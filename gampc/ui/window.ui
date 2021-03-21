@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.38.2 -->
+<interface>
+  <requires lib="gtk+" version="3.20"/>
+  <object class="GtkAdjustment" id="adjustment-volume-button">
+    <property name="upper">100</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">5</property>
+  </object>
+  <object class="GtkHeaderBar" id="header">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="show-close-button">True</property>
+    <child>
+      <object class="GtkVolumeButton" id="volume-button">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="receives-default">False</property>
+        <property name="relief">none</property>
+        <property name="orientation">vertical</property>
+        <property name="adjustment">adjustment-volume-button</property>
+        <property name="icons">audio-volume-muted-symbolic
+audio-volume-high-symbolic
+audio-volume-low-symbolic
+audio-volume-medium-symbolic
+audio-volume-high-symbolic</property>
+        <child internal-child="plus_button">
+          <object class="GtkButton" id="volumebutton-plus_button">
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <property name="halign">center</property>
+            <property name="valign">center</property>
+            <property name="relief">none</property>
+          </object>
+        </child>
+        <child internal-child="minus_button">
+          <object class="GtkButton" id="volumebutton-minus_button">
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <property name="halign">center</property>
+            <property name="valign">center</property>
+            <property name="relief">none</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox" id="box-playback-button">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkButton" id="button-previous">
+            <property name="name">previous</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <property name="action-name">app.previous</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="icon-name">media-skip-backward-symbolic</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="button-play">
+            <property name="name">play</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <property name="action-name">app.play-or-pause</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="icon-name">media-playback-start-symbolic</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="button-pause">
+            <property name="name">pause</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <property name="action-name">app.play-or-pause</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="icon-name">media-playback-pause-symbolic</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="button-stop">
+            <property name="name">stop</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <property name="action-name">app.stop</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="icon-name">media-playback-stop-symbolic</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="button-next">
+            <property name="name">next</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <property name="action-name">app.next</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="icon-name">media-skip-forward-symbolic</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">4</property>
+          </packing>
+        </child>
+      </object>
+      <packing>
+        <property name="position">1</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkScale" id="scale-time">
+        <property name="width-request">150</property>
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="show-fill-level">True</property>
+        <property name="restrict-to-fill-level">False</property>
+        <property name="draw-value">False</property>
+        <property name="has-origin">False</property>
+        <signal name="button-press-event" handler="scale_time_button_press_event_cb" swapped="no"/>
+        <signal name="button-release-event" handler="scale_time_button_release_event_cb" swapped="no"/>
+        <signal name="notify::sensitive" handler="scale_time_notify_sensitive_cb" swapped="no"/>
+      </object>
+      <packing>
+        <property name="position">2</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkLabel" id="label-time">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+      </object>
+      <packing>
+        <property name="position">3</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkLabel" id="label-time-total">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+      </object>
+      <packing>
+        <property name="position">4</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkLabel" id="label-bitrate">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+      </object>
+      <packing>
+        <property name="position">5</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkBox" id="box-options">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkToggleButton" id="togglebutton-random">
+            <property name="name">random</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="icon-name">media-playlist-shuffle-symbolic</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToggleButton" id="togglebutton-repeat">
+            <property name="name">repeat</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="icon-name">media-playlist-repeat-symbolic</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToggleButton" id="togglebutton-consume">
+            <property name="name">consume</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="icon-name">edit-delete-symbolic</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToggleButton" id="togglebutton-single">
+            <property name="name">single</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="receives-default">False</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="icon-name">media-playlist-repeat-song-symbolic</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">3</property>
+          </packing>
+        </child>
+      </object>
+      <packing>
+        <property name="pack-type">end</property>
+        <property name="position">6</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkImage" id="image-protected">
+        <property name="can-focus">False</property>
+        <property name="tooltip-text" translatable="yes">Protected mode</property>
+        <property name="icon-name">system-lock-screen-symbolic</property>
+      </object>
+      <packing>
+        <property name="pack-type">end</property>
+        <property name="position">7</property>
+      </packing>
+    </child>
+  </object>
+  <object class="GtkBox" id="main">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkBox" id="box-info">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="pack-type">end</property>
+        <property name="position">0</property>
+      </packing>
+    </child>
+  </object>
+</interface>

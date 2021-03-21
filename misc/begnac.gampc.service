@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=begnac.gampc
+Exec=/home/begnac/bin/gampc --gapplication-service

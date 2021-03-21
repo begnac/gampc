@@ -1,0 +1,6 @@
+include COPYRIGHT
+include LICENSE
+include misc/begnac.gampc.desktop
+include misc/begnac.gampc.service
+include misc/gampc.1
+include misc/separator.mp3
