@@ -267,6 +267,7 @@ class App(Gtk.Application):
         logger.debug("Quit")
         for win in self.get_windows():
             win.destroy()
+        super().quit()
         return True
 
     def about_cb(self, *args):
