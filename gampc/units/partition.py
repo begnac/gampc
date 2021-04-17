@@ -83,10 +83,9 @@ class __unit__(unit.UnitWithServer):
                 # self.refresh_outputs()
                 # self.refresh_partitions()
                 await self.ampd.idle(ampd.OUTPUT)
-        except asyncio.CancelledError:
+        except ampd.ConnectionError:
             self.clean_outputs()
             self.outputs = []
-            raise
 
     @ampd.task
     async def idle_partition(self):
