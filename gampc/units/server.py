@@ -154,7 +154,7 @@ class __unit__(unit.UnitWithConfig):
     def client_connected_cb(self, client):
         logger.info(_("Connected to {profile} [protocol version {protocol}]").format(profile=self.server_profile, protocol=self.ampd.get_protocol_version()))
         self._update_server_partition()
-        self.idle_separator()
+        self.idle_database()
 
     @ampd.task
     async def _update_server_partition(self):
@@ -188,7 +188,7 @@ class __unit__(unit.UnitWithConfig):
             self.ampd_client.connect_to_server(self.host, self.port)
 
     @ampd.task
-    async def idle_separator(self):
+    async def idle_database(self):
         while True:
             song = await self.ampd.find('file', self.SEPARATOR_FILE)
             if song:
