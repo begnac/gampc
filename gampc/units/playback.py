@@ -57,7 +57,7 @@ class __unit__(unit.UnitWithServer):
             resource.UserAction('app.relative-jump(5)', _("Skip forwards ({} seconds)").format(5), 'playback/jump', ['<Alt>Right'], accels_fragile=True),
         )
 
-        self.fading = False
+        self.fading = None
 
     @ampd.task
     async def mpd_command_cb(self, caller, *data):
@@ -73,10 +73,10 @@ class __unit__(unit.UnitWithServer):
 
     @ampd.task
     async def fade_to_action_cb(self, action_, parameter):
-        if self.fading:
+        self.fading, running = action_.get_name()[8:], self.fading is not None
+        if running:
             return
         try:
-            self.fading = True
             N = 30
             T = 5
 
@@ -91,10 +91,10 @@ class __unit__(unit.UnitWithServer):
                 if reply & ampd.PLAYER:
                     break
             else:
-                await getattr(self.ampd, action_.get_name()[8:])()
+                await getattr(self.ampd, self.fading)()
             self.unit_server.ampd_server_properties.volume = volume
         finally:
-            self.fading = False
+            self.fading = None
 
     def absolute_jump_cb(self, action_, parameter):
         target = parameter.unpack()
