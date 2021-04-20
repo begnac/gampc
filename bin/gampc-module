@@ -21,7 +21,6 @@
 
 import argparse
 import sys
-import gasyncio
 
 from gampc import app
 
@@ -29,4 +28,4 @@ parser = argparse.ArgumentParser()
 parser.add_argument('module', nargs='+', metavar='MODULE')
 args = parser.parse_args()
 
-gasyncio.GAsyncIOEventLoop().run_application(app.App(), [sys.argv[0]] + list(f'module-start-new-window("{module}")' for module in args.module))
+app.App().run([sys.argv[0]] + [f'module-start-new-window("{module}")' for module in args.module])
