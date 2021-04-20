@@ -116,14 +116,13 @@ class UnitWithSongList(module.UnitWithModule):
     def __init__(self, name, manager):
         self.REQUIRED_UNITS = ['misc', 'songlist'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
-
-        self.setup_menu('context')
+        self.setup_menu(self.MODULE_CLASS.name, 'context', self.MODULE_CLASS.use_resources)
 
 
 class UnitWithPanedSongList(UnitWithSongList):
     def __init__(self, name, manager):
         super().__init__(name, manager)
-        self.setup_menu('left-context')
+        self.setup_menu(self.MODULE_CLASS.name, 'left-context', self.MODULE_CLASS.use_resources)
 
 
 class __unit__(unit.UnitWithConfig):

@@ -83,6 +83,8 @@ class Module(Gtk.Bin):
         self.signal_handlers = []
 
     def setup_context_menu(self, name, widget):
+        if self.unit.menus[name].get_n_items() == 0:
+            return
         gtk_context_menu = Gtk.Menu.new_from_model(self.unit.menus[name])
         gtk_context_menu.insert_action_group(self.action_prefix, self.actions)
         widget.connect('button-press-event', self.context_menu_button_press_event_cb, gtk_context_menu)
@@ -142,7 +144,7 @@ class PanedModule(Module):
         self.paned.add1(self.scrolled_left_treeview)
         super().add(self.paned)
 
-        self.setup_context_menu('left-context', self.left_treeview)
+        self.setup_context_menu('.'.join([self.name, 'left-context']), self.left_treeview)
 
         self.starting = True
         self.connect('map', self.__map_cb)
@@ -181,22 +183,27 @@ class UnitWithModule(unit.UnitWithConfig, unit.UnitWithServer):
         self.unit_module.unregister_module_class(self.MODULE_CLASS)
         super().shutdown()
 
-    def setup_menu(self, name):
-        self.menus[name] = Gio.Menu()
+    def setup_menu(self, name, kind, providers=[]):
+        full_name = '.'.join([name, kind])
+        self.menus[full_name] = Gio.Menu()
         self.aggregators += [
-            self.manager.create_aggregator('.'.join([self.MODULE_CLASS.name, name, 'menu']), self.menu_added_cb, self.menu_removed_cb, name,
-                                           also_wants=['.'.join([provider, name, 'menu']) for provider in self.MODULE_CLASS.use_resources]),
-            self.manager.create_aggregator('.'.join([self.MODULE_CLASS.name, name, 'user-action']), self.user_action_added_cb, self.user_action_removed_cb, name,
-                                           also_wants=['.'.join([provider, name, 'user-action']) for provider in self.MODULE_CLASS.use_resources]),
+            self.manager.create_aggregator('.'.join([full_name, 'menu']), self.menu_added_cb, self.menu_removed_cb, full_name,
+                                           also_wants=['.'.join([provider, kind, 'menu']) for provider in providers]),
+            self.manager.create_aggregator('.'.join([full_name, 'user-action']), self.user_action_added_cb, self.user_action_removed_cb, full_name,
+                                           also_wants=['.'.join([provider, kind, 'user-action']) for provider in providers]),
         ]
 
     def menu_added_cb(self, aggregator, menu, name):
+        if name == 'tanda.context':
+            print(1, name)
         menu.insert_into(self.menus[name])
 
     def menu_removed_cb(self, aggregator, menu, name):
         menu.remove_from(self.menus[name])
 
     def user_action_added_cb(self, aggregator, user_action, name):
+        if name == 'tanda.context':
+            print(2, name, vars(user_action))
         user_action.get_menu_action().insert_into(self.menus[name])
 
     def user_action_removed_cb(self, aggregator, user_action, name):

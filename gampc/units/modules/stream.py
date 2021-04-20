@@ -115,7 +115,7 @@ class __unit__(module.UnitWithModule):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.setup_menu('context')
+        self.setup_menu('stream', 'context')
 
         self.new_resource_provider('app.menu').add_resources(
             resource.MenuPath('edit/module/stream'),

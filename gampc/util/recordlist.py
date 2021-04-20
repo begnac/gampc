@@ -58,7 +58,7 @@ class RecordList(module.Module):
         self.add(self.treeview_filter)
         self.actions.add_action(Gio.PropertyAction(name='filter', object=self.treeview_filter, property_name='active'))
 
-        self.setup_context_menu('context', self.treeview)
+        self.setup_context_menu('.'.join([self.name, 'context']), self.treeview)
         self.treeview.connect('row-activated', self.treeview_row_activated_cb)
 
         self.connect('map', self.set_color)

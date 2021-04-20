@@ -219,8 +219,6 @@ class Tanda(module.PanedModule):
 
 
 class TandaSubModule(module.Module):
-    name = Tanda.name  # For config
-
     current_tandaid = GObject.Property()
 
     def __init__(self, unit):
@@ -254,6 +252,8 @@ RGBA_YELLOW.parse('yellow')
 
 
 class TandaEdit(TandaSubModule, songlist.SongListWithEditDelNew):
+    name = 'tanda-edit'
+
     duplicate_field = '_duplicate_edit'
 
     def __init__(self, unit):
@@ -272,7 +272,7 @@ class TandaEdit(TandaSubModule, songlist.SongListWithEditDelNew):
         self.tanda_treeview = data.RecordTreeView(self.unit.db.fields, self.tanda_data_func, True)
         self.tanda_treeview.set_name('tanda-treeview')
         self.tanda_treeview.connect('button-press-event', self.tanda_treeview_button_press_event_cb)
-        # self.setup_context_menu(self.provided.get('left_context_menu_items', []) + [resource.UserAction('mod.tanda-delete', _("Delete tanda"), 'edit')], self.tanda_treeview)
+        self.setup_context_menu('tanda-edit.left-context', self.tanda_treeview)
         self.init_tandaid_treeview(self.tanda_treeview)
 
         for name in self.unit.db.fields.basic_names:
@@ -519,6 +519,8 @@ class TandaEdit(TandaSubModule, songlist.SongListWithEditDelNew):
 
 
 class TandaView(TandaSubModule, songlist.SongList):
+    name = 'tanda-view'
+
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
     duplicate_field = '_duplicate_view'
 
@@ -806,12 +808,13 @@ class __unit__(unit.UnitWithCss, songlist.UnitWithPanedSongList):
             resource.UserAction('mod.tanda-define', _("Define tanda"), 'other')
         )
 
-        self.new_resource_provider(Tanda.name + '.left-context.menu').add_resources(
-            resource.MenuPath('edit'),
-        )
-        self.new_resource_provider(Tanda.name + '.left-context.user-action').add_resources(
+        self.new_resource_provider('tanda-edit.left-context.user-action').add_resources(
             resource.UserAction('mod.tanda-delete', _("Delete tanda"), 'edit')
         )
+
+        self.setup_menu('tanda-edit', 'context', ['songlist'])
+        self.setup_menu('tanda-edit', 'left-context', ['songlist'])
+        self.setup_menu('tanda-view', 'context', ['songlist'])
 
     def shutdown(self):
         del self.db
