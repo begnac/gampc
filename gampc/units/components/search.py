@@ -125,5 +125,5 @@ class __unit__(songlist.UnitWithSongList):
     def __init__(self, name, manager):
         super().__init__(name, manager)
         self.new_resource_provider('app.user-action').add_resources(
-            resource.UserAction('mod.search', _("Search"), 'edit/module', ['<Control><Shift>f']),
+            resource.UserAction('mod.search', _("Search"), 'edit/component', ['<Control><Shift>f']),
         )

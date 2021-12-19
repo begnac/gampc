@@ -22,10 +22,10 @@ from gi.repository import Gtk
 
 import ampd
 
-from gampc.util import module
+from gampc.util import component
 
 
-class Command(module.Module):
+class Command(component.Component):
     title = _("Execute MPD commands")
     name = 'command'
     key = '7'
@@ -55,6 +55,6 @@ class Command(module.Module):
         return False
 
 
-class __unit__(module.UnitWithModule):
+class __unit__(component.UnitWithComponent):
     REQUIRED_UNITS = ['misc']
     MODULE_CLASS = Command

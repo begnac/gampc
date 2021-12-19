@@ -185,7 +185,7 @@ class __unit__(unit.UnitWithConfig):
     async def _reconnect(self):
         reply = await self.ampd.idle(ampd.CONNECT, timeout=1)
         if reply & ampd.TIMEOUT:
-            self.ampd_client.connect_to_server(self.host, self.port)
+            await self.ampd_client.connect_to_server(self.host, self.port)
 
     @ampd.task
     async def idle_database(self):

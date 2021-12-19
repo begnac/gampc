@@ -36,14 +36,14 @@ from gampc.util import db
 from gampc.util.logger import logger
 
 from gampc.util import resource
-from gampc.util import module
+from gampc.util import component
 from gampc.util import unit
 from gampc.units import songlist
 
-from gampc.units.modules import search
+from gampc.units.components import search
 
 
-class Tanda(module.PanedModule):
+class Tanda(component.PanedComponent):
     title = _("Tandas")
     name = 'tanda'
     key = '6'
@@ -94,15 +94,15 @@ class Tanda(module.PanedModule):
         self.view = TandaView(unit)
         self.stack.add_titled(self.edit, 'edit', _("Edit tandas"))
         self.stack.add_titled(self.view, 'view', _("View tandas"))
-        self.sub_modules = [self.edit, self.view]
-        for c in self.sub_modules:
+        self.sub_components = [self.edit, self.view]
+        for c in self.sub_components:
             self.bind_property('current-tandaid', c, 'current-tandaid', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
 
         self.signal_handler_connect(self.unit.db, 'changed', self.db_changed_cb)
         self.signal_handler_connect(self.unit.db, 'verify-progress', self.db_verify_progress_cb)
         self.signal_handler_connect(self.unit.db, 'missing-song', self.db_missing_song_cb)
 
-        self.actions.add_action(resource.Action('tanda-switch-submodule', self.action_sub_module_next_cb))
+        self.actions.add_action(resource.Action('tanda-switch-subcomponent', self.action_sub_component_next_cb))
         self.actions.add_action(resource.Action('tanda-verify', self.unit.db.action_tanda_verify_cb))
         self.actions.add_action(resource.Action('tanda-cleanup-db', self.unit.db.action_cleanup_db_cb))
 
@@ -110,10 +110,10 @@ class Tanda(module.PanedModule):
 
         self.read_db()
 
-    def action_sub_module_next_cb(self, action, param):
-        i = self.sub_modules.index(self.stack.get_visible_child())
-        j = (i + 1) % len(self.sub_modules)
-        self.stack.set_visible_child(self.sub_modules[j])
+    def action_sub_component_next_cb(self, action, param):
+        i = self.sub_components.index(self.stack.get_visible_child())
+        j = (i + 1) % len(self.sub_components)
+        self.stack.set_visible_child(self.sub_components[j])
 
     def tanda_filter_holds(self, tanda):
         if tanda.get('Note') == '0' and self.problem_button.get_active():
@@ -164,7 +164,7 @@ class Tanda(module.PanedModule):
 
     def filter_artists(self):
         tandas = [tanda for tanda in self.filtered_tandas if '*' in self.selected_artists or tanda.get('Artist') in self.selected_artists]
-        for c in self.sub_modules:
+        for c in self.sub_components:
             c.set_tandas(tandas)
             c.set_cursor_tandaid(self.current_tandaid)
 
@@ -194,31 +194,31 @@ class Tanda(module.PanedModule):
                                    default_width=500, default_height=500,
                                    title=_("Replace {}").format(' / '.join(fields)))
         search_window.update_title = lambda *args: None
-        search_module = search.Search(self.unit)
-        search_module.entry.set_text(' '.join('{}="{}"'.format(field, fields[i]) for i, field in enumerate(db.MISSING_SONG_FIELDS)))
+        search_component = search.Search(self.unit)
+        search_component.entry.set_text(' '.join('{}="{}"'.format(field, fields[i]) for i, field in enumerate(db.MISSING_SONG_FIELDS)))
         button_box = Gtk.ButtonBox(visible=True, layout_style=Gtk.ButtonBoxStyle.CENTER)
         cancel_button = Gtk.Button(visible=True, label=_("_Cancel"), use_underline=True)
         cancel_button.connect('clicked', lambda button: button.get_toplevel().destroy())
         button_box.add(cancel_button)
         ok_button = Gtk.Button(visible=True, label=_("_OK"), use_underline=True)
-        ok_button.connect('clicked', self.db_missing_song_ok_cb, db, search_module, song_file)
+        ok_button.connect('clicked', self.db_missing_song_ok_cb, db, search_component, song_file)
         button_box.add(ok_button)
-        search_module.get_child().add(button_box)
-        search_window.add(search_module)
+        search_component.get_child().add(button_box)
+        search_window.add(search_component)
         search_window.present()
 
     @staticmethod
-    def db_missing_song_ok_cb(button, db, search_module, song_file):
-        path, focus = search_module.treeview.get_cursor()
+    def db_missing_song_ok_cb(button, db, search_component, song_file):
+        path, focus = search_component.treeview.get_cursor()
         if path:
-            i = search_module.store.get_iter(path)
-            song = search_module.store.get_record(i).get_data()
+            i = search_component.store.get_iter(path)
+            song = search_component.store.get_record(i).get_data()
             db.replace_song(song_file, song)
             db.emit('changed', -1)
-            search_module.get_toplevel().destroy()
+            search_component.get_toplevel().destroy()
 
 
-class TandaSubModule(module.Module):
+class TandaSubComponent(component.Component):
     current_tandaid = GObject.Property()
 
     def __init__(self, unit):
@@ -251,7 +251,7 @@ RGBA_PINK.parse('pink')
 RGBA_YELLOW.parse('yellow')
 
 
-class TandaEdit(TandaSubModule, songlist.SongListWithEditDelNew):
+class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
     name = 'tanda-edit'
 
     duplicate_field = '_duplicate_edit'
@@ -518,7 +518,7 @@ class TandaEdit(TandaSubModule, songlist.SongListWithEditDelNew):
         self.treeview.set_size_request(-1, max(26, 25 + self.store.iter_n_children() * 27))
 
 
-class TandaView(TandaSubModule, songlist.SongList):
+class TandaView(TandaSubComponent, songlist.SongList):
     name = 'tanda-view'
 
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
@@ -756,8 +756,6 @@ class __unit__(unit.UnitWithCss, songlist.UnitWithPanedSongList):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.config.access(Tanda.PANE_SEPARATOR_CONFIG, Tanda.PANE_SEPARATOR_DEFAULT)  # To avoid losing config value
-
         self.fields = data.FieldFamily(self.config.fields)
         self.fields.register_field(data.Field('Artist', _("Artist")))
         self.fields.register_field(data.Field('Genre', _("Genre")))
@@ -791,13 +789,13 @@ class __unit__(unit.UnitWithCss, songlist.UnitWithPanedSongList):
         )
 
         self.new_resource_provider('app.user-action').add_resources(
-            resource.UserAction('mod.tanda-fill-field', _("Fill tanda field"), 'edit/module', ['<Control>z']),
-            resource.UserAction('mod.tanda-reset-field', _("Reset tanda field"), 'edit/module', ['<Control><Shift>z']),
-            resource.UserAction('mod.tanda-reset', _("Reset tanda"), 'edit/module', ['<Control><Shift>r']),
-            resource.UserAction('mod.tanda-delete', _("Delete tanda"), 'edit/module', ['<Control>Delete']),
-            resource.UserAction('supermod.tanda-switch-submodule', _("Switch tanda view mode"), 'edit/module', ['<Control>Tab']),
-            resource.UserAction('supermod.tanda-verify', _("Verify tanda database"), 'edit/module', ['<Control><Shift>d']),
-            resource.UserAction('supermod.tanda-cleanup-db', _("Cleanup database"), 'edit/module')
+            resource.UserAction('mod.tanda-fill-field', _("Fill tanda field"), 'edit/component', ['<Control>z']),
+            resource.UserAction('mod.tanda-reset-field', _("Reset tanda field"), 'edit/component', ['<Control><Shift>z']),
+            resource.UserAction('mod.tanda-reset', _("Reset tanda"), 'edit/component', ['<Control><Shift>r']),
+            resource.UserAction('mod.tanda-delete', _("Delete tanda"), 'edit/component', ['<Control>Delete']),
+            resource.UserAction('supermod.tanda-switch-subcomponent', _("Switch tanda view mode"), 'edit/component', ['<Control>Tab']),
+            resource.UserAction('supermod.tanda-verify', _("Verify tanda database"), 'edit/component', ['<Control><Shift>d']),
+            resource.UserAction('supermod.tanda-cleanup-db', _("Cleanup database"), 'edit/component')
         )
 
         self.new_resource_provider('songlist.action').add_resources(

@@ -26,11 +26,11 @@ import ampd
 from gampc.util import ssde
 from gampc.util import db
 from gampc.util import resource
-from gampc.util import module
+from gampc.util import component
 from gampc.units import songlist
 
 
-class SavedSearch(songlist.SongListWithEditDelFile, module.PanedModule):
+class SavedSearch(songlist.SongListWithEditDelFile, component.PanedComponent):
     title = _("Saved Searches")
     name = 'savedsearch'
     key = '9'

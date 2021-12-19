@@ -23,7 +23,7 @@ from gampc.util import ssde
 from gampc.util import db
 from gampc.util import resource
 from gampc.util import recordlist
-from gampc.util import module
+from gampc.units import songlist
 
 
 class Stream(recordlist.RecordListWithEditDelNew):
@@ -31,7 +31,8 @@ class Stream(recordlist.RecordListWithEditDelNew):
     name = 'stream'
     key = '4'
 
-    DND_TARGET = 'GAMPC_STREAMS'
+    use_resources = ['songlist']
+    DND_TARGET = 'GAMPC_STREAM'
 
     def __init__(self, unit):
         self.fields = unit.fields
@@ -108,22 +109,19 @@ class StreamDatabase(db.Database):
                                                                                                        ':' + ',:'.join(self.fields.basic_names)), stream)
 
 
-class __unit__(module.UnitWithModule):
-    REQUIRED_UNITS = ['misc']
+class __unit__(songlist.UnitWithSongList):
     MODULE_CLASS = Stream
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.setup_menu('stream', 'context')
-
         self.new_resource_provider('app.menu').add_resources(
-            resource.MenuPath('edit/module/stream'),
+            resource.MenuPath('edit/component/stream'),
         )
 
         self.new_resource_provider('app.user-action').add_resources(
-            resource.UserAction('mod.stream-add', _("Add stream"), 'edit/module/stream'),
-            resource.UserAction('mod.stream-modify', _("Modify stream"), 'edit/module/stream', ['F2']),
+            resource.UserAction('mod.stream-add', _("Add stream"), 'edit/component/stream'),
+            resource.UserAction('mod.stream-modify', _("Modify stream"), 'edit/component/stream', ['F2']),
         )
 
         self.new_resource_provider('stream.context.menu').add_resources(

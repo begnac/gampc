@@ -26,11 +26,11 @@ import ampd
 from gampc.util import ssde
 from gampc.util import dialog
 from gampc.util import resource
-from gampc.util import module
+from gampc.util import component
 from gampc.units import songlist
 
 
-class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, module.PanedModule):
+class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, component.PanedComponent):
     title = _("Playlists")
     name = 'playlist'
     key = '5'
@@ -143,30 +143,30 @@ class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, mod
         await do_save(self, await self.ampd.playlist(), self.playlist_name, True)
 
 
-async def choose_playlist(module_, label, allow_new=True):
+async def choose_playlist(component_, label, allow_new=True):
     """Choose a playlist."""
-    playlists = sorted(map(lambda x: x['playlist'], await module_.ampd.listplaylists()))
+    playlists = sorted(map(lambda x: x['playlist'], await component_.ampd.listplaylists()))
     new_playlist = _("<New playlist>")
     if allow_new:
         playlists = [new_playlist] + playlists
     struct = ssde.Choice(playlists, label=label)
-    value = await struct.edit_async(module_.win)
+    value = await struct.edit_async(component_.win)
     if allow_new and value == new_playlist:
         label = _("New playlist name")
         new_name = "<{}>".format(label)
         struct = ssde.Text(label=label,
                            default=new_name,
                            validator=lambda x: x != new_name)
-        value = await struct.edit_async(module_.win)
+        value = await struct.edit_async(component_.win)
         new = True
     else:
         new = False
     return value, new
 
 
-async def do_save(module_, filenames, playlist_name, replace):
+async def do_save(component_, filenames, playlist_name, replace):
     if replace:
-        dialog_ = dialog.AsyncDialog(parent=module_.win)
+        dialog_ = dialog.AsyncDialog(parent=component_.win)
         dialog_.get_content_area().add(Gtk.Label(label=_("Replace existing playlist {}?").format(playlist_name), visible=True))
         dialog_.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         dialog_.add_button(_("_OK"), Gtk.ResponseType.OK)
@@ -177,17 +177,17 @@ async def do_save(module_, filenames, playlist_name, replace):
 
     tempname = '$$TEMP$$'
     try:
-        await module_.ampd.rm(tempname)
+        await component_.ampd.rm(tempname)
     except ampd.ReplyError:
         pass
     try:
-        await module_.ampd.command_list([module_.ampd.playlistadd(tempname, name) for name in filenames])
+        await component_.ampd.command_list([component_.ampd.playlistadd(tempname, name) for name in filenames])
         if replace:
-            await module_.ampd.rm(playlist_name)
-        await module_.ampd.rename(tempname, playlist_name)
+            await component_.ampd.rm(playlist_name)
+        await component_.ampd.rename(tempname, playlist_name)
     except Exception:
         try:
-            await module_.ampd.rm(tempname)
+            await component_.ampd.rm(tempname)
         except ampd.ReplyError:
             pass
         raise
@@ -223,7 +223,7 @@ class __unit__(songlist.UnitWithPanedSongList):
         super().__init__(name, manager)
 
         self.new_resource_provider('app.user-action').add_resources(
-            resource.UserAction('mod.playlist-saveas(false)', _("Save as playlist"), 'edit/module'),
+            resource.UserAction('mod.playlist-saveas(false)', _("Save as playlist"), 'edit/component'),
         )
 
         self.new_resource_provider('songlist.action').add_resources(

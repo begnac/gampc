@@ -74,16 +74,16 @@ class App(Gtk.Application):
 
         self.unit_manager = unit.UnitManager()
         self.unit_manager.set_target('config')
-        default_units = ['config', 'menubar', 'misc', 'profiles', 'server', 'partition', 'persistent', 'playback',
-                         'module', 'window',
-                         'modules.current', 'modules.playqueue', 'modules.browser', 'modules.search', 'modules.stream', 'modules.playlist', 'modules.command', 'modules.log', 'modules.savedsearch']
-        units = self.unit_manager.get_unit('config').config.access('units', default_units)
-        self.unit_manager.set_target(*units)
+        default_units = ['config', 'menubar', 'misc', 'profiles', 'server', 'partition', 'persistent', 'playback', 'tango-velours',
+                         'component', 'window',
+                         'components.current', 'components.playqueue', 'components.browser', 'components.search', 'components.stream', 'components.playlist', 'components.command', 'components.log', 'components.savedsearch']
+        self.unit_manager.get_unit('config').config.access('units', default_units)
+        self.unit_manager.set_target(*self.unit_manager.get_unit('config').config.units)
 
         self.unit_misc = self.unit_manager.get_unit('misc')
         self.unit_server = self.unit_manager.get_unit('server')
         self.unit_persistent = self.unit_manager.get_unit('persistent')
-        self.unit_module = self.unit_manager.get_unit('module')
+        self.unit_component = self.unit_manager.get_unit('component')
         self.unit_window = self.unit_manager.get_unit('window')
 
         self.action_aggregator = self.unit_manager.create_aggregator('app.action', self.action_added_cb, self.action_removed_cb),
@@ -108,9 +108,9 @@ class App(Gtk.Application):
         self.add_action(resource.Action('about', self.about_cb))
         self.add_action(resource.Action('notify', self.task_hold_app(self.action_notify_cb)))
         self.add_action(resource.Action('quit', self.quit))
-        self.add_action(resource.Action('module-start', self.module_start_cb, parameter_type=GLib.VariantType.new('s')))
-        self.add_action(resource.Action('module-start-new-window', self.module_start_cb, parameter_type=GLib.VariantType.new('s')))
-        self.add_action(resource.Action('module-stop', self.module_stop_cb))
+        self.add_action(resource.Action('component-start', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
+        self.add_action(resource.Action('component-start-new-window', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
+        self.add_action(resource.Action('component-stop', self.component_stop_cb))
 
         # self.add_action(resource.Action('BAD', self.THIS_IS_BAD_cb))
 
@@ -129,7 +129,7 @@ class App(Gtk.Application):
         del self.action_aggregator
 
         del self.unit_window
-        del self.unit_module
+        del self.unit_component
         del self.unit_persistent
         del self.unit_server
         del self.unit_misc
@@ -238,30 +238,30 @@ class App(Gtk.Application):
         self.set_accels_for_action(user_action.action, [])
 
     def new_window_cb(self, action, parameter):
-        module = self.unit_module.get_module('current', False)
-        self.display_module(module, True)
+        component = self.unit_component.get_component('current', False)
+        self.display_component(component, True)
 
     def close_window_cb(self, action, parameter):
         self.get_active_window().destroy()
 
-    def module_start_cb(self, action, parameter):
-        module = self.unit_module.get_module(parameter.unpack(), Gdk.Keymap.get_default().get_modifier_state() & Gdk.ModifierType.CONTROL_MASK)
-        self.display_module(module, action.get_name().endswith('new-window'))
+    def component_start_cb(self, action, parameter):
+        component = self.unit_component.get_component(parameter.unpack(), Gdk.Keymap.get_default().get_modifier_state() & Gdk.ModifierType.CONTROL_MASK)
+        self.display_component(component, action.get_name().endswith('new-window'))
 
-    def display_module(self, module, new_window):
-        win = None if new_window else module.win or self.get_active_window()
+    def display_component(self, component, new_window):
+        win = None if new_window else component.win or self.get_active_window()
         if win is None:
             win = self.unit_window.new_window(self)
-        if module.win is None:
-            win.change_module(module)
+        if component.win is None:
+            win.change_component(component)
         win.present()
 
-    def module_stop_cb(self, action, parameter):
+    def component_stop_cb(self, action, parameter):
         win = self.get_active_window()
-        module = win.module
-        if module:
-            win.change_module(self.unit_module.get_free_module())
-            self.unit_module.remove_module(module)
+        component = win.component
+        if component:
+            win.change_component(self.unit_component.get_free_component())
+            self.unit_component.remove_component(component)
 
     def quit(self, *args):
         logger.debug("Quit")

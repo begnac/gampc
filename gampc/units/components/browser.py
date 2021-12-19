@@ -24,12 +24,12 @@ import os
 
 import ampd
 
-from gampc.util import module
+from gampc.util import component
 
 from gampc.units import songlist
 
 
-class Browser(songlist.SongListWithEditDelFile, module.PanedModule):
+class Browser(songlist.SongListWithEditDelFile, component.PanedComponent):
     title = _("Database Browser")
     name = 'browser'
     key = '2'

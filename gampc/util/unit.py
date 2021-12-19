@@ -83,6 +83,11 @@ class UnitWithConfig(Unit):
         self.REQUIRED_UNITS = ['config'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
         self.config = self.unit_config.config.subtree(name)
+        for name, default in self.get_keep_config_items():
+            self.config.access(name, default)
+
+    def get_keep_config_items(self):
+        yield from ()
 
 
 class UnitWithServer(Unit):

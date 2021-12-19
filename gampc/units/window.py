@@ -72,7 +72,7 @@ class Window(Gtk.ApplicationWindow):
         super().__init__(application=app)
         self.unit = unit
         self.is_fullscreen = False
-        self.module = None
+        self.component = None
 
         self.set_default_size(self.unit.config.access('width', 1000),
                               self.unit.config.access('height', 600))
@@ -135,9 +135,11 @@ class Window(Gtk.ApplicationWindow):
     @staticmethod
     def destroy_cb(self):
         logger.debug("Destroying window: {}".format(self))
-        self.change_module(None)
+        self.change_component(None)
         logger.removeHandler(self.logging_handler)
         self.logging_handler.close()
+        self.remove_action('toggle-fullscreen')
+        self.remove_action('volume-popup')
         self.unit.unit_server.disconnect_by_func(self.update_subtitle)
         self.unit.unit_server.ampd_server_properties.disconnect_by_func(self.update_title)
         self.unit.unit_server.ampd_server_properties.disconnect_by_func(self.notify_current_song_cb)
@@ -146,14 +148,14 @@ class Window(Gtk.ApplicationWindow):
         option_name = '{name} mode'.format(name=button.get_name().capitalize())
         button.set_tooltip_text('{} {}'.format(_(option_name), _("on") if button.get_active() else _("off")))
 
-    def change_module(self, module):
-        if self.module:
-            self.main.remove(self.module)
-            self.module.disconnect_by_func(self.update_subtitle)
-        self.module = module
-        if module:
-            self.main.pack_start(module, True, True, 0)
-            self.module.connect('notify::full-title', self.update_subtitle)
+    def change_component(self, component):
+        if self.component:
+            self.main.remove(self.component)
+            self.component.disconnect_by_func(self.update_subtitle)
+        self.component = component
+        if component:
+            self.main.pack_start(component, True, True, 0)
+            self.component.connect('notify::full-title', self.update_subtitle)
         self.update_subtitle()
 
     def notify_current_song_cb(self, *args):
@@ -172,12 +174,12 @@ class Window(Gtk.ApplicationWindow):
         self.titlebar.set_title(window_title.format(artist=artist, title=title))
 
     def update_subtitle(self, *args):
-        components = []
-        if self.module:
-            components.append(self.module.full_title)
+        chunks = []
+        if self.component:
+            chunks.append(self.component.full_title)
         if self.unit.unit_server.server_label:
-            components.append(self.unit.unit_server.server_label)
-        self.titlebar.set_subtitle(' / '.join(components))
+            chunks.append(self.unit.unit_server.server_label)
+        self.titlebar.set_subtitle(' / '.join(chunks))
 
     def do_check_resize(self):
         if not self.is_fullscreen:

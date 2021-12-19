@@ -34,8 +34,6 @@ from gampc.util import unit
 
 
 class __unit__(unit.UnitWithServer):
-    REQUIRED_UNITS = ['server']
-
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
@@ -65,6 +63,7 @@ class __unit__(unit.UnitWithServer):
         self.app_user_action_provider = self.new_resource_provider('app.user-action')
 
     def shutdown(self):
+        self.clean_outputs()
         self.unit_server.ampd_client.disconnect_by_func(self.client_connected_cb)
         self.unit_server.disconnect_by_func(self.notify_server_partition_cb)
         super().shutdown()
@@ -79,9 +78,6 @@ class __unit__(unit.UnitWithServer):
             while True:
                 self.clean_outputs()
                 self.refresh_outputs(await self.ampd.outputs())
-                # self.outputs = await self.ampd.outputs()
-                # self.refresh_outputs()
-                # self.refresh_partitions()
                 await self.ampd.idle(ampd.OUTPUT)
         except ampd.ConnectionError:
             self.clean_outputs()

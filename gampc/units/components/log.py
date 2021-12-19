@@ -23,7 +23,7 @@ from gi.repository import Gtk
 
 import logging
 
-from gampc.util import module
+from gampc.util import component
 
 
 class Handler(logging.Handler, GObject.Object):
@@ -42,7 +42,7 @@ class Handler(logging.Handler, GObject.Object):
         self.log = []
 
 
-class Log(module.Module):
+class Log(component.Component):
     title = _("View log")
     name = 'log'
     key = '8'
@@ -74,7 +74,7 @@ class Log(module.Module):
         adjustment.set_value(adjustment.get_upper())
 
 
-class __unit__(module.UnitWithModule):
+class __unit__(component.UnitWithComponent):
     MODULE_CLASS = Log
 
     def __init__(self, name, manager):

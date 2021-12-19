@@ -100,7 +100,7 @@ class __unit__(unit.UnitWithServer):
     def notify_protected_cb(self, param):
         if self.protected:
             for option in ampd.OPTION_NAMES:
-                self.ampd_server_properties.set_property(option, False)
+                self.unit_server.ampd_server_properties.set_property(option, False)
 
     @ampd.task
     async def notify_option_cb(self, properties, param):

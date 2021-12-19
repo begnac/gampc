@@ -33,7 +33,7 @@ class __unit__(unit.Unit):
             resource.MenuPath('edit', _("_Edit"), is_submenu=True),
             resource.MenuPath('playback', _("_Playback"), is_submenu=True),
             resource.MenuPath('server', _("_Server"), is_submenu=True),
-            resource.MenuPath('modules', _("_Modules"), is_submenu=True),
+            resource.MenuPath('components', _("_Components"), is_submenu=True),
             resource.MenuPath('help', _("_Help"), is_submenu=True),
 
             resource.MenuPath('gampc/window'),
@@ -41,7 +41,7 @@ class __unit__(unit.Unit):
             resource.MenuPath('gampc/app'),
 
             resource.MenuPath('edit/global'),
-            resource.MenuPath('edit/module'),
+            resource.MenuPath('edit/component'),
 
             resource.MenuPath('server/server'),
             resource.MenuPath('server/profiles'),

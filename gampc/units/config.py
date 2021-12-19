@@ -65,7 +65,7 @@ class ConfigTree(object):
             os.remove(path)
 
     def __getattr__(self, name):
-        return self.access(name, {})
+        return self.access(name)
 
     def __setattr__(self, name, value):
         if name in self.__dict__:
@@ -81,7 +81,7 @@ class ConfigTree(object):
     def get_dict(self):
         return {key: value.get_dict() if isinstance(value, ConfigTree) else value for key, value in self._dict.items()}
 
-    def access(self, name, default):
+    def access(self, name, default={}):
         name = name.replace('_', '-')
         if name not in self._dict:
             self._dict[name] = self.access_base(name, default)

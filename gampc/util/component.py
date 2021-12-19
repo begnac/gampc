@@ -30,7 +30,7 @@ from . import unit
 from .logger import logger
 
 
-class Module(Gtk.Bin):
+class Component(Gtk.Bin):
     title = None
     name = None
     key = None
@@ -83,7 +83,7 @@ class Module(Gtk.Bin):
         self.signal_handlers = []
 
     def setup_context_menu(self, name, widget):
-        if self.unit.menus[name].get_n_items() == 0:
+        if name not in self.unit.menus or self.unit.menus[name].get_n_items() == 0:
             return
         gtk_context_menu = Gtk.Menu.new_from_model(self.unit.menus[name])
         gtk_context_menu.insert_action_group(self.action_prefix, self.actions)
@@ -126,10 +126,9 @@ class Module(Gtk.Bin):
         self.actions.remove_action(action.name)
 
 
-class PanedModule(Module):
-    PANE_SEPARATOR_CONFIG = 'pane_separator'
-    PANE_SEPARATOR_DEFAULT = 100
+PANE_SEPARATOR_CONFIG = 'pane_separator'
 
+class PanedComponent(Component):
     def __init__(self, unit):
         super().__init__(unit)
 
@@ -139,7 +138,7 @@ class PanedModule(Module):
         self.left_treeview.get_selection().connect('changed', self.left_treeview_selection_changed_cb)
         self.left_treeview.set_search_equal_func(lambda store, col, key, i: key.lower() not in store.get_value(i, col).lower())
 
-        self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config.access(self.PANE_SEPARATOR_CONFIG, self.PANE_SEPARATOR_DEFAULT), visible=True)
+        self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config[PANE_SEPARATOR_CONFIG], visible=True)
         self.paned.connect('notify::position', self.paned_notify_position_cb)
         self.paned.add1(self.scrolled_left_treeview)
         super().add(self.paned)
@@ -156,7 +155,7 @@ class PanedModule(Module):
             self.starting = False
 
     def paned_notify_position_cb(self, *args):
-        self.config[self.PANE_SEPARATOR_CONFIG] = self.paned.get_position()
+        self.config[PANE_SEPARATOR_CONFIG] = self.paned.get_position()
 
     def left_store_set_rows(self, rows):
         data.store_set_rows(self.left_store, rows, lambda i, name: self.left_store.set_value(i, 0, name))
@@ -168,11 +167,11 @@ class PanedModule(Module):
         self.paned.remove2(child)
 
 
-class UnitWithModule(unit.UnitWithConfig, unit.UnitWithServer):
+class UnitWithComponent(unit.UnitWithConfig, unit.UnitWithServer):
     def __init__(self, name, manager):
-        self.REQUIRED_UNITS = ['module', 'persistent'] + self.REQUIRED_UNITS
+        self.REQUIRED_UNITS = ['component', 'persistent'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
-        self.unit_module.register_module_class(self.MODULE_CLASS, self)
+        self.unit_component.register_component_class(self.MODULE_CLASS, self)
         self.aggregators = []
         self.menus = {}
 
@@ -180,7 +179,7 @@ class UnitWithModule(unit.UnitWithConfig, unit.UnitWithServer):
         for aggregator in reversed(self.aggregators):
             self.manager.remove_aggregator(aggregator)
         del self.aggregators
-        self.unit_module.unregister_module_class(self.MODULE_CLASS)
+        self.unit_component.unregister_component_class(self.MODULE_CLASS)
         super().shutdown()
 
     def setup_menu(self, name, kind, providers=[]):
@@ -194,17 +193,19 @@ class UnitWithModule(unit.UnitWithConfig, unit.UnitWithServer):
         ]
 
     def menu_added_cb(self, aggregator, menu, name):
-        if name == 'tanda.context':
-            print(1, name)
         menu.insert_into(self.menus[name])
 
     def menu_removed_cb(self, aggregator, menu, name):
         menu.remove_from(self.menus[name])
 
     def user_action_added_cb(self, aggregator, user_action, name):
-        if name == 'tanda.context':
-            print(2, name, vars(user_action))
         user_action.get_menu_action().insert_into(self.menus[name])
 
     def user_action_removed_cb(self, aggregator, user_action, name):
         user_action.get_menu_action().remove_from(self.menus[name])
+
+
+class UnitWithPanedComponent(UnitWithComponent):
+    def get_keep_config_items(self):
+        yield PANE_SEPARATOR_CONFIG, 100
+        yield from super().get_keep_config_items()

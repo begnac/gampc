@@ -29,13 +29,13 @@ from gampc import data
 from gampc.util import ssde
 from gampc.util import resource
 from gampc.util import recordlist
-from gampc.util import module
+from gampc.util import component
 from gampc.util import unit
 
 
 class SongList(recordlist.RecordList):
     use_resources = ['songlist']
-    DND_TARGET = 'GAMPC_SONGS'
+    DND_TARGET = 'GAMPC_SONG'
 
     def __init__(self, unit):
         self.fields = unit.unit_songlist.fields
@@ -112,14 +112,14 @@ class SongListWithEditDelFile(SongListWithEditDel):
         super().set_records(songs, set_fields)
 
 
-class UnitWithSongList(module.UnitWithModule):
+class UnitWithSongList(component.UnitWithComponent):
     def __init__(self, name, manager):
         self.REQUIRED_UNITS = ['misc', 'songlist'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
         self.setup_menu(self.MODULE_CLASS.name, 'context', self.MODULE_CLASS.use_resources)
 
 
-class UnitWithPanedSongList(UnitWithSongList):
+class UnitWithPanedSongList(UnitWithSongList, component.UnitWithPanedComponent):
     def __init__(self, name, manager):
         super().__init__(name, manager)
         self.setup_menu(self.MODULE_CLASS.name, 'left-context', self.MODULE_CLASS.use_resources)
@@ -130,19 +130,19 @@ class __unit__(unit.UnitWithConfig):
         super().__init__(name, manager)
 
         actions = [
-            resource.UserAction('mod.cut', _("Cut"), 'edit/module/base', ['<Control>x'], accels_fragile=True),
-            resource.UserAction('mod.copy', _("Copy"), 'edit/module/base', ['<Control>c'], accels_fragile=True),
-            resource.UserAction('mod.paste', _("Paste"), 'edit/module/base', ['<Control>v'], accels_fragile=True),
-            resource.UserAction('mod.paste-before', _("Paste before"), 'edit/module/base', ['<Control>b']),
-            resource.UserAction('mod.delete', _("Delete"), 'edit/module/base', ['Delete'], accels_fragile=True),
-            resource.UserAction('mod.undelete', _("Undelete"), 'edit/module/base', ['<Alt>Delete'], accels_fragile=True),
-            resource.UserAction('mod.add-separator', _("Add separator"), 'edit/module/special'),
-            resource.UserAction('mod.add-url', _("Add URL or filename"), 'edit/module/special'),
+            resource.UserAction('mod.cut', _("Cut"), 'edit/component/base', ['<Control>x'], accels_fragile=True),
+            resource.UserAction('mod.copy', _("Copy"), 'edit/component/base', ['<Control>c'], accels_fragile=True),
+            resource.UserAction('mod.paste', _("Paste"), 'edit/component/base', ['<Control>v'], accels_fragile=True),
+            resource.UserAction('mod.paste-before', _("Paste before"), 'edit/component/base', ['<Control>b']),
+            resource.UserAction('mod.delete', _("Delete"), 'edit/component/base', ['Delete'], accels_fragile=True),
+            resource.UserAction('mod.undelete', _("Undelete"), 'edit/component/base', ['<Alt>Delete'], accels_fragile=True),
+            resource.UserAction('mod.add-separator', _("Add separator"), 'edit/component/special'),
+            resource.UserAction('mod.add-url', _("Add URL or filename"), 'edit/component/special'),
         ]
 
         menus = [
-            resource.MenuPath('edit/module/base'),
-            resource.MenuPath('edit/module/special'),
+            resource.MenuPath('edit/component/base'),
+            resource.MenuPath('edit/component/special'),
         ]
 
         self.new_resource_provider('app.menu').add_resources(*menus)
@@ -157,7 +157,7 @@ class __unit__(unit.UnitWithConfig):
         self.new_resource_provider('songlist.context.menu').add_resources(
             resource.MenuPath('action'),
             resource.MenuPath('edit'),
-            resource.MenuPath('edit/module'),
+            resource.MenuPath('edit/component'),
             *menus,
             resource.MenuPath('other'),
         )

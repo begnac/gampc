@@ -46,11 +46,22 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         for name in self.actions.list_actions():
             if name.startswith('playqueue-ext-'):
                 self.actions.remove(name)
+        self.signal_handler_connect(self.treeview, 'cursor-changed', self.cursor_changed_cb)
+        self.cursor_by_profile = {}
+        self.set_cursor = False
+
+    def cursor_changed_cb(self, treeview):
+        if not self.set_cursor:
+            self.cursor_by_profile[self.unit.unit_server.server_profile] = self.treeview.get_cursor().path
 
     @ampd.task
     async def client_connected_cb(self, client):
+        self.set_cursor = True
         while True:
             self.set_records(await self.ampd.playlistinfo())
+            if self.set_cursor:
+                self.treeview.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
+                self.set_cursor = False
             await self.ampd.idle(ampd.PLAYLIST)
 
     def data_func(self, column, renderer, store, i, j):
@@ -144,8 +155,8 @@ class __unit__(songlist.UnitWithSongList):
         super().__init__(name, manager)
 
         self.new_resource_provider('app.user-action').add_resources(
-            resource.UserAction('mod.playqueue-shuffle', _("Shuffle"), 'edit/module'),
-            resource.UserAction('mod.playqueue-go-to-current', _("Go to current song"), 'edit/module', ['<Control>z'])
+            resource.UserAction('mod.playqueue-shuffle', _("Shuffle"), 'edit/component'),
+            resource.UserAction('mod.playqueue-go-to-current', _("Go to current song"), 'edit/component', ['<Control>z'])
         )
 
         self.new_resource_provider('songlist.action').add_resources(

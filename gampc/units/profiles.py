@@ -22,6 +22,7 @@ from gi.repository import GObject
 from gi.repository import Gio
 
 import zeroconf as zeroconf_  # conflict with handler keyword argument
+import re
 
 from gampc.util import ssde
 from gampc.util import resource
@@ -95,17 +96,16 @@ class __unit__(unit.UnitWithConfig):
 
     def zeroconf_profiles_handler(self, zeroconf, service_type, name, state_change):
         info = zeroconf.get_service_info(service_type, name)
-        if name.endswith(ZEROCONF_MPD_TYPE):
-            name = name[:-len(ZEROCONF_MPD_TYPE) - 1]
-        if ' @ ' in name:
-            name = name.split(' @ ', 1)[1]
+        name_regexp = f'^(?P<name>[^\\[]*)(\\[[0-9]+\\])?\\.{ZEROCONF_MPD_TYPE}$'
+        match = re.fullmatch(name_regexp, name)
+        profile_name = match.group('name')
         if state_change == zeroconf_.ServiceStateChange.Added:
-            self.zeroconf_profiles[name] = dict(host=info.server, port=info.port)
+            self.zeroconf_profiles[profile_name] = dict(host=info.server, port=info.port)
             self.zeroconf_profiles = self.zeroconf_profiles  # emit notify signal
-            resource.MenuAction('app.server-profile-desired("{name}")'.format(name=name), name).insert_into(self.zeroconf_profile_menu)
+            resource.MenuAction(f'app.server-profile-desired("{profile_name}")', profile_name).insert_into(self.zeroconf_profile_menu)
         elif state_change == zeroconf_.ServiceStateChange.Removed:
-            resource.MenuAction('app.server-profile-desired("{name}")'.format(name=name), name).remove_from(self.zeroconf_profile_menu)
-            del self.zeroconf_profiles[name]
+            resource.MenuAction(f'app.server-profile-desired("{profile_name}")', profile_name).remove_from(self.zeroconf_profile_menu)
+            del self.zeroconf_profiles[profile_name]
             self.zeroconf_profiles = self.zeroconf_profiles  # emit notify signal
 
     def user_profiles_setup(self):

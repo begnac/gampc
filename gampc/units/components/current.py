@@ -28,7 +28,7 @@ import time
 import asyncio
 import ampd
 
-from gampc.util import module
+from gampc.util import component
 
 
 class PixbufCache(dict):
@@ -69,7 +69,7 @@ class PixbufCache(dict):
         return pixbuf
 
 
-class Current(module.Module):
+class Current(component.Component):
     title = _("Current Song")
     name = 'current'
     key = '0'
@@ -214,6 +214,6 @@ class Current(module.Module):
         image.set_from_pixbuf(pixbuf)
 
 
-class __unit__(module.UnitWithModule):
+class __unit__(component.UnitWithComponent):
     REQUIRED_UNITS = ['builder', 'persistent']
     MODULE_CLASS = Current

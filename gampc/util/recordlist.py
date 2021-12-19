@@ -25,11 +25,11 @@ from gi.repository import Gtk
 import ampd
 
 from .. import data
-from . import module
+from . import component
 from . import resource
 
 
-class RecordList(module.Module):
+class RecordList(component.Component):
     sortable = False
     duplicate_test_columns = []
     duplicate_field = '_duplicate'
