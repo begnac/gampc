@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2021 Itaï BEN YAACOV
+# Copyright (C) 2015-2022 Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,11 +37,19 @@ class Unit(GObject.Object):
         self.name = name
         self.manager = manager
         self.providers = []
-        for required in self.REQUIRED_UNITS:
-            setattr(self, 'unit_' + required, manager._use_unit(required))
+
+        loaded_required = []
+        try:
+            for required in self.REQUIRED_UNITS:
+                setattr(self, 'unit_' + required, manager._use_unit(required))
+                loaded_required.append(required)
+        except UnitLoadError:
+            for required in loaded_required:
+                self.manager._free_unit(required)
+            raise
 
     def shutdown(self):
-        logger.debug("Shutting down unit {self}".format(self=self))
+        logger.debug(f"Shutting down unit {self}")
         for required in reversed(self.REQUIRED_UNITS):
             self.manager._free_unit(required)
         del self.providers
@@ -66,10 +74,10 @@ class Unit(GObject.Object):
         logger.debug("Deleting {self}".format(self=self))
 
 
-class UnitWithCss(Unit):
+class UnitMixinCss:
     def __init__(self, name, manager):
         super().__init__(name, manager)
-        self.css_provider = Gtk.CssProvider.new()
+        self.css_provider = Gtk.CssProvider()
         self.css_provider.load_from_data(self.CSS)
         Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
@@ -78,27 +86,38 @@ class UnitWithCss(Unit):
         super().shutdown()
 
 
-class UnitWithConfig(Unit):
+class UnitMixinConfig:
     def __init__(self, name, manager):
         self.REQUIRED_UNITS = ['config'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
-        self.config = self.unit_config.config.subtree(name)
-        for name, default in self.get_keep_config_items():
-            self.config.access(name, default)
-
-    def get_keep_config_items(self):
-        yield from ()
+        self.config = self.unit_config.load_config(name)
 
 
-class UnitWithServer(Unit):
+class UnitMixinServer:
     def __init__(self, name, manager):
         self.REQUIRED_UNITS = ['server'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
         self.ampd = self.unit_server.ampd_client.executor.sub_executor()
 
+        self.unit_server.ampd_client.connect('client-connected', self.client_connected_cb)
+        if self.ampd.get_is_connected():
+            self.client_connected_cb(self.unit_server.ampd_client)
+
     def shutdown(self):
+        self.unit_server.ampd_client.disconnect_by_func(self.client_connected_cb)
         self.ampd.close()
         super().shutdown()
+
+    @staticmethod
+    def client_connected_cb(client):
+        pass
+
+
+class UnitMixinCache:
+    def __init__(self, name, manager):
+        self.REQUIRED_UNITS = ['cache'] + self.REQUIRED_UNITS
+        super().__init__(name, manager)
+        self.cache = manager.get_unit('cache')
 
 
 class UnitManager(GObject.Object):
@@ -109,11 +128,17 @@ class UnitManager(GObject.Object):
         self._aggregators = []
 
     def set_target(self, *target):
+        real_target = []
         for name in target:
-            self._use_unit(name)
+            try:
+                self._use_unit(name)
+                real_target.append(name)
+            except UnitLoadError:
+                pass
         for name in reversed(self._target):
             self._free_unit(name)
-        self._target = target
+        self._target = real_target
+        return real_target
 
     def get_unit(self, name):
         return self._units[name]

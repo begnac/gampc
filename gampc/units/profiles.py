@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015 Itaï BEN YAACOV
+# Copyright (C) 2015-2022 Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,43 +21,61 @@
 from gi.repository import GObject
 from gi.repository import Gio
 
-import zeroconf as zeroconf_  # conflict with handler keyword argument
+import zeroconf
+import zeroconf.asyncio
 import re
+import asyncio
 
-from gampc.util import ssde
-from gampc.util import resource
-from gampc.util import unit
+from ..util import ssde
+from ..util import resource
+from ..util import unit
 
 
 ZEROCONF_MPD_TYPE = '_mpd._tcp.local.'
+ZEROCONF_NAME_REGEXP = f'^(?P<name>[^\\[]*)(\\[[0-9]+\\])?\\.{ZEROCONF_MPD_TYPE}$'
 
 
-class __unit__(unit.UnitWithConfig):
+class Profile:
+    def __init__(self, name, address=None):
+        self.name = name
+        self.address = address
+
+    @staticmethod
+    def from_repr(profile_repr):
+        if '=' in profile_repr:
+            address, name = profile_repr.split('=', 1)
+        else:
+            address = profile_repr
+            name = _("Unknown profile")
+        return Profile(name, address)
+
+    def get_action(self):
+        return resource.MenuAction(f'app.server-profile("{self}")', self.name)
+
+    def __repr__(self):
+        return f'{self.address}={self.name}'
+
+
+class __unit__(unit.UnitMixinConfig, unit.Unit):
     REQUIRED_UNITS = ['menubar']
 
-    LOCAL_HOST = _("Local host")
-
-    zeroconf_profiles = GObject.Property()
-    user_profiles = GObject.Property()
-    profiles = GObject.Property()
+    LOCAL_HOST_NAME = _("Local host")
+    LOCAL_HOST_ADDRESS = 'localhost:6600'
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
-        self.config.access('profiles',
-                           [
-                               {
-                                   'name': self.LOCAL_HOST,
-                                   'host': 'localhost',
-                                   'port': 6600,
-                               },
-                           ])
+        default_profiles = [
+            {
+                'name': self.LOCAL_HOST_NAME,
+                'address': self.LOCAL_HOST_ADDRESS,
+            },
+        ]
 
-        self.zeroconf_profiles = self.user_profiles = self.profiles = {}
-        self.connect('notify::zeroconf-profiles', self.notify_profiles_cb)
-        self.connect('notify::user-profiles', self.notify_profiles_cb)
         self.zeroconf_profile_menu = Gio.Menu()
         self.user_profile_menu = Gio.Menu()
         self.zeroconf_profiles_setup()
+
+        self.config.profiles._get(default=default_profiles)
         self.user_profiles_setup()
 
         self.new_resource_provider('app.action').add_resources(
@@ -65,10 +83,10 @@ class __unit__(unit.UnitWithConfig):
         )
 
         self.new_resource_provider('app.menu').add_resources(
-            resource.MenuPath('server/profiles/profiles', _("_Profiles"), is_submenu=True),
-            resource.MenuPath('server/profiles/profiles/zeroconf', instance=self.zeroconf_profile_menu),
-            resource.MenuPath('server/profiles/profiles/user', instance=self.user_profile_menu),
-            resource.MenuAction('server/profiles/profiles/app.edit-user-profiles', _("Edit profiles")),
+            resource.MenuPath('server/profiles/profiles_menu', _("_Profiles"), is_submenu=True),
+            resource.MenuPath('server/profiles/profiles_menu/zeroconf', instance=self.zeroconf_profile_menu),
+            resource.MenuPath('server/profiles/profiles_menu/user', instance=self.user_profile_menu),
+            resource.MenuAction('server/profiles/profiles_menu/app.edit-user-profiles', _("Edit profiles")),
         )
 
         self.user_profiles_struct = ssde.List(
@@ -76,58 +94,47 @@ class __unit__(unit.UnitWithConfig):
             substruct=ssde.Dict(
                 label=_("Profile"),
                 substructs=[
-                    ssde.Text(name='name', label=_("Name")),
-                    ssde.Text(name='host', label=_("Host")),
-                    ssde.Integer(name='port', label=_("Port"), default=6600, min_value=0),
+                    ssde.Text(name='name', label=_("Name"), default=_("<Name>")),
+                    ssde.Text(name='address', label=_("[Password@]Host:Port"), default=_("<Host>") + ':6600'),
                 ]))
 
     def shutdown(self):
         super().shutdown()
-        self.zeroconf_profiles_cleanup()
-        self.disconnect_by_func(self.notify_profiles_cb)
-        self.disconnect_by_func(self.notify_profiles_cb)
+        asyncio.get_event_loop().run_without_glib_until_complete(self.zeroconf_profiles_cleanup())
 
     def zeroconf_profiles_setup(self):
-        self.zeroconf_profile_browser = zeroconf_.ServiceBrowser(zeroconf_.Zeroconf(), ZEROCONF_MPD_TYPE, handlers=[self.zeroconf_profiles_handler])
+        self.zc_menu_actions = {}
+        self.azc = zeroconf.asyncio.AsyncZeroconf()
+        self.asb = zeroconf.asyncio.AsyncServiceBrowser(self.azc.zeroconf, ZEROCONF_MPD_TYPE, handlers=[lambda **kwargs: asyncio.ensure_future(self.zeroconf_profiles_handler(**kwargs))])
 
-    def zeroconf_profiles_cleanup(self):
-        self.zeroconf_profile_browser.cancel()
-        del self.zeroconf_profile_browser
+    async def zeroconf_profiles_cleanup(self):
+        await self.asb.async_cancel()
+        await self.azc.async_close()
 
-    def zeroconf_profiles_handler(self, zeroconf, service_type, name, state_change):
-        info = zeroconf.get_service_info(service_type, name)
-        name_regexp = f'^(?P<name>[^\\[]*)(\\[[0-9]+\\])?\\.{ZEROCONF_MPD_TYPE}$'
-        match = re.fullmatch(name_regexp, name)
-        profile_name = match.group('name')
-        if state_change == zeroconf_.ServiceStateChange.Added:
-            self.zeroconf_profiles[profile_name] = dict(host=info.server, port=info.port)
-            self.zeroconf_profiles = self.zeroconf_profiles  # emit notify signal
-            resource.MenuAction(f'app.server-profile-desired("{profile_name}")', profile_name).insert_into(self.zeroconf_profile_menu)
-        elif state_change == zeroconf_.ServiceStateChange.Removed:
-            resource.MenuAction(f'app.server-profile-desired("{profile_name}")', profile_name).remove_from(self.zeroconf_profile_menu)
-            del self.zeroconf_profiles[profile_name]
-            self.zeroconf_profiles = self.zeroconf_profiles  # emit notify signal
+        del self.asb
+
+    async def zeroconf_profiles_handler(self, service_type, name, state_change, **kwargs):
+        match = re.fullmatch(ZEROCONF_NAME_REGEXP, name)
+        short_name = match.group('name')
+        if state_change in (zeroconf.ServiceStateChange.Removed, zeroconf.ServiceStateChange.Updated) and short_name in self.zc_menu_actions:
+            menu_action = self.zc_menu_actions.pop(short_name)
+            menu_action.remove_from(self.zeroconf_profile_menu)
+        if state_change in (zeroconf.ServiceStateChange.Added, zeroconf.ServiceStateChange.Updated) and short_name not in self.zc_menu_actions:
+            info = await self.azc.async_get_service_info(service_type, name)
+            profile = Profile(short_name, f'{info.server[:-1]}:{info.port}')
+            menu_action = profile.get_action()
+            menu_action.insert_into(self.zeroconf_profile_menu)
+            self.zc_menu_actions[short_name] = menu_action
 
     def user_profiles_setup(self):
         self.user_profile_menu.remove_all()
-        new_user_profiles = {}
-        for profile in self.config.profiles:
-            resource.MenuAction('app.server-profile-desired("{name}")'.format_map(profile), profile['name']).insert_into(self.user_profile_menu)
-            profile = dict(profile)
-            name = profile.pop('name')
-            new_user_profiles[name] = profile
-        self.user_profiles = new_user_profiles
+        for profile in self.config.profiles._get():
+            Profile(**profile).get_action().insert_into(self.user_profile_menu)
 
     def edit_user_profiles_cb(self, *args):
-        value = self.user_profiles_struct.edit(None, self.config.profiles,
-                                               self.config.access(self.unit_config.CONFIG_EDIT_DIALOG_SIZE, [500, 500]))
+        value = self.user_profiles_struct.edit(None, self.config.profiles._get(), self.config.edit_dialog_size._get(default=[500, 500]))
         if value:
-            self.config.profiles = value
+            self.config.profiles._set(value)
             self.user_profiles_setup()
 
-    @staticmethod
-    def notify_profiles_cb(self, param):
-        new_profiles = {}
-        new_profiles.update(self.zeroconf_profiles)
-        new_profiles.update(self.user_profiles)
-        self.profiles = new_profiles
+    profile_from_repr = staticmethod(Profile.from_repr)

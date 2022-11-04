@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015 Itaï BEN YAACOV
+# Copyright (C) 2015-2022 Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -51,16 +51,9 @@ class App(Gtk.Application):
     def __del__(self):
         logger.debug('Deleting {}'.format(self))
 
-    def run(self, argv):
-        self.connect('startup', self.startup_cb),
-        self.connect('shutdown', self.shutdown_cb),
-        self.connect('handle-local-options', self.handle_local_options_cb),
-        self.connect('command-line', self.command_line_cb),
-        self.connect('activate', self.activate_cb),
-        super().run(argv)
+    def do_startup(self):
+        Gtk.Application.do_startup(self)
 
-    @staticmethod
-    def startup_cb(self):
         logger.debug("Starting")
 
         self.event_loop = gasyncio.GAsyncIOEventLoop()
@@ -73,12 +66,19 @@ class App(Gtk.Application):
         self.set_menubar(self.menubar)
 
         self.unit_manager = unit.UnitManager()
-        self.unit_manager.set_target('config')
-        default_units = ['config', 'menubar', 'misc', 'profiles', 'server', 'partition', 'persistent', 'playback', 'tango-velours',
-                         'component', 'window',
-                         'components.current', 'components.playqueue', 'components.browser', 'components.search', 'components.stream', 'components.playlist', 'components.command', 'components.log', 'components.savedsearch']
-        self.unit_manager.get_unit('config').config.access('units', default_units)
-        self.unit_manager.set_target(*self.unit_manager.get_unit('config').config.units)
+        # self.unit_manager.set_target('config')
+        # self.unit_config = self.unit_manager.get_unit('config')
+
+        default_units = [
+            'menubar', 'misc', 'profiles', 'server',
+            'output', 'persistent',
+            'playback', 'window',
+            'current', 'playqueue', 'browser', 'search', 'stream', 'playlist', 'tanda', 'command', 'log'
+        ]
+
+        # units = self.unit_manager.get_unit('config').config.access('units', default_units)
+        # self.unit_config.config.units =
+        self.unit_manager.set_target(*default_units)
 
         self.unit_misc = self.unit_manager.get_unit('misc')
         self.unit_server = self.unit_manager.get_unit('server')
@@ -86,9 +86,8 @@ class App(Gtk.Application):
         self.unit_component = self.unit_manager.get_unit('component')
         self.unit_window = self.unit_manager.get_unit('window')
 
-        self.action_aggregator = self.unit_manager.create_aggregator('app.action', self.action_added_cb, self.action_removed_cb),
-        self.menu_aggregator = self.unit_manager.create_aggregator('app.menu', self.menu_added_cb, self.menu_removed_cb),
-        self.user_action_aggregator = self.unit_manager.create_aggregator('app.user-action', self.user_action_added_cb, self.user_action_removed_cb)
+        self.action_aggregator = self.unit_manager.create_aggregator('app.action', self.action_added_cb, self.action_removed_cb)
+        self.menu_aggregator = self.unit_manager.create_aggregator('app.menu', self.menu_item_added_cb, self.menu_item_removed_cb)
 
         self.unit_misc.connect('notify::block-fragile-accels', self.notify_block_fragile_accels_cb)
 
@@ -112,19 +111,16 @@ class App(Gtk.Application):
         self.add_action(resource.Action('component-start-new-window', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
         self.add_action(resource.Action('component-stop', self.component_stop_cb))
 
-        # self.add_action(resource.Action('BAD', self.THIS_IS_BAD_cb))
-
         self.unit_server.ampd_connect()
 
-    @staticmethod
-    def shutdown_cb(self):
+    def do_shutdown(self):
         logger.debug("Shutting down")
+
         self.unit_server.ampd_server_properties.disconnect_by_func(self.set_inhibit)
         self.unit_persistent.disconnect_by_func(self.set_inhibit)
         self.unit_misc.disconnect_by_func(self.notify_block_fragile_accels_cb)
         self.unit_manager.set_target()
         del self.unit_manager
-        del self.user_action_aggregator
         del self.menu_aggregator
         del self.action_aggregator
 
@@ -142,32 +138,37 @@ class App(Gtk.Application):
         del self.excepthook_orig
 
         self.event_loop.stop_slave_loop()
-        self.event_loop.stop()
         self.event_loop.close()
 
         GLib.source_remove(self.sigint_source)
 
-    @staticmethod
-    def handle_local_options_cb(self, options):
-        if options.contains('non-unique'):
-            self.set_flags(self.get_flags() | Gio.ApplicationFlags.NON_UNIQUE)
-        if options.contains('debug'):
-            logging.getLogger().setLevel(logging.DEBUG)
+        Gtk.Application.do_shutdown(self)
+
+    def do_handle_local_options(self, options):
         if options.contains('version'):
             print(_("{program} version {version}").format(program=__program_name__, version=__version__))
-        elif options.contains('copyright'):
+            return 0
+
+        if options.contains('copyright'):
             print(__copyright__)
             print(__license__)
-        elif options.contains('list-actions'):
+            return 0
+
+        if options.contains('list-actions'):
             self.register()
             for name in sorted(self.list_actions()):
                 print(name)
-        else:
-            return -1
-        return 0
+            return 0
 
-    @staticmethod
-    def command_line_cb(self, command_line):
+        if options.contains('non-unique'):
+            self.set_flags(self.get_flags() | Gio.ApplicationFlags.NON_UNIQUE)
+
+        if options.contains('debug'):
+            logging.getLogger().setLevel(logging.DEBUG)
+
+        return Gtk.Application.do_handle_local_options(self, options)
+
+    def do_command_line(self, command_line):
         options = command_line.get_options_dict().end().unpack()
         if GLib.OPTION_REMAINING in options:
             for option in options[GLib.OPTION_REMAINING]:
@@ -184,8 +185,8 @@ class App(Gtk.Application):
             self.activate()
         return 0
 
-    @staticmethod
-    def activate_cb(self, *args):
+    def do_activate(self):
+        Gtk.Application.do_activate(self)
         win = self.get_active_window()
         if win:
             win.present()
@@ -213,8 +214,9 @@ class App(Gtk.Application):
         return g
 
     def notify_block_fragile_accels_cb(self, unit_misc, param):
-        for user_action in self.user_action_aggregator.get_resources():
-            self.set_accels_for_action(user_action.action, [] if self.unit_misc.block_fragile_accels and user_action.accels_fragile else user_action.accels)
+        for menu_item in self.menu_aggregator.get_resources():
+            if isinstance(menu_item, resource.UserAction):
+                self.set_accels_for_action(menu_item.action, [] if self.unit_misc.block_fragile_accels and menu_item.accels_fragile else menu_item.accels)
 
     def action_added_cb(self, aggregator, action):
         self.add_action(action.generate(self.task_hold_app, self.unit_persistent))
@@ -222,20 +224,15 @@ class App(Gtk.Application):
     def action_removed_cb(self, aggregator, action):
         self.remove_action(action.get_name())
 
-    def menu_added_cb(self, aggregator, menu):
-        menu.insert_into(self.menubar)
+    def menu_item_added_cb(self, aggregator, menu_item):
+        menu_item.insert_into(self.menubar)
+        if isinstance(menu_item, resource.UserAction) and not (self.unit_misc.block_fragile_accels and menu_item.accels_fragile):
+            self.set_accels_for_action(menu_item.action, menu_item.accels)
 
-    def menu_removed_cb(self, aggregator, menu):
-        menu.remove_from(self.menubar)
-
-    def user_action_added_cb(self, aggregator, user_action):
-        user_action.get_menu_action().insert_into(self.menubar)
-        if not self.unit_misc.block_fragile_accels or not user_action.accels_fragile:
-            self.set_accels_for_action(user_action.action, user_action.accels)
-
-    def user_action_removed_cb(self, aggregator, user_action):
-        user_action.get_menu_action().remove_from(self.menubar)
-        self.set_accels_for_action(user_action.action, [])
+    def menu_item_removed_cb(self, aggregator, menu_item):
+        menu_item.remove_from(self.menubar)
+        if isinstance(menu_item, resource.UserAction):
+            self.set_accels_for_action(menu_item.action, [])
 
     def new_window_cb(self, action, parameter):
         component = self.unit_component.get_component('current', False)
@@ -271,7 +268,7 @@ class App(Gtk.Application):
         return True
 
     def about_cb(self, *args):
-        dialog = Gtk.AboutDialog(parent=self.get_active_window(), program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=Gtk.License.GPL_3_0, logo_icon_name='face-cool', website='http://math.univ-lyon1.fr/~begnac', website_label=_("Author's website"))
+        dialog = Gtk.AboutDialog(parent=self.get_active_window(), program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=Gtk.License.GPL_3_0, logo_icon_name='face-cool-gampc', website='http://math.univ-lyon1.fr/~begnac', website_label=_("Author's website"))
         dialog.run()
         dialog.destroy()
 
@@ -279,21 +276,35 @@ class App(Gtk.Application):
         window = Gtk.ShortcutsWindow(title="Window", transient_for=self.get_active_window(), modal=True)
         # window.set_application(self)
 
-        section = Gtk.ShortcutsSection(title="Section", section_name="CC")
-        section.show()
+        section_labels = {}
+        section_order = []
+        items_by_section = {}
+        for menu_item in self.menu_aggregator.get_resources():
+            if '/' not in menu_item.path:
+                section_labels[menu_item.path] = menu_item.label.replace('_', '')
+                section_order.append(menu_item.path)
+            elif isinstance(menu_item, resource.UserAction) and menu_item.accels:
+                print(menu_item.name, self.lookup_action(menu_item.name.split('.')[1]))
+                name = menu_item.path[:menu_item.path.find('/')]
+                if name not in items_by_section:
+                    items_by_section[name] = []
+                items_by_section[name].append(menu_item)
+
+        section = Gtk.ShortcutsSection(title=None, section_name='section', visible=True)
         window.add(section)
 
-        group = Gtk.ShortcutsGroup(title="Group")
-        section.add(group)
-
-        for user_action in self.user_action_aggregator.get_resources():
-            if not user_action.accels:
+        for name in section_order:
+            if name not in items_by_section:
                 continue
-            shortcut = Gtk.ShortcutsShortcut(accelerator=' '.join(user_action.accels),
-                                             title=user_action.label)
-            group.add(shortcut)
+            group = Gtk.ShortcutsGroup(title=section_labels[name], name=name, visible=True)
+            section.add(group)
 
-        window.show_all()
+            for menu_item in items_by_section[name]:
+                shortcut = Gtk.ShortcutsShortcut(accelerator=' '.join(menu_item.accels),
+                                                 title=menu_item.label.replace('_', ''), visible=True)
+                group.add(shortcut)
+
+        window.show()
 
     @ampd.task
     async def action_notify_cb(self, *args):
@@ -329,24 +340,3 @@ class App(Gtk.Application):
         else:
             self.session_inhibit_cookie = self.session_inhibit_cookie and self.uninhibit(self.session_inhibit_cookie)
             self.systemd_inhibit_fd = None
-
-    def THIS_IS_BAD_cb(self, action, param):
-        pass
-        # window = Gtk.ShortcutsWindow(title="Window", transient_for=self.get_active_window(), modal=True)
-        # # window.set_application(self)
-
-        # section = Gtk.ShortcutsSection(title="Section", section_name="CC")
-        # section.show()
-        # window.add(section)
-
-        # group = Gtk.ShortcutsGroup(title="Group")
-        # section.add(group)
-
-        # for user_action in self.user_action_aggregator.get_resources():
-        #     if not user_action.accels:
-        #         continue
-        #     shortcut = Gtk.ShortcutsShortcut(accelerator=' '.join(user_action.accels),
-        #                                      title=user_action.label)
-        #     group.add(shortcut)
-
-        # window.show_all()

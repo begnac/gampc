@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015 Itaï BEN YAACOV
+# Copyright (C) 2015-2022 Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,10 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gio
-
-from gampc.util import resource
-from gampc.util import unit
+from ..util import resource
+from ..util import unit
 
 
 class __unit__(unit.Unit):
@@ -45,15 +43,11 @@ class __unit__(unit.Unit):
 
             resource.MenuPath('server/server'),
             resource.MenuPath('server/profiles'),
-        )
-
-        self.new_resource_provider('app.user-action').add_resources(
             resource.UserAction('app.new-window', _("New window"), 'gampc/window', ['<Control>n']),
             resource.UserAction('app.close-window', _("Close window"), 'gampc/window', ['<Control>w']),
             resource.UserAction('win.toggle-fullscreen', _("Fullscreen window"), 'gampc/window', ['<Alt>f']),
             resource.UserAction('win.volume-popup', _("Adjust volume"), 'gampc/window', ['<Alt>v']),
             resource.UserAction('app.quit', _("Quit"), 'gampc/app', ['<Control>q']),
-            resource.UserAction('app.BAD', "BAD", 'gampc/app', ['<Control><Alt>z']),
 
             resource.UserAction('app.help', _("Help"), 'help', ['<Control>h', 'F1']),
             resource.UserAction('app.about', _("About"), 'help'),

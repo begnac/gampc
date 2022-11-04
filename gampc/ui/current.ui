@@ -1,60 +1,41 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.20.0 
-
-Copyright (C) 
-
-This file is part of .
-
- is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
- is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with .  If not, see <http://www.gnu.org/licenses/>.
-
--->
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.11.3 -->
 <interface>
+  <!-- interface-name current.ui -->
+  <!-- interface-copyright Itaï BEN YAACOV -->
   <requires lib="gtk+" version="3.20"/>
-  <!-- interface-license-type gplv3 -->
   <object class="GtkEventBox" id="widget">
+    <property name="can-focus">False</property>
     <property name="visible">True</property>
-    <property name="can_focus">False</property>
     <child>
       <object class="GtkBox">
-        <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="margin_left">20</property>
-        <property name="margin_right">20</property>
-        <property name="margin_top">20</property>
-        <property name="margin_bottom">20</property>
+        <property name="can-focus">False</property>
+        <property name="margin-bottom">20</property>
+        <property name="margin-left">20</property>
+        <property name="margin-right">20</property>
+        <property name="margin-top">20</property>
         <property name="orientation">vertical</property>
+        <property name="visible">True</property>
         <child>
           <object class="GtkBox" id="welcome">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
+            <property name="can-focus">False</property>
             <property name="spacing">50</property>
+            <property name="visible">True</property>
             <child>
               <object class="GtkLabel">
+                <property name="can-focus">False</property>
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
               </object>
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
-                <property name="position">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkImage" id="image-icon">
+                <property name="can-focus">False</property>
+                <property name="icon-name">face-cool-gampc</property>
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="icon_name">face-cool</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -64,9 +45,9 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
             </child>
             <child>
               <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
+                <property name="can-focus">False</property>
                 <property name="label">GAMPC</property>
+                <property name="visible">True</property>
                 <attributes>
                   <attribute name="font-desc" value="Sans Bold"/>
                   <attribute name="scale" value="5"/>
@@ -80,8 +61,8 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="can-focus">False</property>
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -96,34 +77,33 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
           <packing>
             <property name="expand">True</property>
             <property name="fill">True</property>
-            <property name="position">0</property>
           </packing>
         </child>
         <child>
           <object class="GtkBox" id="current">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="orientation">vertical</property>
+            <property name="can-focus">False</property>
             <property name="homogeneous">True</property>
+            <property name="orientation">vertical</property>
+            <property name="visible">True</property>
             <child>
               <object class="GtkBox">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="spacing">50</property>
+                <property name="can-focus">False</property>
                 <property name="homogeneous">True</property>
+                <property name="spacing">50</property>
+                <property name="visible">True</property>
                 <child>
                   <object class="GtkBox">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
+                    <property name="can-focus">False</property>
                     <property name="orientation">vertical</property>
+                    <property name="visible">True</property>
                     <child>
                       <object class="GtkLabel" id="label-artist">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label">artist</property>
-                        <property name="wrap">True</property>
+                        <property name="can-focus">False</property>
                         <property name="ellipsize">middle</property>
+                        <property name="label">artist</property>
                         <property name="lines">3</property>
+                        <property name="visible">True</property>
+                        <property name="wrap">True</property>
                         <attributes>
                           <attribute name="font-desc" value="Serif Bold"/>
                           <attribute name="scale" value="2"/>
@@ -135,12 +115,11 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
                       <packing>
                         <property name="expand">True</property>
                         <property name="fill">True</property>
-                        <property name="position">0</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkImage" id="image-artist">
-                        <property name="can_focus">False</property>
+                        <property name="can-focus">False</property>
                         <property name="stock">gtk-missing-image</property>
                       </object>
                       <packing>
@@ -151,7 +130,7 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
                     </child>
                     <child>
                       <object class="GtkLabel" id="image-label-artist">
-                        <property name="can_focus">False</property>
+                        <property name="can-focus">False</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -163,22 +142,21 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
-                    <property name="position">0</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkBox">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
+                    <property name="can-focus">False</property>
                     <property name="orientation">vertical</property>
+                    <property name="visible">True</property>
                     <child>
                       <object class="GtkLabel" id="label-performer">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label">performer</property>
-                        <property name="wrap">True</property>
+                        <property name="can-focus">False</property>
                         <property name="ellipsize">middle</property>
+                        <property name="label">performer</property>
                         <property name="lines">3</property>
+                        <property name="visible">True</property>
+                        <property name="wrap">True</property>
                         <attributes>
                           <attribute name="font-desc" value="Sans"/>
                           <attribute name="scale" value="2"/>
@@ -190,12 +168,11 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
                       <packing>
                         <property name="expand">True</property>
                         <property name="fill">True</property>
-                        <property name="position">0</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkImage" id="image-performer">
-                        <property name="can_focus">False</property>
+                        <property name="can-focus">False</property>
                         <property name="stock">gtk-missing-image</property>
                       </object>
                       <packing>
@@ -206,7 +183,7 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
                     </child>
                     <child>
                       <object class="GtkLabel" id="image-label-performer">
-                        <property name="can_focus">False</property>
+                        <property name="can-focus">False</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -225,20 +202,19 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkBox">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
+                <property name="can-focus">False</property>
                 <property name="orientation">vertical</property>
+                <property name="visible">True</property>
                 <child>
                   <object class="GtkLabel" id="label-title">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label">title</property>
+                    <property name="can-focus">False</property>
                     <property name="ellipsize">middle</property>
+                    <property name="label">title</property>
+                    <property name="visible">True</property>
                     <attributes>
                       <attribute name="font-desc" value="Sans Bold Italic"/>
                       <attribute name="scale" value="3"/>
@@ -250,20 +226,19 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
                   <packing>
                     <property name="expand">True</property>
                     <property name="fill">True</property>
-                    <property name="position">0</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkBox">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
+                    <property name="can-focus">False</property>
                     <property name="halign">center</property>
                     <property name="spacing">14</property>
+                    <property name="visible">True</property>
                     <child>
                       <object class="GtkLabel" id="label-genre">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
+                        <property name="can-focus">False</property>
                         <property name="label">genre</property>
+                        <property name="visible">True</property>
                         <attributes>
                           <attribute name="font-desc" value="Serif"/>
                         </attributes>
@@ -271,14 +246,13 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">0</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkLabel">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
+                        <property name="can-focus">False</property>
                         <property name="label">/</property>
+                        <property name="visible">True</property>
                         <attributes>
                           <attribute name="font-desc" value="Serif"/>
                         </attributes>
@@ -291,9 +265,9 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
                     </child>
                     <child>
                       <object class="GtkLabel" id="label-date">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
+                        <property name="can-focus">False</property>
                         <property name="label">date</property>
+                        <property name="visible">True</property>
                         <attributes>
                           <attribute name="font-desc" value="Serif"/>
                         </attributes>
@@ -306,9 +280,9 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
                     </child>
                     <child>
                       <object class="GtkLabel">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
+                        <property name="can-focus">False</property>
                         <property name="label">/</property>
+                        <property name="visible">True</property>
                         <attributes>
                           <attribute name="font-desc" value="Serif"/>
                         </attributes>
@@ -321,10 +295,10 @@ along with .  If not, see <http://www.gnu.org/licenses/>.
                     </child>
                     <child>
                       <object class="GtkLabel" id="label-composer">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label">composer</property>
+                        <property name="can-focus">False</property>
                         <property name="ellipsize">middle</property>
+                        <property name="label">composer</property>
+                        <property name="visible">True</property>
                         <attributes>
                           <attribute name="font-desc" value="Serif"/>
                         </attributes>

@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015 Itaï BEN YAACOV
+# Copyright (C) 2015-2022 Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -66,21 +66,27 @@ class Connection(object):
 
 
 class Database(object):
-    def __init__(self, name):
+    def __init__(self, name, *, cache=False):
         super().__init__()
         self.name = name
+        self.cache = cache
         self.get_connection()
         self.setup_database()
 
     def get_connection(self):
-        self.connection = Connection(os.path.join(xdg.BaseDirectory.save_data_path('gampc'), self.name + '.sqlite'))
+        base_path = xdg.BaseDirectory.save_cache_path('gampc') if self.cache else xdg.BaseDirectory.save_data_path('gampc')
+        self.connection = Connection(os.path.join(base_path, self.name + '.sqlite'))
         self.connection.cursor().execute('PRAGMA foreign_keys=ON')
 
     def setup_table(self, table, definition, columns=[]):
         cursor = self.connection.cursor()
-        cursor.execute('CREATE TABLE IF NOT EXISTS {}({})'.format(table, definition))
+        cursor.execute(f'CREATE TABLE IF NOT EXISTS {table}({definition})')
         for column in columns:
             try:
-                cursor.execute('ALTER TABLE {} ADD COLUMN {}'.format(table, column))
+                cursor.execute(f'ALTER TABLE {table} ADD COLUMN {column}')
             except apsw.SQLError:
                 pass
+
+    @staticmethod
+    def _tuple_to_dict(t, names):
+        return {name: t[i] for i, name in enumerate(names) if t[i] is not None}

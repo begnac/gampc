@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015 Itaï BEN YAACOV
+# Copyright (C) 2015-2022 Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,9 +30,11 @@ gettext.install('gampc', os.path.join(os.path.dirname(__file__), 'locale'))
 
 
 __program_name__ = "Graphical Asyncronous Music Player Client"
-__program_description__ = _("A Music Player Daemon client written in Python/Gtk+3, using asynchronous communication")
+__program_description__ = \
+    _("A Music Player Daemon client written in Python/Gtk+3, using"
+      " asynchronous communication")
 __author__ = "Itaï BEN YAACOV"
-__copyright__ = "© 2015 " + __author__
+__copyright__ = "© 2015-2022 " + __author__
 __license__ = _("""\
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -47,4 +49,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """)
-__version__ = '0.3.0'
+__version__ = '0.3.1'

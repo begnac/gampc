@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015 Itaï BEN YAACOV
+# Copyright (C) 2015-2022 Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,86 +22,114 @@ import xdg.BaseDirectory
 import json
 import os
 
-from gampc.util import unit
-from gampc.util.logger import logger
+from ..util import unit
+from ..util.logger import logger
 
 
-class ConfigTree(object):
+class ConfigNode(object):
     def __init__(self, name, base=None):
-        if base is None:
-            self.__dict__.update(_base={}, _name=name + '/', _dict={}, _loaded=set())
-            self._load(name)
-        else:
-            self.__dict__.update(_base=base, _name=name + '/', _dict={}, _loaded=set())
+        self._name = name
+        self._base = base
+        self._is_leaf = None
+        self._value = None
 
     def __del__(self):
         logger.debug("Deleting config {}".format(self._name))
 
-    def subtree(self, name):
-        self._loaded.add(name)
-        result = self.access(name, {})
-        result._load(name)
-        return result
+    def _get(self, *, default=None):
+        if self._is_leaf is False:
+            raise RuntimeError
 
-    def _load(self, name):
-        self.__dict__['_filename'] = name + '.json'
+        if self._is_leaf is None:
+            self._is_leaf = True
+            self._value = self._base if self._base is not None else default
+
+        return self._value
+
+    def _set(self, value):
+        if self._is_leaf is False:
+            raise RuntimeError(self._name)
+
+        self._is_leaf = True
+        self._value = value
+
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            return super().__getattr__(name)
+        subnode = self._subnode(name)
+        return subnode
+
+    __getitem__ = __getattr__
+
+    def _subnode(self, name, default=None):
+        if self._is_leaf is True:
+            raise RuntimeError(self._name, name)
+
+        if self._is_leaf is None:
+            self._is_leaf = False
+            self._value = {}
+            if self._base is None:
+                self._base = {}
+            if not isinstance(self._base, dict):
+                raise RuntimeError(self._name)
+        elif name in self._value:
+            return self._value[name]
+
+        subnode = ConfigNode('.'.join((self._name, name)), self._base.get(name, default))
+        self._value[name] = subnode
+        return subnode
+
+    def _get_tree(self):
+        if self._is_leaf is False:
+            return {name: subnode._get_tree() for name, subnode in self._value.items()}
+        else:
+            return self._value
+
+    def __str__(self):
+        return "{}: {} | {}".format(self._name, self._get_tree(), self._base)
+
+
+class LoadedConfigNode(ConfigNode):
+    def __init__(self, name):
+        super().__init__(name)
+        self._load()
+        self._is_leaf = False
+        self._value = {}
+
+    def _load(self):
+        self._filename = self._name + '.json'
 
         for path in xdg.BaseDirectory.load_config_paths('gampc'):
             fullpath = os.path.join(path, self._filename)
             if os.path.exists(fullpath):
                 self._base = json.loads(open(fullpath, 'rb').read().decode('utf-8'))
                 break
+        else:
+            self._base = {}
 
-    def save(self):
-        for name in self._loaded:
-            self._dict[name].save()
-            del self._dict[name]
-        to_save = self.get_dict()
+    def _save(self):
         path = os.path.join(xdg.BaseDirectory.save_config_path('gampc'), self._filename)
-        if to_save:
-            s = json.dumps(to_save, sort_keys=True, indent=2, ensure_ascii=False)
+        tree = self._get_tree()
+        if tree:
+            s = json.dumps(tree, sort_keys=True, indent=2, ensure_ascii=False) + '\n'
             open(path, 'wb').write(s.encode('utf-8'))
         elif os.path.exists(path):
             os.remove(path)
 
-    def __getattr__(self, name):
-        return self.access(name)
-
-    def __setattr__(self, name, value):
-        if name in self.__dict__:
-            self.__dict__[name] = value
-        else:
-            self[name] = value
-
-    __getitem__ = __getattr__
-
-    def __setitem__(self, name, value):
-        self._dict[name.replace('_', '-')] = value
-
-    def get_dict(self):
-        return {key: value.get_dict() if isinstance(value, ConfigTree) else value for key, value in self._dict.items()}
-
-    def access(self, name, default={}):
-        name = name.replace('_', '-')
-        if name not in self._dict:
-            self._dict[name] = self.access_base(name, default)
-        return self._dict[name]
-
-    def access_base(self, name, default):
-        value = self._base.get(name, default)
-        return ConfigTree(self._name + name, value) if isinstance(value, dict) else value
-
-    def __str__(self):
-        return "{}: {} | {}".format(self._name, self.get_dict(), self._base)
-
 
 class __unit__(unit.Unit):
-    CONFIG_EDIT_DIALOG_SIZE = 'edit-dialog-size'
-
     def __init__(self, name, manager):
         super().__init__(name, manager)
-        self.config = ConfigTree('config')
+        self.config_trees = {}
 
     def shutdown(self):
         super().shutdown()
-        self.config.save()
+        for config_tree in self.config_trees.values():
+            config_tree._save()
+
+    def load_config(self, name):
+        if name in self.config_trees:
+            raise RuntimeError
+        config_tree = LoadedConfigNode(name)
+        self.config_trees[name] = config_tree
+        return config_tree

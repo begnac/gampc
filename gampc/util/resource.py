@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2021 Itaï BEN YAACOV
+# Copyright (C) 2015-2022 Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -94,7 +94,7 @@ class MenuAction(MenuPathBase):
         return item
 
 
-class UserAction(GObject.Object):
+class UserAction(MenuAction, GObject.Object):
     def __init__(self, action, label, path, accels=[], accels_fragile=False):
         GObject.Object.__init__(self)
         self.action = action
@@ -102,9 +102,7 @@ class UserAction(GObject.Object):
         self.label = label
         self.accels = accels
         self.accels_fragile = accels_fragile
-
-    def get_menu_action(self):
-        return MenuAction('{path}/{action}'.format(path=self.path, action=self.action), self.label)
+        MenuAction.__init__(self, '{path}/{action}'.format(path=self.path, action=self.action), self.label)
 
 
 class Action(Gio.SimpleAction):
@@ -209,8 +207,3 @@ class ResourceAggregator(ResourceProvider):
 
     def resource_removed_cb(self, provider, resource):
         self.remove_resource(resource)
-
-
-
-# ('\([^']*\)/[^/']*', \('[^']*'\), \(_("[^"]*")\) → (\2, \3, '\1'
-# ('\([^']*\)/[^/']*', \([^,]*\), \([^,]*\) → (\2, \3, '\1'

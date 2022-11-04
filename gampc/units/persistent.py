@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015 Itaï BEN YAACOV
+# Copyright (C) 2015-2022 Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,11 +24,11 @@ from gi.repository import Gtk
 
 import ampd
 
-from gampc.util import resource
-from gampc.util import unit
+from ..util import resource
+from ..util import unit
 
 
-class __unit__(unit.UnitWithServer):
+class __unit__(unit.UnitMixinServer, unit.Unit):
     REQUIRED_UNITS = ['menubar']
     STICKER_PROPERTIES = ('protected', 'dark')
 
@@ -45,14 +45,13 @@ class __unit__(unit.UnitWithServer):
             self.unit_server.ampd_server_properties.connect('notify::' + option, self.notify_option_cb)
 
         self.unit_server.ampd_client.connect('client-connected', self.client_connected_cb)
-        self.unit_server.connect('notify::server-partition', self.notify_server_partition_cb)
 
         self.new_resource_provider('app.action').add_resources(
             resource.PropertyActionModel('protected', self),
             resource.PropertyActionModel('dark', self),
         )
 
-        self.new_resource_provider('app.user-action').add_resources(
+        self.new_resource_provider('app.menu').add_resources(
             resource.UserAction('app.protected', _("Protected mode"), 'gampc/persistent', ['<Control><Alt>r']),
             resource.UserAction('app.dark', _("Dark interface"), 'gampc/persistent', ['<Control><Alt>d']),
         )
@@ -61,7 +60,6 @@ class __unit__(unit.UnitWithServer):
         self.disconnect_by_func(self.notify_sticker_cb)
         self.disconnect_by_func(self.notify_protected_cb)
         self.disconnect_by_func(self.notify_dark_cb)
-        self.unit_server.disconnect_by_func(self.notify_server_partition_cb)
         self.unit_server.ampd_client.disconnect_by_func(self.client_connected_cb)
         super().shutdown()
 
@@ -74,10 +72,6 @@ class __unit__(unit.UnitWithServer):
             self.read_sticker_properties()
             await self.ampd.idle(ampd.STICKER)
 
-    def notify_server_partition_cb(self, unit_server, param):
-        if self.ampd.get_is_connected() and self.unit_server.server_partition is not None:
-            self.read_sticker_properties()
-
     @ampd.task
     async def read_sticker_properties(self):
         self.handler_block_by_func(self.notify_sticker_cb)
@@ -87,8 +81,7 @@ class __unit__(unit.UnitWithServer):
             stickers = []
         pdict = dict(sticker.split('=', 1) for sticker in stickers)
         for key in self.STICKER_PROPERTIES:
-            sticker_name = key if self.unit_server.server_partition is None else key + '.' + self.unit_server.server_partition
-            self.set_property(key, pdict.get(sticker_name) == 'True')
+            self.set_property(key, pdict.get(key) == 'True')
         self.handler_unblock_by_func(self.notify_sticker_cb)
 
     @staticmethod
@@ -111,5 +104,4 @@ class __unit__(unit.UnitWithServer):
     @ampd.task
     async def notify_sticker_cb(self, param):
         if param.name in self.STICKER_PROPERTIES:
-            sticker_name = param.name if self.unit_server.server_partition is None else param.name + '.' + self.unit_server.server_partition
-            await self.ampd.sticker_set('song', self.unit_server.SEPARATOR_FILE, sticker_name, str(self.get_property(param.name)))
+            await self.ampd.sticker_set('song', self.unit_server.SEPARATOR_FILE, param.name, str(self.get_property(param.name)))

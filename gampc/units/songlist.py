@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015 Itaï BEN YAACOV
+# Copyright (C) 2015-2022 Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,117 +19,26 @@
 
 
 from gi.repository import GLib
-from gi.repository import Gio
-from gi.repository import Gtk
 
 import urllib.parse
 import os.path
 
-from gampc import data
-from gampc.util import ssde
-from gampc.util import resource
-from gampc.util import recordlist
-from gampc.util import component
-from gampc.util import unit
+from ..util import data
+from ..util import resource
+from ..util import unit
 
 
-class SongList(recordlist.RecordList):
-    use_resources = ['songlist']
-    DND_TARGET = 'GAMPC_SONG'
-
-    def __init__(self, unit):
-        self.fields = unit.unit_songlist.fields
-        super().__init__(unit)
-
-
-class SongListWithTotals(SongList):
-    def set_records(self, songs, set_fields=True):
-        super().set_records(songs, set_fields)
-        time = sum(int(song.get('Time', '0')) for song in songs)
-        self.status = '{} / {}'.format(len(songs), data.format_time(time))
-
-
-class SongListWithEditDel(SongList, recordlist.RecordListWithEditDel):
-    pass
-
-
-class SongListWithAdd(SongList, recordlist.RecordListWithAdd):
-    def __init__(self, unit):
-        super().__init__(unit)
-        self.actions.add_action(resource.Action('add-separator', self.action_add_separator_cb))
-        self.actions.add_action(resource.Action('add-url', self.action_add_url_cb))
-
-    def action_add_separator_cb(self, action, parameter):
-        self.add_record(dict(self.unit.unit_server.separator_song))
-
-    def action_add_url_cb(self, action, parameter):
-        struct = ssde.Text(label=_("URL or filename to add"), default='http://')
-        url = struct.edit(self.win)
-        if url:
-            self.add_record(dict(file=url))
-
-
-class SongListWithEditDelNew(SongListWithAdd, recordlist.RecordListWithEditDelNew):
-    pass
-
-
-class SongListWithEditDelFile(SongListWithEditDel):
-    def records_set_fields(self, songs):
-        for song in songs:
-            gfile = Gio.File.new_for_path(GLib.build_filenamev([self.unit.unit_songlist.config.music_dir, song['file']]))
-            if gfile.query_exists():
-                song['_gfile'] = gfile
-            else:
-                song['_status'] = self.RECORD_UNDEFINED
-        super().records_set_fields(songs)
-
-    def action_save_cb(self, action, parameter):
-        self.save_files(song for i, p, song in self.store)
-
-    def action_save_selected_cb(self, action, parameter):
-        songs, refs = self.treeview.get_selection_rows()
-
-    def save_files(self, songs):
-        deleted = [song for song in songs if song._status == self.RECORD_DELETED]
-        if deleted:
-            dialog = Gtk.Dialog(parent=self.win, title=_("Move to trash"))
-            dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
-            dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
-            dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash?")] + [song.file for song in deleted]), visible=True))
-            reply = dialog.run()
-            dialog.destroy()
-            if reply != Gtk.ResponseType.OK:
-                return
-            for song in deleted:
-                song._gfile.trash()
-                song._status = self.RECORD_UNDEFINED
-
-    def set_modified(self):
-        self.status = _("modified")
-
-    def set_records(self, songs, set_fields=True):
-        self.status = None
-        super().set_records(songs, set_fields)
-
-
-class UnitWithSongList(component.UnitWithComponent):
-    def __init__(self, name, manager):
-        self.REQUIRED_UNITS = ['misc', 'songlist'] + self.REQUIRED_UNITS
-        super().__init__(name, manager)
-        self.setup_menu(self.MODULE_CLASS.name, 'context', self.MODULE_CLASS.use_resources)
-
-
-class UnitWithPanedSongList(UnitWithSongList, component.UnitWithPanedComponent):
+class __unit__(unit.UnitMixinConfig, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
-        self.setup_menu(self.MODULE_CLASS.name, 'left-context', self.MODULE_CLASS.use_resources)
 
-
-class __unit__(unit.UnitWithConfig):
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+        menus = [
+            resource.MenuPath('edit/component/base'),
+            resource.MenuPath('edit/component/special'),
+        ]
 
         actions = [
+            # resource.UserAction('mod.selectall', _("Select all"), 'edit/component/base', ['<Control>a'], accels_fragile=True),
             resource.UserAction('mod.cut', _("Cut"), 'edit/component/base', ['<Control>x'], accels_fragile=True),
             resource.UserAction('mod.copy', _("Copy"), 'edit/component/base', ['<Control>c'], accels_fragile=True),
             resource.UserAction('mod.paste', _("Paste"), 'edit/component/base', ['<Control>v'], accels_fragile=True),
@@ -138,16 +47,11 @@ class __unit__(unit.UnitWithConfig):
             resource.UserAction('mod.undelete', _("Undelete"), 'edit/component/base', ['<Alt>Delete'], accels_fragile=True),
             resource.UserAction('mod.add-separator', _("Add separator"), 'edit/component/special'),
             resource.UserAction('mod.add-url', _("Add URL or filename"), 'edit/component/special'),
+            resource.UserAction('mod.delete-file', _("Move files to trash"), 'edit/component/special', ['<Control>Delete']),
         ]
 
-        menus = [
-            resource.MenuPath('edit/component/base'),
-            resource.MenuPath('edit/component/special'),
-        ]
-
-        self.new_resource_provider('app.menu').add_resources(*menus)
-
-        self.new_resource_provider('app.user-action').add_resources(
+        self.new_resource_provider('app.menu').add_resources(
+            *menus,
             resource.UserAction('mod.save', _("Save"), 'edit/global', ['<Control>s']),
             resource.UserAction('mod.reset', _("Reset"), 'edit/global', ['<Control>r']),
             resource.UserAction('mod.filter', _("Filter"), 'edit/global', ['<Control><Shift>f']),
@@ -160,9 +64,8 @@ class __unit__(unit.UnitWithConfig):
             resource.MenuPath('edit/component'),
             *menus,
             resource.MenuPath('other'),
+            *actions,
         )
-
-        self.new_resource_provider('songlist.context.user-action').add_resources(*actions)
 
         self.new_resource_provider('songlist.left-context.menu').add_resources(
             resource.MenuPath('action'),
@@ -170,7 +73,7 @@ class __unit__(unit.UnitWithConfig):
             resource.MenuPath('other'),
         )
 
-        self.config.access('music-dir', GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC))
+        self.config.music_dir._get(default=GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC))
 
         self.fields = data.FieldFamily(self.config.fields)
         self.fields.register_field(data.Field('Album', _("Album")))
