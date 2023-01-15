@@ -73,7 +73,7 @@ class Tanda(component.PanedComponent):
             self.button_box.pack_start(button, False, False, 0)
         self.connect('notify::genre-filter', lambda *args: self.filter_tandas(False))
 
-        self.problem_button = Gtk.ToggleButton(image=Gtk.Image(icon_name='object-select-symbolic'), visible=True, can_focus=False, active=unit.unit_persistent.protected, tooltip_text=_("Filter zero note"))
+        self.problem_button = Gtk.ToggleButton(image=Gtk.Image(icon_name='object-select-symbolic'), visible=True, can_focus=False, active=unit.unit_persistent.protect_requested, tooltip_text=_("Filter zero note"))
         self.problem_button.connect('toggled', lambda *args: self.filter_tandas(False))
 
         self.stack = Gtk.Stack(visible=True, transition_type=Gtk.StackTransitionType.CROSSFADE)
@@ -106,7 +106,7 @@ class Tanda(component.PanedComponent):
         self.actions.add_action(resource.Action('tanda-verify', self.unit.db.action_tanda_verify_cb))
         self.actions.add_action(resource.Action('tanda-cleanup-db', self.unit.db.action_cleanup_db_cb))
 
-        self.signal_handler_connect(self.unit.unit_persistent, 'notify::protected', lambda unit_persistent, param_spec: unit_persistent.protected and self.problem_button.set_active(True))
+        self.signal_handler_connect(self.unit.unit_persistent, 'notify::protect-requested', lambda unit_persistent, param_spec: unit_persistent.protect_requested and self.problem_button.set_active(True))
 
         self.read_db()
 

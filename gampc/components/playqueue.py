@@ -115,11 +115,11 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
                 ampd.task(self.ampd.command_list)((self.ampd.swap(n, m), self.ampd.delete(m)))
                 store.remove(i)
                 return
-        if not (self.unit.unit_persistent.protected and self.unit.unit_server.ampd_server_properties.state == 'play' and self.unit.unit_server.ampd_server_properties.current_song.get('pos') == song_id):
+        if not (self.unit.unit_persistent.protect_active and self.unit.unit_server.ampd_server_properties.current_song.get('pos') == song_id):
             ampd.task(self.ampd.deleteid)(song_id)
             store.remove(i)
 
     @ampd.task
     async def treeview_row_activated_cb(self, treeview, p, column):
-        if not self.unit.unit_persistent.protected:
+        if not self.unit.unit_persistent.protect_active:
             await self.ampd.playid(self.store.get_record(self.store.get_iter(p)).Id)

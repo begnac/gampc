@@ -105,19 +105,22 @@ class UserAction(MenuAction, GObject.Object):
         MenuAction.__init__(self, '{path}/{action}'.format(path=self.path, action=self.action), self.label)
 
 
-class Action(Gio.SimpleAction):
-    def __init__(self, name, activate_cb, *, dangerous=False, protector=None, **kwargs):
+class ActionDangerousMixin:
+    def __init__(self, *args, dangerous=False, protector=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if dangerous:
+            protector.bind_property('protect-active', self, 'enabled', GObject.BindingFlags.SYNC_CREATE, lambda x, y: not y)
+
+
+class Action(ActionDangerousMixin, Gio.SimpleAction):
+    def __init__(self, name, activate_cb, **kwargs):
         super().__init__(name=name, **kwargs)
         self.connect('activate', activate_cb)
-        if dangerous:
-            protector.bind_property('protected', self, 'enabled', GObject.BindingFlags.SYNC_CREATE, lambda x, y: not y)
 
 
-class PropertyAction(Gio.PropertyAction):
-    def __init__(self, name, object_, property_name=None, *, dangerous=False, protector=None, **kwargs):
+class PropertyAction(ActionDangerousMixin, Gio.PropertyAction):
+    def __init__(self, name, object_, property_name=None, **kwargs):
         super().__init__(name=name, object=object_, property_name=property_name or name, **kwargs)
-        if dangerous:
-            protector.bind_property('protected', self, 'enabled', GObject.BindingFlags.SYNC_CREATE, lambda x, y: not y)
 
 
 class ActionModelBase(GObject.Object):

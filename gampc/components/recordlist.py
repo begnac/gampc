@@ -111,7 +111,7 @@ class RecordList(component.Component):
 
     @ampd.task
     async def treeview_row_activated_cb(self, treeview, p, column):
-        if self.unit.unit_persistent.protected:
+        if self.unit.unit_persistent.protect_active:
             return
         filename = self.store.get_record(self.store.get_iter(p)).file
         records = await self.ampd.playlistfind('file', filename)

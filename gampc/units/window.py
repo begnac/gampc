@@ -95,7 +95,7 @@ class Window(Gtk.ApplicationWindow):
 
         for option in ampd.OPTION_NAMES:
             button = builder.get_object('togglebutton-' + option)
-            self.unit.unit_persistent.bind_property('protected', button, 'sensitive', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: not value)
+            self.unit.unit_persistent.bind_property('protect-active', button, 'sensitive', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: not value)
 
         self.scale_time = builder.get_object('scale-time')
         label_time = builder.get_object('label-time')
@@ -115,8 +115,8 @@ class Window(Gtk.ApplicationWindow):
         self.unit.unit_server.ampd_server_properties.bind_property('state', self.scale_time, 'sensitive', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value in {'play', 'pause'})
         self.unit.unit_server.ampd_server_properties.bind_property('volume', self.volume_button, 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.unit.unit_server.ampd_server_properties.bind_property('volume', self.volume_button, 'sensitive', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value != -1)
-        self.unit.unit_persistent.bind_property('protected', builder.get_object('image-protected'), 'visible', GObject.BindingFlags.SYNC_CREATE)
-        self.unit.unit_persistent.bind_property('protected', self.scale_time, 'sensitive', GObject.BindingFlags.INVERT_BOOLEAN | GObject.BindingFlags.SYNC_CREATE)
+        self.unit.unit_persistent.bind_property('protect-requested', builder.get_object('image-protected'), 'visible', GObject.BindingFlags.SYNC_CREATE)
+        self.unit.unit_persistent.bind_property('protect-active', self.scale_time, 'sensitive', GObject.BindingFlags.INVERT_BOOLEAN | GObject.BindingFlags.SYNC_CREATE)
         label_time.bind_property('visible', label_time_total, 'visible', GObject.BindingFlags.SYNC_CREATE)
         self.unit.unit_server.ampd_server_properties.bind_property('bitrate', builder.get_object('label-bitrate'), 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: ' [{kbps}kbps]'.format(kbps=value) if value else '')
         self.unit.unit_server.ampd_server_properties.bind_property('duration', self.scale_time.get_adjustment(), 'upper', GObject.BindingFlags.SYNC_CREATE)

@@ -30,16 +30,19 @@ from ..util import unit
 
 class __unit__(unit.UnitMixinServer, unit.Unit):
     REQUIRED_UNITS = ['menubar']
-    STICKER_PROPERTIES = ('protected', 'dark')
+    STICKER_PROPERTIES = ('protect-requested', 'dark')
 
-    protected = GObject.Property(type=bool, default=False)
+    protect_requested = GObject.Property(type=bool, default=False)
+    protect_active = GObject.Property(type=bool, default=False)
     dark = GObject.Property(type=bool, default=False)
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
+        self.unit_server.ampd_server_properties.connect('notify::state', self.notify_protect_requested_cb)
+        self.connect('notify::protect-requested', self.notify_protect_requested_cb)
+        self.connect('notify::protect-active', self.notify_protect_active_cb)
         self.connect('notify::dark', self.notify_dark_cb)
-        self.connect('notify::protected', self.notify_protected_cb)
         self.connect('notify', self.notify_sticker_cb)
         for option in ampd.OPTION_NAMES:
             self.unit_server.ampd_server_properties.connect('notify::' + option, self.notify_option_cb)
@@ -47,19 +50,20 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
         self.unit_server.ampd_client.connect('client-connected', self.client_connected_cb)
 
         self.new_resource_provider('app.action').add_resources(
-            resource.PropertyActionModel('protected', self),
-            resource.PropertyActionModel('dark', self),
+            *(resource.PropertyActionModel(name, self) for name in self.STICKER_PROPERTIES),
         )
 
         self.new_resource_provider('app.menu').add_resources(
-            resource.UserAction('app.protected', _("Protected mode"), 'gampc/persistent', ['<Control><Alt>r']),
+            resource.UserAction('app.protect-requested', _("Protected mode"), 'gampc/persistent', ['<Control><Alt>r']),
             resource.UserAction('app.dark', _("Dark interface"), 'gampc/persistent', ['<Control><Alt>d']),
         )
 
     def shutdown(self):
         self.disconnect_by_func(self.notify_sticker_cb)
-        self.disconnect_by_func(self.notify_protected_cb)
         self.disconnect_by_func(self.notify_dark_cb)
+        self.disconnect_by_func(self.notify_protect_active_cb)
+        self.disconnect_by_func(self.notify_protect_requested_cb)
+        self.unit_server.ampd_server_properties.disconnect_by_func(self.notify_protect_requested_cb)
         self.unit_server.ampd_client.disconnect_by_func(self.client_connected_cb)
         super().shutdown()
 
@@ -84,20 +88,23 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
             self.set_property(key, pdict.get(key) == 'True')
         self.handler_unblock_by_func(self.notify_sticker_cb)
 
+    def notify_protect_requested_cb(self, o, param):
+        self.protect_active = self.protect_requested and self.unit_server.ampd_server_properties.state == 'play'
+
+    @staticmethod
+    def notify_protect_active_cb(self, param):
+        if self.protect_active:
+            for option in ampd.OPTION_NAMES:
+                self.unit_server.ampd_server_properties.set_property(option, False)
+
     @staticmethod
     def notify_dark_cb(self, param):
         css = Gtk.CssProvider.get_named('Adwaita', 'dark' if self.dark else None)
         Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-    @staticmethod
-    def notify_protected_cb(self, param):
-        if self.protected:
-            for option in ampd.OPTION_NAMES:
-                self.unit_server.ampd_server_properties.set_property(option, False)
-
     @ampd.task
     async def notify_option_cb(self, properties, param):
-        if self.protected:
+        if self.protect_active:
             await getattr(self.ampd, param.name)(0)
 
     @staticmethod

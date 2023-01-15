@@ -99,7 +99,6 @@ class App(Gtk.Application):
         self.session_inhibit_cookie = None
         self.systemd_inhibit_fd = None
         self.unit_server.ampd_server_properties.connect('notify::state', self.set_inhibit)
-        self.unit_persistent.connect('notify::protected', self.set_inhibit)
 
         self.add_action(resource.Action('new-window', self.new_window_cb))
         self.add_action(resource.Action('close-window', self.close_window_cb))
@@ -117,7 +116,6 @@ class App(Gtk.Application):
         logger.debug("Shutting down")
 
         self.unit_server.ampd_server_properties.disconnect_by_func(self.set_inhibit)
-        self.unit_persistent.disconnect_by_func(self.set_inhibit)
         self.unit_misc.disconnect_by_func(self.notify_block_fragile_accels_cb)
         self.unit_manager.set_target()
         del self.unit_manager
