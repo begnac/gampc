@@ -26,6 +26,7 @@ import ampd
 
 from ..util import resource
 from ..util import unit
+from ..util.logger import logger
 
 
 class __unit__(unit.UnitMixinServer, unit.Unit):
@@ -47,8 +48,6 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
         for option in ampd.OPTION_NAMES:
             self.unit_server.ampd_server_properties.connect('notify::' + option, self.notify_option_cb)
 
-        self.unit_server.ampd_client.connect('client-connected', self.client_connected_cb)
-
         self.new_resource_provider('app.action').add_resources(
             *(resource.PropertyActionModel(name, self) for name in self.STICKER_PROPERTIES),
         )
@@ -64,17 +63,25 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
         self.disconnect_by_func(self.notify_protect_active_cb)
         self.disconnect_by_func(self.notify_protect_requested_cb)
         self.unit_server.ampd_server_properties.disconnect_by_func(self.notify_protect_requested_cb)
-        self.unit_server.ampd_client.disconnect_by_func(self.client_connected_cb)
         super().shutdown()
 
     def client_connected_cb(self, client):
         self.idle_sticker()
+        self.idle_player()
 
     @ampd.task
     async def idle_sticker(self):
         while True:
             self.read_sticker_properties()
             await self.ampd.idle(ampd.STICKER)
+
+    @ampd.task
+    async def idle_player(self):
+        while True:
+            await self.ampd.idle(ampd.PLAYER)
+            if self.protect_requested and (await self.ampd.status())['state'] == 'pause':
+                await self.ampd.play()
+                logger.info(_("Paused while protected.  Playing."))
 
     @ampd.task
     async def read_sticker_properties(self):
