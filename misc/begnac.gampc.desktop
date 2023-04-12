@@ -2,7 +2,7 @@
 Name=Graphical Asynchronous Music Player Client
 Comment=A Python/Gtk3 client for MPD
 Comment[fr]=Un client Python/Gtk3 pour MPD
-Exec=gampc
+Exec=/usr/bin/gampc
 Icon=face-cool-gampc
 Type=Application
 Terminal=false
