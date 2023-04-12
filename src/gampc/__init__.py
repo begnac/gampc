@@ -19,14 +19,13 @@
 
 
 import gi
-import os
 import gettext
 
 
 gi.require_version('Gdk', '3.0')
 gi.require_version('Gtk', '3.0')
 
-gettext.install('gampc', os.path.join(os.path.dirname(__file__), 'locale'))
+gettext.install('gampc')
 
 
 __program_name__ = "Graphical Asyncronous Music Player Client"
