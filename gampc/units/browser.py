@@ -28,6 +28,9 @@ from ..components import songlist
 from ..components import browser
 
 
+DIRECTORY = 'directory'
+
+
 class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
     MODULE_CLASS = browser.Browser
 
@@ -46,13 +49,14 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
             await self.ampd.idle(ampd.DATABASE)
 
     async def get_path_contents(self, path):
-        real_path = '/'.join(path) if path else '/'
-        contents = await self.ampd.lsinfo(real_path)
-        return contents
+        if path:
+            return await self.ampd.lsinfo('/'.join(path[1:]))
+        else:
+            return {DIRECTORY: [{DIRECTORY: _("Music")}]}
 
     async def fill_node(self, node):
         icon = 'folder-symbolic'
 
         contents = await self.get_path_contents(node.path)
-        folders = sorted(os.path.basename(item['directory']) for item in contents.get('directory', []))
+        folders = sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, []))
         node.sub_nodes = (dict(name=folder, icon=icon) for folder in folders)
