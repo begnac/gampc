@@ -70,7 +70,6 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
             bg = self._mix_colors(1, 1, 1)
             renderer.set_property('background-rgba', bg)
         elif column.field.name == 'FormattedTime' and store.get_record(i).Prio is not None:
-            print(store.get_record(i).Prio)
             bg = self._mix_colors(0, int(store.get_record(i).Prio) / 255.0, 0)
             renderer.set_property('background-rgba', bg)
 
