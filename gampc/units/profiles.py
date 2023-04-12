@@ -95,7 +95,7 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
                 label=_("Profile"),
                 substructs=[
                     ssde.Text(name='name', label=_("Name"), default=_("<Name>")),
-                    ssde.Text(name='address', label=_("[Password@]Host:Port"), default=_("<Host>") + ':6600'),
+                    ssde.Text(name='address', label=_("[password@]host:port"), default=_("<Host>") + ':6600'),
                 ]))
 
     def shutdown(self):
