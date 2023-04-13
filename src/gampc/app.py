@@ -282,7 +282,6 @@ class App(Gtk.Application):
                 section_labels[menu_item.path] = menu_item.label.replace('_', '')
                 section_order.append(menu_item.path)
             elif isinstance(menu_item, resource.UserAction) and menu_item.accels:
-                print(menu_item.name, self.lookup_action(menu_item.name.split('.')[1]))
                 name = menu_item.path[:menu_item.path.find('/')]
                 if name not in items_by_section:
                     items_by_section[name] = []
