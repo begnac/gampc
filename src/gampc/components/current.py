@@ -21,6 +21,7 @@
 from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import GdkPixbuf
+from gi.repository import Pango
 from gi.repository import Gtk
 
 import os
@@ -75,21 +76,80 @@ class Current(component.Component):
     name = 'current'
     key = '0'
 
-    FIELD_NAMES = ['Artist', 'Performer', 'Title', 'Date', 'Genre', 'Composer']
-
     size = GObject.Property(type=int)
+
+    @staticmethod
+    def make_label_image_box():
+        label = Gtk.Label(visible=True, ellipsize=Pango.EllipsizeMode.MIDDLE, lines=3, wrap=True)
+
+        image = Gtk.Image(visible=True)
+        image_label = Gtk.Label(visible=True)
+
+        box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
+        box.pack_start(label, True, True, 0)
+        box.pack_start(image, True, True, 0)
+        box.pack_start(image_label, False, False, 0)
+
+        return box, label, image, image_label
 
     def __init__(self, *args):
         super().__init__(*args)
         self.signals['check-resize'] = self.window_check_resize_cb
 
         self.pixbufs = PixbufCache()
-        self.images = []
 
-        builder = self.unit.unit_builder.build_ui('current')
-        self.welcome = builder.get_object('welcome')
-        self.image_icon = builder.get_object('image-icon')
-        self.current = builder.get_object('current')
+        self.labels = {}
+        self.images = {}
+        self.image_labels = {}
+
+        self.app_icon = Gtk.Image(visible=True, icon_name='face-cool-gampc')
+        self.app_label = Gtk.Label(visible=True, label="GAMPC")
+        self.app_label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold", 0 -1 scale 5'))
+
+        self.welcome = Gtk.Box(spacing=50)
+        self.welcome.pack_start(Gtk.Label(visible=True), True, True, 0)
+        self.welcome.pack_start(self.app_icon, False, False, 0)
+        self.welcome.pack_start(self.app_label, False, False, 0)
+        self.welcome.pack_start(Gtk.Label(visible=True), True, True, 0)
+
+        artist_box, self.labels['Artist'], self.images['Artist'], self.image_labels['Artist'] = self.make_label_image_box()
+        self.labels['Artist'].set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Serif Bold", 0 -1 scale 2'))
+
+        performer_box, self.labels['Performer'], self.images['Performer'], self.image_labels['Performer'] = self.make_label_image_box()
+        self.labels['Performer'].set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans", 0 -1 scale 2'))
+
+        artist_performer_box = Gtk.Box(visible=True, homogeneous=True, spacing=50)
+        artist_performer_box.add(artist_box)
+        artist_performer_box.add(performer_box)
+
+        self.labels['Title'] = title_label = Gtk.Label(visible=True, ellipsize=Pango.EllipsizeMode.MIDDLE)
+        title_label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold Italic", 0 -1 scale 3'))
+
+        self.labels['Genre'] = genre_label = Gtk.Label(visible=True)
+        self.labels['Date'] = date_label = Gtk.Label(visible=True)
+        self.labels['Composer'] = composer_label = Gtk.Label(visible=True)
+        data_box = Gtk.Box(visible=True, halign=Gtk.Align.CENTER, spacing=14)
+        data_box.pack_start(genre_label, False, False, 0)
+        data_box.pack_start(Gtk.Label(visible=True, label="/"), False, False, 0)
+        data_box.pack_start(date_label, False, False, 0)
+        data_box.pack_start(Gtk.Label(visible=True, label="/"), False, False, 0)
+        data_box.pack_start(composer_label, False, False, 0)
+
+        info_box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
+        info_box.pack_start(title_label, True, True, 0)
+        info_box.pack_start(data_box, False, False, 0)
+
+        self.current = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, homogeneous=True)
+        self.current.pack_start(artist_performer_box, True, True, 0)
+        self.current.pack_start(info_box, True, True, 0)
+
+        main_box = Gtk.Box(visible=True, margin_bottom=20, margin_left=20, margin_right=20, margin_top=20)
+        main_box.pack_start(self.welcome, True, True, 0)
+        main_box.pack_start(self.current, True, True, 0)
+
+
+
+
         self.unit.unit_server.bind_property('current-song', self.welcome, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: not y)
         self.unit.unit_server.bind_property('current-song', self.current, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: bool(y))
         self.signal_handler_connect(self.unit.unit_server, 'notify::current-song', self.fader)
@@ -99,20 +159,19 @@ class Current(component.Component):
         self.css_provider = Gtk.CssProvider.new()
         self.get_style_context().add_provider(self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.connect('size-allocate', self.size_allocate_cb)
-        self.bind_property('size', self.image_icon, 'pixel-size', GObject.BindingFlags(0), lambda x, y: y * 5)
+        self.bind_property('size', self.app_icon, 'pixel-size', GObject.BindingFlags(0), lambda x, y: y * 5)
 
-        for field in self.FIELD_NAMES:
-            label = builder.get_object('label-' + field.lower())
+        for field in self.labels.keys():
+            label = self.labels[field]
             label.field = field
-            image = builder.get_object('image-' + field.lower())
+            image = self.images.get(field)
             if image:
-                image_label = builder.get_object('image-label-' + field.lower())
+                image_label = self.image_labels.get(field)
                 if image_label:
                     label.bind_property('label', image_label, 'label', GObject.BindingFlags.SYNC_CREATE)
                     image.bind_property('visible', image_label, 'visible', GObject.BindingFlags.SYNC_CREATE)
                 label.connect('notify::label', self.notify_label_cb, image)
                 image.connect('size-allocate', self.image_size_allocate_cb)
-                self.images.append(image)
             else:
                 self.unit.unit_server.bind_property('current-song',
                                                     label, 'visible',
@@ -125,7 +184,7 @@ class Current(component.Component):
                                                 lambda x, y, z: self.set_size() or y.get(z, ''),
                                                 None, field)
 
-        self.add(builder.get_object('widget'))
+        self.add(main_box)
         self.connect('map', self.__map_cb)
         self.connect('destroy', self.__destroy_cb)
 
@@ -141,7 +200,7 @@ class Current(component.Component):
         self.set_size()
 
     def window_check_resize_cb(self, win):
-        for image in self.images:
+        for image in self.images.values():
             image.clear()
             image.last_width = image.last_height = None
 
@@ -203,7 +262,7 @@ class Current(component.Component):
         self.css_provider.load_from_data(css)
 
     def image_size_allocate_cb(self, image, allocation):
-        if self.width == 0 or image.last_width == allocation.width and image.last_height == allocation.height:
+        if self.width == 0 or (image.last_width == allocation.width and image.last_height == allocation.height):
             return
         image.last_width = allocation.width
         image.last_height = allocation.height

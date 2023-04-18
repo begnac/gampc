@@ -24,5 +24,5 @@ from ..components import current
 
 
 class __unit__(component.UnitMixinComponent, unit.Unit):
-    REQUIRED_UNITS = ['builder', 'persistent']
+    REQUIRED_UNITS = ['persistent']
     MODULE_CLASS = current.Current
