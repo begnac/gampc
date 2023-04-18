@@ -25,10 +25,10 @@ from gi.repository import Gtk
 import urllib.parse
 import os.path
 
-from ..util import data
 from ..util import ssde
 from ..util import resource
 from ..util import unit
+from ..util.misc import format_time
 
 from . import recordlist
 from . import component
@@ -74,7 +74,7 @@ class SongListWithTotals(SongList):
     def set_records(self, songs, set_fields=True):
         super().set_records(songs, set_fields)
         time = sum(int(song.get('Time', '0')) for song in songs)
-        self.status = '{} / {}'.format(len(songs), data.format_time(time))
+        self.status = '{} / {}'.format(len(songs), format_time(time))
 
 
 class SongListWithEditDel(SongList, recordlist.RecordListWithEditDel):

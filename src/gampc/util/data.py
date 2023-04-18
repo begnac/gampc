@@ -24,14 +24,6 @@ import ast
 import cairo
 
 
-def format_time(time):
-    time = int(time)
-    hours = time // 3600
-    minutes = (time // 60) % 60
-    seconds = time % 60
-    return '{:d}:{:02d}:{:02d}'.format(hours, minutes, seconds) if hours else '{:d}:{:02d}'.format(minutes, seconds)
-
-
 def store_set_rows(store, rows, func):
     if not rows:
         store.clear()

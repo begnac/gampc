@@ -26,6 +26,7 @@ import os.path
 from ..util import data
 from ..util import resource
 from ..util import unit
+from ..util.misc import format_time
 
 
 class __unit__(unit.UnitMixinConfig, unit.Unit):
@@ -87,7 +88,7 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
         self.fields.register_field(data.Field('Last_Modified', _("Last modified")))
         self.fields.register_field(data.Field('Performer', _("Performer")))
         self.fields.register_field(data.Field('Time', _("Seconds"), visible=False))
-        self.fields.register_field(data.Field('FormattedTime', _("Duration"), get_value=lambda song: data.format_time(song['Time']) if 'Time' in song else ''))
+        self.fields.register_field(data.Field('FormattedTime', _("Duration"), get_value=lambda song: format_time(song['Time']) if 'Time' in song else ''))
         self.fields.register_field(data.Field('Title', _("Title (partial)")))
         self.fields.register_field(data.Field('FullTitle', _("Title"), get_value=self.song_title))
         self.fields.register_field(data.Field('Track', _("Track")))

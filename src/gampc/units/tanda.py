@@ -35,6 +35,7 @@ from ..util import data
 from ..util import db
 from ..util import resource
 from ..util import unit
+from ..util.misc import format_time
 from ..util.logger import logger
 
 from ..components import component
@@ -784,7 +785,7 @@ class __unit__(unit.UnitMixinCss, songlist.UnitMixinPanedSongList, unit.Unit):
         self.fields.register_field(data.Field('Last_Played', _("Last played")))
         self.fields.register_field(data.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=get_last_played_weeks))
         self.fields.register_field(data.Field('n_songs', _("Number of songs"), min_width=30, get_value=lambda tanda: 0 if not tanda.get('_songs') else None if (len(tanda.get('_songs')) == 4 and tanda.get('Genre').startswith('Tango')) or (len(tanda.get('_songs')) == 3 and tanda.get('Genre') in {'Vals', 'Milonga'}) else len(tanda.get('_songs'))))
-        self.fields.register_field(data.Field('Duration', _("Duration"), get_value=lambda tanda: data.format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
+        self.fields.register_field(data.Field('Duration', _("Duration"), get_value=lambda tanda: format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
 
         self.db = TandaDatabase(self.fields, self)
 

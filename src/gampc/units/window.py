@@ -18,57 +18,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GObject, GLib, Gtk, Gdk
-import logging
+from gi.repository import GObject
+from gi.repository import Gdk
+from gi.repository import Gtk
 
 import ampd
 
-from ..util import data
 from ..util import resource
 from ..util import unit
 from ..util.logger import logger
-
-
-class WindowLoggingHandeler(logging.Handler):
-    MAX_INFOBARS = 5
-
-    def __init__(self, box, timeout):
-        super().__init__(logging.INFO)
-        self.box = box
-        self.timeout = timeout
-        self.infobars = []
-
-    def remove_infobar(self, infobar, response=None):
-        self._remove_infobar(infobar)
-        GLib.source_remove(infobar.timeout)
-
-    def remove_infobar_timeout(self, infobar):
-        self._remove_infobar(infobar)
-        return GLib.SOURCE_REMOVE
-
-    def _remove_infobar(self, infobar):
-        self.infobars.remove(infobar)
-        self.box.remove(infobar)
-
-    def cull_infobars(self, n = 0):
-        while len(self.infobars) > n:
-            self.remove_infobar(self.infobars[0])
-
-    def emit(self, record):
-        self.cull_infobars(self.MAX_INFOBARS - 1)
-
-        message_type = Gtk.MessageType.ERROR if record.levelno >= 40 else Gtk.MessageType.WARNING if record.levelno >= 30 else Gtk.MessageType.INFO
-        message_icon = 'error' if record.levelno >= 40 else 'warning' if record.levelno >= 30 else 'information'
-        infobar = Gtk.InfoBar(visible=True, message_type=message_type, show_close_button=True)
-        infobar.get_content_area().add(Gtk.Image(visible=True, icon_name='dialog-' + message_icon, icon_size=Gtk.IconSize.LARGE_TOOLBAR))
-        infobar.get_content_area().add(Gtk.Label(visible=True, label=record.msg))
-        infobar.connect('response', self.remove_infobar)
-        infobar.timeout = GLib.timeout_add(self.timeout, self.remove_infobar_timeout, infobar)
-        self.box.add(infobar)
-        self.infobars.append(infobar)
-
-    def shutdown(self):
-        self.cull_infobars()
+from ..ui import headerbar
+from ..ui import logging
 
 
 class Window(Gtk.ApplicationWindow):
@@ -91,51 +51,32 @@ class Window(Gtk.ApplicationWindow):
         self.unit.unit_server.ampd_server_properties.connect('notify::state', self.update_title)
         self.unit.unit_server.connect('notify::server-label', self.update_subtitle)
 
-        builder = self.unit.unit_builder.build_ui('window')
-
-        for option in ampd.OPTION_NAMES:
-            button = builder.get_object('togglebutton-' + option)
-            self.unit.unit_persistent.bind_property('protect-active', button, 'sensitive', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: not value)
-
-        self.scale_time = builder.get_object('scale-time')
-        label_time = builder.get_object('label-time')
-        label_time_total = builder.get_object('label-time-total')
-        self.volume_button = builder.get_object('volume-button')
-
-        self.main = builder.get_object('main')
+        self.main = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
+        self.info_box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
+        self.main.pack_end(self.info_box, False, False, 0)
         self.add(self.main)
 
-        self.headerbar = builder.get_object('headerbar')
+        self.headerbar = headerbar.HeaderBar()
         self.set_titlebar(self.headerbar)
-        self.label_title = builder.get_object('label-title')
-        self.label_subtitle = builder.get_object('label-subtitle')
 
-        self.unit.unit_server.ampd_server_properties.bind_property('state', builder.get_object('button-play'), 'visible', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value != 'play')
-        self.unit.unit_server.ampd_server_properties.bind_property('state', builder.get_object('button-pause'), 'visible', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value == 'play')
-        self.unit.unit_server.ampd_server_properties.bind_property('state', self.scale_time, 'sensitive', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value in {'play', 'pause'})
-        self.unit.unit_server.ampd_server_properties.bind_property('volume', self.volume_button, 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
-        self.unit.unit_server.ampd_server_properties.bind_property('volume', self.volume_button, 'sensitive', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value != -1)
-        self.unit.unit_persistent.bind_property('protect-requested', builder.get_object('image-protected'), 'visible', GObject.BindingFlags.SYNC_CREATE)
-        self.unit.unit_persistent.bind_property('protect-active', self.scale_time, 'sensitive', GObject.BindingFlags.INVERT_BOOLEAN | GObject.BindingFlags.SYNC_CREATE)
-        label_time.bind_property('visible', label_time_total, 'visible', GObject.BindingFlags.SYNC_CREATE)
-        self.unit.unit_server.ampd_server_properties.bind_property('bitrate', builder.get_object('label-bitrate'), 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: ' [{kbps}kbps]'.format(kbps=value) if value else '')
-        self.unit.unit_server.ampd_server_properties.bind_property('duration', self.scale_time.get_adjustment(), 'upper', GObject.BindingFlags.SYNC_CREATE)
-        self.unit.unit_server.ampd_server_properties.bind_property('duration', self.scale_time.get_adjustment(), 'value', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: binding.get_source().elapsed)
-        self.unit.unit_server.ampd_server_properties.bind_property('elapsed', self.scale_time, 'fill-level', GObject.BindingFlags.SYNC_CREATE)
-        self.scale_time_binding = None
-        self.scale_time.get_adjustment().bind_property('value', label_time, 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: data.format_time(value + 0.5))
-        self.scale_time.get_adjustment().bind_property('upper', label_time_total, 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: ' / ' + data.format_time(value))
-        self.scale_time.get_adjustment().bind_property('upper', label_time, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value != 0.0)
-        self.set_scale_time_binding()
+        self.unit.unit_persistent.bind_property('protect-active', self.headerbar.option_buttons, 'sensitive', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
 
-        self.scale_time.connect('notify::senstive', self.scale_time_notify_sensitive_cb)
-        self.scale_time.connect('button-press-event', self.scale_time_button_press_event_cb)
-        self.scale_time.connect('button-release-event', self.scale_time_button_release_event_cb)
+        self.unit.unit_server.ampd_server_properties.bind_property('state', self.headerbar.playback_buttons, 'playing', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value == 'play')
+        self.unit.unit_server.ampd_server_properties.bind_property('volume', self.headerbar.volume_button, 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
+        self.unit.unit_server.ampd_server_properties.bind_property('volume', self.headerbar.volume_button, 'sensitive', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value != -1)
+        self.unit.unit_persistent.bind_property('protect-requested', self.headerbar.protected_image, 'visible', GObject.BindingFlags.SYNC_CREATE)
+        self.unit.unit_server.ampd_server_properties.bind_property('bitrate', self.headerbar.bitrate_label, 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: ' [{kbps}kbps]'.format(kbps=value) if value else '')
+
+        self.unit.unit_server.ampd_server_properties.bind_property('duration', self.headerbar.time_scale, 'duration', GObject.BindingFlags.SYNC_CREATE)
+        self.unit.unit_server.ampd_server_properties.bind_property('elapsed', self.headerbar.time_scale, 'elapsed', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
+
+        self.unit.unit_server.ampd_server_properties.connect('notify::state', self.set_time_scale_sensitive)
+        self.unit.unit_persistent.connect('notify::protect-active', self.set_time_scale_sensitive)
 
         self.add_action(resource.Action('toggle-fullscreen', self.action_toggle_fullscreen_cb))
         self.add_action(resource.Action('volume-popup', self.action_volume_popup_cb))
 
-        self.logging_handler = WindowLoggingHandeler(builder.get_object('box-info'), self.unit.config.message_timeout._get() * 1000)
+        self.logging_handler = logging.Handeler(self.info_box, self.unit.config.message_timeout._get() * 1000)
         logger.addHandler(self.logging_handler)
         self.update_title()
         self.update_subtitle()
@@ -166,8 +107,14 @@ class Window(Gtk.ApplicationWindow):
             self.component.connect('notify::full-title', self.update_subtitle)
         self.update_subtitle()
 
+    def set_time_scale_sensitive(self, *args):
+        if self.unit.unit_persistent.protect_active or self.unit.unit_server.ampd_server_properties.state not in ('play', 'pause'):
+            self.headerbar.time_scale.set_sensitive(False)
+        else:
+            self.headerbar.time_scale.set_sensitive(True)
+
     def notify_current_song_cb(self, *args):
-        self.scale_time_break_interaction()
+        self.headerbar.time_scale.break_interaction()
         self.update_title()
 
     def update_title(self, *args):
@@ -179,7 +126,7 @@ class Window(Gtk.ApplicationWindow):
             window_title = self.DEFAULT_TITLE
         artist = self.unit.unit_server.current_song.get('Artist', _("Unknown Artist"))
         title = self.unit.unit_server.current_song.get('Title', _("Unknown Title"))
-        self.label_title.set_label(window_title.format(artist=artist, title=title))
+        self.headerbar.set_title(window_title.format(artist=artist, title=title))
 
     def update_subtitle(self, *args):
         chunks = []
@@ -187,7 +134,7 @@ class Window(Gtk.ApplicationWindow):
             chunks.append(self.component.full_title)
         if self.unit.unit_server.server_label:
             chunks.append(self.unit.unit_server.server_label)
-        self.label_subtitle.set_label(' / '.join(chunks))
+        self.headerbar.set_subtitle(' / '.join(chunks))
 
     def do_configure_event(self, event):
         if not self.is_fullscreen:
@@ -195,34 +142,6 @@ class Window(Gtk.ApplicationWindow):
             self.unit.config.height._set(event.height)
             self.unit.config.maximized._set(self.is_maximized())
         Gtk.ApplicationWindow.do_configure_event(self, event)
-
-    def scale_time_button_press_event_cb(self, scale_time, event):
-        if event.button == 1 and event.type == Gdk.EventType.BUTTON_PRESS and self.scale_time_binding:
-            self.scale_time_binding.unbind()
-            self.scale_time_binding = None
-        else:
-            self.scale_time_break_interaction()
-
-    def scale_time_button_release_event_cb(self, scale_time, event):
-        if not self.scale_time_binding:
-            if event.button == 1 and event.state & (Gdk.ModifierType.SHIFT_MASK | Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.MOD1_MASK) == 0:
-                self.unit.unit_server.ampd_server_properties.elapsed = self.scale_time.get_value()
-                self.set_scale_time_binding()
-            else:
-                self.scale_time_break_interaction()
-
-    def scale_time_break_interaction(self, *args):
-        if not self.scale_time_binding:
-            self.scale_time.set_sensitive(False)
-            GLib.idle_add(lambda: self.scale_time.set_sensitive(True) or GLib.SOURCE_REMOVE)
-
-    def scale_time_notify_sensitive_cb(self, *args):
-        if not self.scale_time.get_sensitive():
-            self.set_scale_time_binding()
-
-    def set_scale_time_binding(self):
-        if not self.scale_time_binding:
-            self.scale_time_binding = self.unit.unit_server.ampd_server_properties.bind_property('elapsed', self.scale_time.get_adjustment(), 'value', GObject.BindingFlags.SYNC_CREATE)
 
     def action_toggle_fullscreen_cb(self, *args):
         if self.is_fullscreen:
