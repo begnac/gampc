@@ -75,14 +75,15 @@ class TimeScale(Gtk.Box):
         self.label_box = Gtk.Box()
 
         self.bind_property('duration', self.scale.get_adjustment(), 'upper', GObject.BindingFlags.SYNC_CREATE)
-        # self.bind_property('duration', self.scale.get_adjustment(), 'value', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: self.elapsed)
+        self.bind_property('duration', self.scale.get_adjustment(), 'value', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: self.elapsed)
         self.bind_property('elapsed', self.scale, 'fill-level', GObject.BindingFlags.SYNC_CREATE)
 
         self.elapsed_binding = None
+        self.set_elapsed_binding()
+
         self.scale.get_adjustment().bind_property('value', self.elapsed_label, 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: format_time(value + 0.5))
         self.scale.get_adjustment().bind_property('upper', self.duration_label, 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: ' / ' + format_time(value))
         self.scale.get_adjustment().bind_property('upper', self.label_box, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value != 0.0)
-        self.set_elapsed_binding()
 
         self.connect('notify::sensitive', self.notify_sensitive_cb)
         self.scale.connect('button-press-event', self.button_press_event_cb)
