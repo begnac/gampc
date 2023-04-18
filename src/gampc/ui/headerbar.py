@@ -69,7 +69,7 @@ class TimeScale(Gtk.Box):
     def __init__(self):
         super().__init__(visible=True, orientation=Gtk.Orientation.HORIZONTAL)
 
-        self.scale = Gtk.Scale(visible=True, restrict_to_fill_level=False, show_fill_level=True, width_request=150, draw_value=False)
+        self.scale = Gtk.Scale(visible=True, restrict_to_fill_level=False, show_fill_level=True, width_request=150, draw_value=False, has_origin=False)
         self.elapsed_label = Gtk.Label(visible=True)
         self.duration_label = Gtk.Label(visible=True)
         self.label_box = Gtk.Box()
