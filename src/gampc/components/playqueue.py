@@ -28,10 +28,6 @@ from . import songlist
 
 
 class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
-    title = _("Play Queue")
-    name = 'playqueue'
-    key = '1'
-
     duplicate_test_columns = ['Title']
 
     def __init__(self, unit):

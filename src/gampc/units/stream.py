@@ -48,6 +48,9 @@ class StreamDatabase(db.Database):
 
 
 class __unit__(songlistbase.UnitMixinSongListBase, unit.Unit):
+    title = _("Internet Streams")
+    key = '4'
+
     COMPONENT_CLASS = stream.Stream
 
     def __init__(self, name, manager):

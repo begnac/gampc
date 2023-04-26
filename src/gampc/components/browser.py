@@ -23,10 +23,6 @@ from . import songlist
 
 
 class Browser(treelist.TreeList, songlist.SongList):
-    title = _("Database Browser")
-    name = 'browser'
-    key = '2'
-
     sortable = True
 
     left_title = _("Directory")

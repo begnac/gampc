@@ -28,10 +28,6 @@ from ..components import songlist
 
 
 class Search(songlist.SongList):
-    title = _("Search")
-    name = 'search'
-    key = '3'
-
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
 
     sortable = True
@@ -120,6 +116,9 @@ class Search(songlist.SongList):
 
 
 class __unit__(songlist.UnitMixinSongList, unit.Unit):
+    title = _("Search")
+    key = '3'
+
     REQUIRED_UNITS = ['misc']
     COMPONENT_CLASS = Search
 

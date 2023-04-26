@@ -24,5 +24,8 @@ from ..components import current
 
 
 class __unit__(component.UnitMixinComponent, unit.Unit):
+    title = _("Current Song")
+    key = '0'
+
     REQUIRED_UNITS = ['persistent']
     COMPONENT_CLASS = current.Current

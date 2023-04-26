@@ -72,10 +72,6 @@ class PixbufCache(dict):
 
 
 class Current(component.Component):
-    title = _("Current Song")
-    name = 'current'
-    key = '0'
-
     size = GObject.Property(type=int)
 
     @staticmethod

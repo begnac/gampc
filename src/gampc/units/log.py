@@ -44,10 +44,6 @@ class Handler(logging.Handler, GObject.Object):
 
 
 class Log(component.Component):
-    title = _("View log")
-    name = 'log'
-    key = '8'
-
     def __init__(self, unit):
         super().__init__(unit)
         self.label = Gtk.Label(selectable=True, visible=True, halign=Gtk.Align.START, valign=Gtk.Align.START)
@@ -68,6 +64,9 @@ class Log(component.Component):
 
 
 class __unit__(component.UnitMixinComponent, unit.Unit):
+    title = _("View log")
+    key = '8'
+
     COMPONENT_CLASS = Log
 
     def __init__(self, name, manager):

@@ -32,9 +32,6 @@ from ..util.logger import logger
 
 
 class Component(Gtk.Bin):
-    title = None
-    name = None
-    key = None
     action_prefix = 'mod'
     use_resources = []
 
@@ -42,7 +39,7 @@ class Component(Gtk.Bin):
     full_title = GObject.Property(type=str)
 
     def __init__(self, unit):
-        super().__init__(visible=True, full_title=self.title)
+        super().__init__(visible=True, full_title=unit.title)
         self.unit = unit
         self.config = self.unit.config
         self.ampd = self.unit.ampd.sub_executor()
@@ -54,7 +51,7 @@ class Component(Gtk.Bin):
         self.action_aggregator = resource.ActionAggregator([provider + '.action' for provider in [unit.name] + self.use_resources], self.window_actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
         unit.manager.add_aggregator(self.action_aggregator)
 
-        self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(self.title, self.status) if self.status else self.title)
+        self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(unit.title, self.status) if self.status else unit.title)
 
         self.connect('destroy', self.__destroy_cb)
         self.signal_handler_connect(unit.unit_server.ampd_client, 'client-connected', self.client_connected_cb)
@@ -119,7 +116,7 @@ class PanedComponent(Component):
         self.paned.add1(self.scrolled_left_treeview)
         super().add(self.paned)
 
-        self.setup_context_menu('.'.join([self.name, 'left-context']), self.left_treeview)
+        self.setup_context_menu('.'.join([unit.name, 'left-context']), self.left_treeview)
 
         self.starting = True
         self.connect('map', self.__map_cb)
@@ -152,8 +149,8 @@ class UnitMixinComponent(unit.UnitMixinConfig, unit.UnitMixinServer):
         self.unit_component.register_component_factory(self.name, self.new_component)
         self.add_resource('app.menu', resource.MenuAction('components/components',
                                                           f'app.component-start("{self.name}")',
-                                                          self.COMPONENT_CLASS.title,
-                                                          ['<Alt>' + self.COMPONENT_CLASS.key, '<Control><Alt>' + self.COMPONENT_CLASS.key]))
+                                                          self.title,
+                                                          ['<Alt>' + self.key, '<Control><Alt>' + self.key]))
 
         for menu in menus:
             self.setup_menu(self.name, menu, self.COMPONENT_CLASS.use_resources)

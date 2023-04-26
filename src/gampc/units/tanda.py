@@ -45,9 +45,6 @@ from . import search
 
 
 class Tanda(component.PanedComponent):
-    title = _("Tandas")
-    name = 'tanda'
-    key = '6'
     action_prefix = 'supermod'
 
     GENRES = ('Tango', 'Vals', 'Milonga', _("Other"), _("All"))
@@ -261,8 +258,6 @@ RGBA_YELLOW.parse('yellow')
 
 
 class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
-    name = 'tanda-edit'
-
     duplicate_field = '_duplicate_edit'
 
     def __init__(self, unit):
@@ -528,8 +523,6 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
 
 
 class TandaView(TandaSubComponent, songlist.SongList):
-    name = 'tanda-view'
-
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
     duplicate_field = '_duplicate_view'
 
@@ -560,7 +553,7 @@ class TandaDatabase(GObject.Object, db.Database):
     def __init__(self, fields, unit):
         self.fields = fields
         self.unit = unit
-        db.Database.__init__(self, Tanda.name)
+        db.Database.__init__(self, unit.name)
         super().__init__()
         self.ampd = unit.ampd.sub_executor()
 
@@ -755,6 +748,9 @@ def get_last_played_weeks(tanda):
 
 
 class __unit__(unit.UnitMixinCss, songlist.UnitMixinPanedSongList, unit.Unit):
+    title = _("Tandas")
+    key = '6'
+
     COMPONENT_CLASS = Tanda
     CSS = b'#tanda-treeview.view { outline-width: 4px; outline-style: solid; }'
 

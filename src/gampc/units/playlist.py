@@ -74,6 +74,9 @@ class ChoosePathDialog(dialog.AsyncTextDialog):
 
 
 class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
+    title = _("Playlists")
+    key = '5'
+
     COMPONENT_CLASS = playlist.Playlist
 
     def __init__(self, name, manager):

@@ -37,10 +37,6 @@ ICONS = {
 
 
 class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, treelist.TreeList):
-    title = _("Playlists")
-    name = 'playlist'
-    key = '5'
-
     duplicate_test_columns = ['file']
 
     left_title = _("Playlists")

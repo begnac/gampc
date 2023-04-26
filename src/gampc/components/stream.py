@@ -24,10 +24,6 @@ from . import songlistbase
 
 
 class Stream(songlistbase.SongListBaseWithEditDelNew):
-    title = _("Internet Streams")
-    name = 'stream'
-    key = '4'
-
     use_resources = ['songlistbase']
     DND_TARGET = 'GAMPC_STREAM'
 

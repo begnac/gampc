@@ -27,10 +27,6 @@ from ..components import component
 
 
 class Command(component.Component):
-    title = _("Execute MPD commands")
-    name = 'command'
-    key = '7'
-
     def __init__(self, *args):
         super().__init__(*args)
         self.label = Gtk.Label(max_width_chars=50, wrap=True, selectable=True, visible=True)
@@ -57,5 +53,8 @@ class Command(component.Component):
 
 
 class __unit__(component.UnitMixinComponent, unit.Unit):
+    title = _("Execute MPD commands")
+    key = '7'
+
     REQUIRED_UNITS = ['misc']
     COMPONENT_CLASS = Command

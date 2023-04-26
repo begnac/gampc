@@ -50,6 +50,9 @@ async def action_playqueue_add_high_priority_cb(songlist_, action, parameter):
 
 
 class __unit__(songlist.UnitMixinSongList, unit.Unit):
+    title = _("Play Queue")
+    key = '1'
+
     COMPONENT_CLASS = playqueue.PlayQueue
 
     def __init__(self, name, manager):
@@ -79,7 +82,7 @@ class __unit__(songlist.UnitMixinSongList, unit.Unit):
             )
 
         self.add_resources(
-            playqueue.PlayQueue.name + '.context.menu',
+            self.name + '.context.menu',
             resource.MenuPath('other/playqueue-priority', _("Priority for random mode"), is_submenu=True),
             resource.MenuAction('other/playqueue-priority', 'mod.playqueue-high-priority', _("High")),
             resource.MenuAction('other/playqueue-priority', 'mod.playqueue-normal-priority', _("Normal")),

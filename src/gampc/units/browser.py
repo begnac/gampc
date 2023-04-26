@@ -32,6 +32,9 @@ DIRECTORY = 'directory'
 
 
 class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
+    title = _("Database Browser")
+    key = '2'
+
     COMPONENT_CLASS = browser.Browser
 
     def __init__(self, *args, **kwargs):
