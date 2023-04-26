@@ -26,6 +26,7 @@ from gi.repository import Gtk
 import types
 
 from ..util import data
+from ..util import resource
 from ..util import unit
 from ..util.logger import logger
 
@@ -46,12 +47,12 @@ class Component(Gtk.Bin):
         self.config = self.unit.config
         self.ampd = self.unit.ampd.sub_executor()
         self.signal_handlers = []
-        self.actions = Gio.SimpleActionGroup()
-        self.signals = {}
+        self.window_actions = Gio.SimpleActionGroup()
+        self.window_signals = {}
         self.win = None
 
-        self.action_aggregator = unit.manager.create_aggregator(self.name + '.action', self.action_added_cb, self.action_removed_cb,
-                                                                also_wants=[provider + '.action' for provider in self.use_resources])
+        self.action_aggregator = resource.ActionAggregator([provider + '.action' for provider in [unit.name] + self.use_resources], self.window_actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
+        unit.manager.add_aggregator(self.action_aggregator)
 
         self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(self.title, self.status) if self.status else self.title)
 
@@ -63,24 +64,13 @@ class Component(Gtk.Bin):
     def __del__(self):
         logger.debug('Deleting {}'.format(self))
 
-    def set_window(self, win=None):
-        if self.win is not None:
-            self.win.insert_action_group(self.action_prefix, None)
-            for cb in self.signals.values():
-                self.win.disconnect_by_func(cb)
-        self.win = win
-        if self.win is not None:
-            for name, cb in self.signals.items():
-                self.win.connect(name, cb)
-            self.win.insert_action_group(self.action_prefix, self.actions)
-
     @staticmethod
     def __destroy_cb(self):
         self.signal_handlers_disconnect()
         self.ampd.close()
         del self.action_aggregator
-        del self.signals
-        del self.actions
+        del self.window_signals
+        del self.window_actions
 
     def signal_handler_connect(self, target, *args):
         handler = target.connect(*args)
@@ -92,10 +82,13 @@ class Component(Gtk.Bin):
         self.signal_handlers = []
 
     def setup_context_menu(self, name, widget):
-        if name not in self.unit.menus or self.unit.menus[name].get_n_items() == 0:
+        if name not in self.unit.menu_aggregators:
             return
-        menu = Gtk.Menu.new_from_model(self.unit.menus[name])
-        menu.insert_action_group(self.action_prefix, self.actions)
+        model = self.unit.menu_aggregators[name].menu
+        if model.get_n_items() == 0:
+            return
+        menu = Gtk.Menu.new_from_model(model)
+        menu.insert_action_group(self.action_prefix, self.window_actions)
         widget.connect('button-press-event', self.context_menu_button_press_event_cb, menu)
 
     @staticmethod
@@ -108,12 +101,6 @@ class Component(Gtk.Bin):
     @staticmethod
     def client_connected_cb(client):
         pass
-
-    def action_added_cb(self, manager, action):
-        self.actions.add_action(action.generate(lambda f: types.MethodType(f, self), self.unit.unit_persistent))
-
-    def action_removed_cb(self, manager, action):
-        self.actions.remove_action(action.name)
 
 
 class PanedComponent(Component):
@@ -157,35 +144,38 @@ class PanedComponent(Component):
 
 
 class UnitMixinComponent(unit.UnitMixinConfig, unit.UnitMixinServer):
-    def __init__(self, name, manager):
+    def __init__(self, name, manager, *, menus=[]):
         self.REQUIRED_UNITS = ['component', 'persistent'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
-        self.unit_component.register_component_class(self.MODULE_CLASS, self)
-        self.aggregators = []
-        self.menus = {}
+        self.menu_aggregators = {}
+
+        self.unit_component.register_component_factory(self.name, self.new_component)
+        self.add_resource('app.menu', resource.MenuAction('components/components',
+                                                          f'app.component-start("{self.name}")',
+                                                          self.COMPONENT_CLASS.title,
+                                                          ['<Alt>' + self.COMPONENT_CLASS.key, '<Control><Alt>' + self.COMPONENT_CLASS.key]))
+
+        for menu in menus:
+            self.setup_menu(self.name, menu, self.COMPONENT_CLASS.use_resources)
 
     def shutdown(self):
-        for aggregator in reversed(self.aggregators):
+        for aggregator in self.menu_aggregators.values():
             self.manager.remove_aggregator(aggregator)
-        del self.aggregators
-        self.unit_component.unregister_component_class(self.MODULE_CLASS)
+        del self.menu_aggregators
+        self.unit_component.unregister_component_factory(self.name)
         super().shutdown()
+
+    def new_component(self):
+        return self.COMPONENT_CLASS(self)
 
     def setup_menu(self, name, kind, providers=[]):
         full_name = '.'.join([name, kind])
-        self.menus[full_name] = Gio.Menu()
-        aggregator = self.manager.create_aggregator('.'.join([full_name, 'menu']), self.menu_item_added_cb, self.menu_item_removed_cb, full_name,
-                                                    also_wants=['.'.join([provider, kind, 'menu']) for provider in providers])
-        self.aggregators.append(aggregator)
-
-    def menu_item_added_cb(self, aggregator, menu_item, name):
-        menu_item.insert_into(self.menus[name])
-
-    def menu_item_removed_cb(self, aggregator, menu_item, name):
-        menu_item.remove_from(self.menus[name])
+        aggregator = resource.MenuAggregator(['.'.join([full_name, 'menu'])] + ['.'.join([provider, kind, 'menu']) for provider in providers])
+        self.manager.add_aggregator(aggregator)
+        self.menu_aggregators[full_name] = aggregator
 
 
 class UnitMixinPanedComponent(UnitMixinComponent, unit.UnitMixinConfig):
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, name, manager, **kwargs):
+        super().__init__(name, manager, **kwargs)
         self.config.pane_separator._get(default=100)

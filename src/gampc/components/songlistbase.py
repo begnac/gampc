@@ -29,7 +29,7 @@ from ..util import resource
 from . import component
 
 
-class RecordList(component.Component):
+class SongListBase(component.Component):
     sortable = False
     duplicate_test_columns = []
     duplicate_field = '_duplicate'
@@ -52,24 +52,24 @@ class RecordList(component.Component):
         self.treeview = data.RecordTreeView(self.fields, self.data_func, self.sortable)
         self.store = self.treeview.get_model()
 
-        self.actions.add_action(resource.Action('reset', self.action_reset_cb))
-        self.actions.add_action(resource.Action('copy', self.action_copy_delete_cb))
+        self.window_actions.add_action(resource.Action('reset', self.action_reset_cb))
+        self.window_actions.add_action(resource.Action('copy', self.action_copy_delete_cb))
 
         if self.record_new_cb != NotImplemented:
-            self.actions.add_action(resource.Action('paste', self.action_paste_cb))
-            self.actions.add_action(resource.Action('paste-before', self.action_paste_cb))
+            self.window_actions.add_action(resource.Action('paste', self.action_paste_cb))
+            self.window_actions.add_action(resource.Action('paste-before', self.action_paste_cb))
             self.signal_handler_connect(self.store, 'record-new', self.record_new_cb)
 
         if self.record_delete_cb != NotImplemented:
-            self.actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
-            self.actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
+            self.window_actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
+            self.window_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
             self.signal_handler_connect(self.store, 'record-delete', self.record_delete_cb)
 
         self.set_editable(True)
 
         self.treeview_filter = data.TreeViewFilter(self.unit.unit_misc, self.treeview)
         self.add(self.treeview_filter)
-        self.actions.add_action(Gio.PropertyAction(name='filter', object=self.treeview_filter, property_name='active'))
+        self.window_actions.add_action(Gio.PropertyAction(name='filter', object=self.treeview_filter, property_name='active'))
 
         self.setup_context_menu('.'.join([self.name, 'context']), self.treeview)
         self.treeview.connect('row-activated', self.treeview_row_activated_cb)
@@ -92,7 +92,7 @@ class RecordList(component.Component):
             self.treeview.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, dndtargets, Gdk.DragAction.COPY)
 
         for name in ['paste', 'paste-before', 'delete', 'cut']:
-            action_ = self.actions.lookup(name)
+            action_ = self.window_actions.lookup(name)
             if action_ is not None:
                 action_.set_enabled(editable)
 
@@ -193,11 +193,11 @@ class RecordList(component.Component):
     record_delete_cb = record_new_cb = NotImplemented
 
 
-class RecordListWithEditDel(RecordList):
+class SongListBaseWithEditDel(SongListBase):
     def __init__(self, unit):
         super().__init__(unit)
-        self.actions.add_action(resource.Action('save', self.action_save_cb))
-        self.actions.add_action(resource.Action('undelete', self.action_undelete_cb))
+        self.window_actions.add_action(resource.Action('save', self.action_save_cb))
+        self.window_actions.add_action(resource.Action('undelete', self.action_undelete_cb))
 
     def action_undelete_cb(self, action, parameter):
         store, paths = self.treeview.get_selection().get_selected_rows()
@@ -239,7 +239,7 @@ class RecordListWithEditDel(RecordList):
                 return
 
 
-class RecordListWithAdd(RecordList):
+class SongListBaseWithAdd(SongListBase):
     def add_record(self, record):
         # dest = self.treeview.get_path_at_pos(int(self.treeview.context_menu_x), int(self.treeview.context_menu_y))
         # path = None if dest is None else dest[0]
@@ -247,8 +247,14 @@ class RecordListWithAdd(RecordList):
         self.treeview.paste_at([record], path, False)
 
 
-class RecordListWithEditDelNew(RecordListWithEditDel, RecordListWithAdd):
+class SongListBaseWithEditDelNew(SongListBaseWithEditDel, SongListBaseWithAdd):
     def record_new_cb(self, store, i):
         self.set_modified()
         store.get_record(i)._status = self.RECORD_NEW
         self.merge_new_del(i)
+
+
+class UnitMixinSongListBase(component.UnitMixinComponent):
+    def __init__(self, name, manager, *, menus=[]):
+        self.REQUIRED_UNITS = ['misc', 'songlistbase'] + self.REQUIRED_UNITS
+        super().__init__(name, manager, menus=menus + ['context'])

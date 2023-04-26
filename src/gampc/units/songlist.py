@@ -30,49 +30,20 @@ from ..util.misc import format_time
 
 
 class __unit__(unit.UnitMixinConfig, unit.Unit):
+    REQUIRED_UNITS = ['songlistbase']
+
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        menus = [
-            resource.MenuPath('edit/component/base'),
-            resource.MenuPath('edit/component/special'),
+        menu = [
+            resource.MenuPath('edit/songlist/special'),
+            resource.MenuAction('edit/songlist/special', 'mod.add-separator', _("Add separator")),
+            resource.MenuAction('edit/songlist/special', 'mod.add-url', _("Add URL or filename")),
+            resource.MenuAction('edit/songlist/special', 'mod.delete-file', _("Move files to trash"), ['<Control>Delete']),
         ]
 
-        actions = [
-            # resource.UserAction('mod.selectall', _("Select all"), 'edit/component/base', ['<Control>a'], accels_fragile=True),
-            resource.UserAction('mod.cut', _("Cut"), 'edit/component/base', ['<Control>x'], accels_fragile=True),
-            resource.UserAction('mod.copy', _("Copy"), 'edit/component/base', ['<Control>c'], accels_fragile=True),
-            resource.UserAction('mod.paste', _("Paste"), 'edit/component/base', ['<Control>v'], accels_fragile=True),
-            resource.UserAction('mod.paste-before', _("Paste before"), 'edit/component/base', ['<Control>b']),
-            resource.UserAction('mod.delete', _("Delete"), 'edit/component/base', ['Delete'], accels_fragile=True),
-            resource.UserAction('mod.undelete', _("Undelete"), 'edit/component/base', ['<Alt>Delete'], accels_fragile=True),
-            resource.UserAction('mod.add-separator', _("Add separator"), 'edit/component/special'),
-            resource.UserAction('mod.add-url', _("Add URL or filename"), 'edit/component/special'),
-            resource.UserAction('mod.delete-file', _("Move files to trash"), 'edit/component/special', ['<Control>Delete']),
-        ]
-
-        self.new_resource_provider('app.menu').add_resources(
-            *menus,
-            resource.UserAction('mod.save', _("Save"), 'edit/global', ['<Control>s']),
-            resource.UserAction('mod.reset', _("Reset"), 'edit/global', ['<Control>r']),
-            resource.UserAction('mod.filter', _("Filter"), 'edit/global', ['<Control><Shift>f']),
-            *actions,
-        )
-
-        self.new_resource_provider('songlist.context.menu').add_resources(
-            resource.MenuPath('action'),
-            resource.MenuPath('edit'),
-            resource.MenuPath('edit/component'),
-            *menus,
-            resource.MenuPath('other'),
-            *actions,
-        )
-
-        self.new_resource_provider('songlist.left-context.menu').add_resources(
-            resource.MenuPath('action'),
-            resource.MenuPath('edit'),
-            resource.MenuPath('other'),
-        )
+        self.add_resources('app.menu', *menu)
+        self.add_resources('songlistbase.context.menu', *menu)
 
         self.config.music_dir._get(default=GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC))
 

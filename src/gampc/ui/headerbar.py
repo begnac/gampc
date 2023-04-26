@@ -23,7 +23,7 @@ from gi.repository import GLib
 from gi.repository import Gdk
 from gi.repository import Gtk
 
-from ..util.misc import format_time
+from ..util.misc import format_time, get_modifier_state
 
 
 class ButtonBox(Gtk.Box):

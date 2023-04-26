@@ -86,7 +86,7 @@ class MenuPath(MenuPathBase):
         return item
 
 
-class MenuAction(MenuPathBase):
+class MenuActionMinimal(MenuPathBase):
     def create_item(self):
         item = super().create_item()
         item.set_detailed_action(self.name)
@@ -94,15 +94,15 @@ class MenuAction(MenuPathBase):
         return item
 
 
-class UserAction(MenuAction, GObject.Object):
-    def __init__(self, action, label, path, accels=[], accels_fragile=False):
+class MenuAction(MenuActionMinimal, GObject.Object):
+    def __init__(self, path, action, label, accels=[], accels_fragile=False):
         GObject.Object.__init__(self)
-        self.action = action
         self.path = path
+        self.action = action
         self.label = label
         self.accels = accels
         self.accels_fragile = accels_fragile
-        MenuAction.__init__(self, '{path}/{action}'.format(path=self.path, action=self.action), self.label)
+        super().__init__(f'{path}/{action}', label)
 
 
 class ActionDangerousMixin:
@@ -154,59 +154,95 @@ class PropertyActionModel(ActionModelBase):
 
 class ResourceProvider(GObject.Object):
     __gsignals__ = {
-        'resource-added': (GObject.SIGNAL_RUN_FIRST, None, (GObject.Object,)),
-        'resource-removed': (GObject.SIGNAL_RUN_FIRST, None, (GObject.Object,)),
+        'resource-added': (GObject.SIGNAL_RUN_FIRST, None, (str, GObject.Object)),
+        'resource-removed': (GObject.SIGNAL_RUN_FIRST, None, (str, GObject.Object)),
     }
 
-    def __init__(self, name):
+    def __init__(self):
         super().__init__()
-        self.name = name
-        self._resources = []
+        self._resources = {}
 
-    def get_resources(self):
-        return self._resources
+    def get_resources(self, target):
+        return self._resources.get(target, [])
 
-    def add_resource(self, resource):
-        self._resources.append(resource)
-        self.emit('resource-added', resource)
+    def add_resource(self, target, resource):
+        self._resources.setdefault(target, []).append(resource)
+        self.emit('resource-added', target, resource)
 
-    def remove_resource(self, resource):
-        self.emit('resource-removed', resource)
-        self._resources.remove(resource)
+    def remove_resource(self, target, resource):
+        self.emit('resource-removed', target, resource)
+        self._resources[target].remove(resource)
 
-    def add_resources(self, *resources):
+    def add_resources(self, target, *resources):
         for resource in resources:
-            self.add_resource(resource)
+            self.add_resource(target, resource)
 
-    def remove_resources(self, *resources):
+    def remove_resources(self, target, *resources):
         for resource in reversed(resources):
-            self.remove_resource(resource)
+            self.remove_resource(target, resource)
+
+    def remove_target_resources(self, target):
+        if target in self._resources:
+            self.remove_resources(target, *self._resources[target])
 
     def remove_all_resources(self):
-        for resource in reversed(self._resources):
-            self.remove_resource(resource)
+        for target in self._resources:
+            self.remove_target_resources(target)
 
 
 class ResourceAggregator(ResourceProvider):
-    def __init__(self, name, also_wants=[]):
-        super().__init__(name)
+    def __init__(self, sources):
+        super().__init__()
         self._providers = []
-        self.also_wants = also_wants
+        self.sources = sources
 
     def link(self, provider):
-        self.add_resources(*provider.get_resources())
-        provider.connect('resource-added', self.resource_added_cb)
-        provider.connect('resource-removed', self.resource_removed_cb)
+        for source in self.sources:
+            self.add_resources(source, *provider.get_resources(source))
+        provider.connect('resource-added', self.provider_resource_added_cb)
+        provider.connect('resource-removed', self.provider_resource_removed_cb)
         self._providers.append(provider)
 
     def unlink(self, provider):
         self._providers.remove(provider)
-        provider.disconnect_by_func(self.resource_added_cb)
-        provider.disconnect_by_func(self.resource_removed_cb)
-        self.remove_resources(*provider.get_resources())
+        provider.disconnect_by_func(self.provider_resource_added_cb)
+        provider.disconnect_by_func(self.provider_resource_removed_cb)
+        for source in self.sources:
+            self.remove_resources(source, *provider.get_resources(source))
 
-    def resource_added_cb(self, provider, resource):
-        self.add_resource(resource)
+    def provider_resource_added_cb(self, provider, source, resource):
+        if source in self.sources:
+            self.add_resource(source, resource)
 
-    def resource_removed_cb(self, provider, resource):
-        self.remove_resource(resource)
+    def provider_resource_removed_cb(self, provider, source, resource):
+        if source in self.sources:
+            self.remove_resource(source, resource)
+
+
+class ActionAggregator(ResourceAggregator):
+    def __init__(self, sources, action_group, *params):
+        super().__init__(sources)
+        self.action_group = action_group
+        self.params = params
+
+    def add_resource(self, source, action):
+        super().add_resource(source, action)
+        self.action_group.add_action(action.generate(*self.params))
+
+    def remove_resource(self, source, action):
+        self.action_group.remove_action(action.get_name())
+        super().remove_resource(source, action)
+
+
+class MenuAggregator(ResourceAggregator):
+    def __init__(self, sources, menu=None):
+        super().__init__(sources)
+        self.menu = menu or Gio.Menu()
+
+    def add_resource(self, source, menu_item):
+        super().add_resource(source, menu_item)
+        menu_item.insert_into(self.menu)
+
+    def remove_resource(self, source, menu_item):
+        menu_item.remove_from(self.menu)
+        super().remove_resource(source, menu_item)

@@ -98,10 +98,14 @@ class Window(Gtk.ApplicationWindow):
             self.component.disconnect_by_func(self.update_subtitle)
             self.component.disconnect_by_func(self.update_title)
             self.main.remove(self.component)
-            self.component.set_window()
+            self.insert_action_group(self.component.action_prefix, None)
+            for cb in self.component.window_signals.values():
+                self.disconnect_by_func(cb)
         self.component = component
         if self.component is not None:
-            self.component.set_window(self)
+            for name, cb in self.component.window_signals.items():
+                self.connect(name, cb)
+            self.insert_action_group(self.component.action_prefix, self.component.window_actions)
             self.main.pack_start(component, True, True, 0)
             self.component.connect('notify::title-extra', self.update_title)
             self.component.connect('notify::full-title', self.update_subtitle)

@@ -22,26 +22,22 @@ from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import Gtk
 
-import urllib.parse
-import os.path
-
 from ..util import ssde
 from ..util import resource
-from ..util import unit
 from ..util.misc import format_time
 
-from . import recordlist
+from . import songlistbase
 from . import component
 
 
-class SongList(recordlist.RecordList):
-    use_resources = ['songlist']
+class SongList(songlistbase.SongListBase):
+    use_resources = ['songlistbase', 'songlist']
     DND_TARGET = 'GAMPC_SONG'
 
     def __init__(self, unit):
         self.fields = unit.unit_songlist.fields
         super().__init__(unit)
-        self.actions.add_action(resource.Action('delete-file', self.action_delete_file_cb))
+        self.window_actions.add_action(resource.Action('delete-file', self.action_delete_file_cb))
 
     def records_set_fields(self, songs):
         for song in songs:
@@ -77,15 +73,15 @@ class SongListWithTotals(SongList):
         self.status = '{} / {}'.format(len(songs), format_time(time))
 
 
-class SongListWithEditDel(SongList, recordlist.RecordListWithEditDel):
+class SongListWithEditDel(SongList, songlistbase.SongListBaseWithEditDel):
     pass
 
 
-class SongListWithAdd(SongList, recordlist.RecordListWithAdd):
+class SongListWithAdd(SongList, songlistbase.SongListBaseWithAdd):
     def __init__(self, unit):
         super().__init__(unit)
-        self.actions.add_action(resource.Action('add-separator', self.action_add_separator_cb))
-        self.actions.add_action(resource.Action('add-url', self.action_add_url_cb))
+        self.window_actions.add_action(resource.Action('add-separator', self.action_add_separator_cb))
+        self.window_actions.add_action(resource.Action('add-url', self.action_add_url_cb))
 
     def action_add_separator_cb(self, action, parameter):
         self.add_record(dict(self.unit.unit_server.separator_song))
@@ -97,7 +93,7 @@ class SongListWithAdd(SongList, recordlist.RecordListWithAdd):
             self.add_record(dict(file=url))
 
 
-class SongListWithEditDelNew(SongListWithAdd, recordlist.RecordListWithEditDelNew):
+class SongListWithEditDelNew(SongListWithAdd, songlistbase.SongListBaseWithEditDelNew):
     pass
 
 
@@ -131,14 +127,12 @@ class SongListWithEditDelNew(SongListWithAdd, recordlist.RecordListWithEditDelNe
 #         super().set_records(songs, set_fields)
 
 
-class UnitMixinSongList(component.UnitMixinComponent):
-    def __init__(self, name, manager):
-        self.REQUIRED_UNITS = ['misc', 'songlist'] + self.REQUIRED_UNITS
-        super().__init__(name, manager)
-        self.setup_menu(self.MODULE_CLASS.name, 'context', self.MODULE_CLASS.use_resources)
+class UnitMixinSongList(songlistbase.UnitMixinSongListBase):
+    def __init__(self, name, manager, *, menus=[]):
+        self.REQUIRED_UNITS = ['songlist'] + self.REQUIRED_UNITS
+        super().__init__(name, manager, menus=menus)
 
 
 class UnitMixinPanedSongList(UnitMixinSongList, component.UnitMixinPanedComponent):
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
-        self.setup_menu(self.MODULE_CLASS.name, 'left-context', self.MODULE_CLASS.use_resources)
+    def __init__(self, name, manager, *, menus=[]):
+        super().__init__(name, manager, menus=menus + ['left-context'])

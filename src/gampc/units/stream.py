@@ -23,14 +23,14 @@ from ..util import db
 from ..util import resource
 from ..util import unit
 from ..util.logger import logger
-from ..components import songlist
+from ..components import songlistbase
 from ..components import stream
 
 
 class StreamDatabase(db.Database):
-    def __init__(self, fields):
+    def __init__(self, name, fields):
         self.fields = fields
-        super().__init__(stream.Stream.name)
+        super().__init__(name)
 
     def setup_database(self):
         self.setup_table('streams', 'streamid INTEGER PRIMARY KEY', self.fields.basic_names)
@@ -47,22 +47,24 @@ class StreamDatabase(db.Database):
                                                                                                        ':' + ',:'.join(self.fields.basic_names)), stream_)
 
 
-class __unit__(songlist.UnitMixinSongList, unit.Unit):
-    MODULE_CLASS = stream.Stream
+class __unit__(songlistbase.UnitMixinSongListBase, unit.Unit):
+    COMPONENT_CLASS = stream.Stream
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.new_resource_provider('app.menu').add_resources(
+        self.add_resources(
+            'app.menu',
             resource.MenuPath('edit/component/stream'),
-            resource.UserAction('mod.stream-add', _("Add stream"), 'edit/component/stream'),
-            resource.UserAction('mod.stream-modify', _("Modify stream"), 'edit/component/stream', ['F2']),
+            resource.MenuAction('edit/component/stream', 'mod.stream-add', _("Add stream"), ),
+            resource.MenuAction('edit/component/stream', 'mod.stream-modify', _("Modify stream"), ['F2']),
         )
 
-        self.new_resource_provider('stream.context.menu').add_resources(
+        self.add_resources(
+            'stream.context.menu',
             resource.MenuPath('stream'),
-            resource.MenuAction('stream/mod.stream-add', _("Add stream")),
-            resource.MenuAction('stream/mod.stream-modify', _("Modify stream")),
+            resource.MenuAction('stream', 'mod.stream-add', _("Add stream")),
+            resource.MenuAction('stream', 'mod.stream-modify', _("Modify stream")),
         )
 
         self.fields = data.FieldFamily(self.config.fields)
@@ -70,7 +72,7 @@ class __unit__(songlist.UnitMixinSongList, unit.Unit):
         self.fields.register_field(data.Field('file', _("URL")))
         self.fields.register_field(data.Field('Comment', _("Comment")))
 
-        self.db = StreamDatabase(self.fields)
+        self.db = StreamDatabase(self.name, self.fields)
 
         self.config.edit_dialog_size._get(default=[500, 500])
 

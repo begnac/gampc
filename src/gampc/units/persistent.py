@@ -48,13 +48,15 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
         for option in ampd.OPTION_NAMES:
             self.unit_server.ampd_server_properties.connect('notify::' + option, self.notify_option_cb)
 
-        self.new_resource_provider('app.action').add_resources(
+        self.add_resources(
+            'app.action',
             *(resource.PropertyActionModel(name, self) for name in self.STICKER_PROPERTIES),
         )
 
-        self.new_resource_provider('app.menu').add_resources(
-            resource.UserAction('app.protect-requested', _("Protected mode"), 'gampc/persistent', ['<Control><Alt>r']),
-            resource.UserAction('app.dark', _("Dark interface"), 'gampc/persistent', ['<Control><Alt>d']),
+        self.add_resources(
+            'app.menu',
+            resource.MenuAction('gampc/persistent', 'app.protect-requested', _("Protected mode"), ['<Control><Alt>r']),
+            resource.MenuAction('gampc/persistent', 'app.dark', _("Dark interface"), ['<Control><Alt>d']),
         )
 
     def shutdown(self):

@@ -94,7 +94,7 @@ class Current(component.Component):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.signals['check-resize'] = self.window_check_resize_cb
+        self.window_signals['check-resize'] = self.window_check_resize_cb
 
         self.pixbufs = PixbufCache()
 

@@ -24,9 +24,9 @@ from gi.repository import Gdk
 
 import ampd
 
-from ..util import ssde
 from ..util import resource
 from ..util import unit
+from ..util.misc import get_modifier_state
 
 
 class __unit__(unit.UnitMixinServer, unit.Unit):
@@ -37,12 +37,10 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
 
         self.output_menu = Gio.Menu()
 
-        self.app_menu_provider = self.new_resource_provider('app.menu')
-        self.app_menu_provider.add_resources(
+        self.add_resources(
+            'app.menu',
             resource.MenuPath('server/server/output/output_menu', _("Outputs (<Ctrl> to toggle)"), instance=self.output_menu),
         )
-
-        self.app_action_provider = self.new_resource_provider('app.action')
 
     def shutdown(self):
         self.clean_outputs()
@@ -63,8 +61,8 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
             self.outputs = []
 
     def clean_outputs(self):
-        self.app_action_provider.remove_all_resources()
         self.output_menu.remove_all()
+        self.remove_target_resources('app.action')
 
     def refresh_outputs(self, outputs):
         self.outputs = []
@@ -72,14 +70,14 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
             if output['plugin'] == 'dummy':
                 continue
             output['action'] = 'output-' + output['outputid']
-            self.app_action_provider.add_resource(resource.ActionModel(output['action'], self.action_output_activate_cb, state=GLib.Variant.new_boolean(int(output['outputenabled'])), dangerous=True))
-            resource.MenuAction('app.' + output['action'], output['outputname']).insert_into(self.output_menu)
+            self.add_resource('app.action', resource.ActionModel(output['action'], self.action_output_activate_cb, state=GLib.Variant.new_boolean(int(output['outputenabled'])), dangerous=True))
+            resource.MenuActionMinimal('app.' + output['action'], output['outputname']).insert_into(self.output_menu)
             self.outputs.append(output)
 
     @ampd.task
     async def action_output_activate_cb(self, action, parameter):
         output_id = action.get_name().split('-', 1)[1]
-        if Gdk.Keymap.get_default().get_modifier_state() & Gdk.ModifierType.CONTROL_MASK:
+        if get_modifier_state() & Gdk.ModifierType.CONTROL_MASK:
             await self.ampd.toggleoutput(output_id)
         elif all(map(lambda output: output['outputid'] == output_id or output['outputenabled'] == '0', await self.ampd.outputs())) and self.unit_server.ampd_server_properties.state == 'play':
             await self.ampd.command_list([self.ampd.pause(1), self.ampd.disableoutput(output_id), self.ampd.enableoutput(output_id), self.ampd.pause(0)])

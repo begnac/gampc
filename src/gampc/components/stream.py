@@ -20,15 +20,15 @@
 
 from ..util import ssde
 from ..util import resource
-from . import recordlist
+from . import songlistbase
 
 
-class Stream(recordlist.RecordListWithEditDelNew):
+class Stream(songlistbase.SongListBaseWithEditDelNew):
     title = _("Internet Streams")
     name = 'stream'
     key = '4'
 
-    use_resources = ['songlist']
+    use_resources = ['songlistbase']
     DND_TARGET = 'GAMPC_STREAM'
 
     def __init__(self, unit):
@@ -36,8 +36,8 @@ class Stream(recordlist.RecordListWithEditDelNew):
 
         super().__init__(unit)
 
-        self.actions.add_action(resource.Action('stream-add', self.action_add_cb))
-        self.actions.add_action(resource.Action('stream-modify', self.action_modify_cb))
+        self.window_actions.add_action(resource.Action('stream-add', self.action_add_cb))
+        self.window_actions.add_action(resource.Action('stream-modify', self.action_modify_cb))
 
         self.ssde_struct = ssde.Dict(
             label=_("Internet stream"),

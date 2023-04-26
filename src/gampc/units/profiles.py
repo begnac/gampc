@@ -50,7 +50,7 @@ class Profile:
         return Profile(name, address)
 
     def get_action(self):
-        return resource.MenuAction(f'app.server-profile("{self}")', self.name)
+        return resource.MenuActionMinimal(f'app.server-profile("{self}")', self.name)
 
     def __repr__(self):
         return f'{self.address}={self.name}'
@@ -78,15 +78,17 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
         self.config.profiles._get(default=default_profiles)
         self.user_profiles_setup()
 
-        self.new_resource_provider('app.action').add_resources(
+        self.add_resources(
+            'app.action',
             resource.ActionModel('edit-user-profiles', self.edit_user_profiles_cb),
         )
 
-        self.new_resource_provider('app.menu').add_resources(
+        self.add_resources(
+            'app.menu',
             resource.MenuPath('server/profiles/profiles_menu', _("_Profiles"), is_submenu=True),
             resource.MenuPath('server/profiles/profiles_menu/zeroconf', instance=self.zeroconf_profile_menu),
             resource.MenuPath('server/profiles/profiles_menu/user', instance=self.user_profile_menu),
-            resource.MenuAction('server/profiles/profiles_menu/app.edit-user-profiles', _("Edit profiles")),
+            resource.MenuAction('server/profiles/profiles_menu', 'app.edit-user-profiles', _("Edit profiles")),
         )
 
         self.user_profiles_struct = ssde.List(

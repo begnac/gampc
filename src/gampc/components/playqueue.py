@@ -36,15 +36,15 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
 
     def __init__(self, unit):
         super().__init__(unit)
-        self.actions.add_action(resource.Action('playqueue-high-priority', self.action_priority_cb))
-        self.actions.add_action(resource.Action('playqueue-normal-priority', self.action_priority_cb))
-        self.actions.add_action(resource.Action('playqueue-choose-priority', self.action_priority_cb))
-        self.actions.add_action(resource.Action('playqueue-shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
-        self.actions.add_action(resource.Action('playqueue-go-to-current', self.action_go_to_current_cb))
+        self.window_actions.add_action(resource.Action('playqueue-high-priority', self.action_priority_cb))
+        self.window_actions.add_action(resource.Action('playqueue-normal-priority', self.action_priority_cb))
+        self.window_actions.add_action(resource.Action('playqueue-choose-priority', self.action_priority_cb))
+        self.window_actions.add_action(resource.Action('playqueue-shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
+        self.window_actions.add_action(resource.Action('playqueue-go-to-current', self.action_go_to_current_cb))
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
-        for name in self.actions.list_actions():
+        for name in self.window_actions.list_actions():
             if name.startswith('playqueue-ext-'):
-                self.actions.remove(name)
+                self.window_actions.remove(name)
         self.signal_handler_connect(self.treeview, 'cursor-changed', self.cursor_changed_cb)
         self.cursor_by_profile = {}
         self.set_cursor = False

@@ -26,7 +26,8 @@ class __unit__(unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.new_resource_provider('app.menu').add_resources(
+        self.add_resources(
+            'app.menu',
             resource.MenuPath('gampc', _("_GAMPC"), is_submenu=True),
             resource.MenuPath('edit', _("_Edit"), is_submenu=True),
             resource.MenuPath('playback', _("_Playback"), is_submenu=True),
@@ -43,12 +44,13 @@ class __unit__(unit.Unit):
 
             resource.MenuPath('server/server'),
             resource.MenuPath('server/profiles'),
-            resource.UserAction('app.new-window', _("New window"), 'gampc/window', ['<Control>n']),
-            resource.UserAction('app.close-window', _("Close window"), 'gampc/window', ['<Control>w']),
-            resource.UserAction('win.toggle-fullscreen', _("Fullscreen window"), 'gampc/window', ['<Alt>f']),
-            resource.UserAction('win.volume-popup', _("Adjust volume"), 'gampc/window', ['<Alt>v']),
-            resource.UserAction('app.quit', _("Quit"), 'gampc/app', ['<Control>q']),
 
-            resource.UserAction('app.help', _("Help"), 'help', ['<Control>h', 'F1']),
-            resource.UserAction('app.about', _("About"), 'help'),
+            resource.MenuAction('gampc/window', 'app.new-window', _("New window"), ['<Control>n']),
+            resource.MenuAction('gampc/window', 'app.close-window', _("Close window"), ['<Control>w']),
+            resource.MenuAction('gampc/window', 'win.toggle-fullscreen', _("Fullscreen window"), ['<Alt>f']),
+            resource.MenuAction('gampc/window', 'win.volume-popup', _("Adjust volume"), ['<Alt>v']),
+            resource.MenuAction('gampc/app', 'app.quit', _("Quit"), ['<Control>q']),
+
+            resource.MenuAction('help', 'app.help', _("Help"), ['<Control>h', 'F1']),
+            resource.MenuAction('help', 'app.about', _("About")),
         )

@@ -55,7 +55,7 @@ class Search(songlist.SongList):
         self.add(box)
 
         self.connect('map', self.action_search_cb)
-        self.actions.add_action(resource.Action('search', self.action_search_cb))
+        self.window_actions.add_action(resource.Action('search', self.action_search_cb))
 
     def action_search_cb(self, *args):
         self.entry.grab_focus()
@@ -121,10 +121,11 @@ class Search(songlist.SongList):
 
 class __unit__(songlist.UnitMixinSongList, unit.Unit):
     REQUIRED_UNITS = ['misc']
-    MODULE_CLASS = Search
+    COMPONENT_CLASS = Search
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
-        self.new_resource_provider('app.menu').add_resources(
-            resource.UserAction('mod.search', _("Search"), 'edit/component', ['<Control><Shift>f']),
+        self.add_resources(
+            'app.menu',
+            resource.MenuAction('edit/component', 'mod.search', _("Search"), ['<Control><Shift>f']),
         )

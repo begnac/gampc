@@ -48,9 +48,9 @@ class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, tre
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.actions.add_action(resource.Action('playlist-rename', self.action_playlist_rename_cb))
-        self.actions.add_action(resource.Action('playlist-delete', self.action_playlist_delete_cb))
-        self.actions.add_action(resource.Action('playlist-update-from-queue', self.action_playlist_update_from_queue_cb))
+        self.window_actions.add_action(resource.Action('playlist-rename', self.action_playlist_rename_cb))
+        self.window_actions.add_action(resource.Action('playlist-delete', self.action_playlist_delete_cb))
+        self.window_actions.add_action(resource.Action('playlist-update-from-queue', self.action_playlist_update_from_queue_cb))
 
     def init_left_store(self):
         return self.unit.left_store

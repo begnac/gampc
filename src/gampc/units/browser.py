@@ -32,7 +32,7 @@ DIRECTORY = 'directory'
 
 
 class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
-    MODULE_CLASS = browser.Browser
+    COMPONENT_CLASS = browser.Browser
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -58,4 +58,4 @@ class Command(component.Component):
 
 class __unit__(component.UnitMixinComponent, unit.Unit):
     REQUIRED_UNITS = ['misc']
-    MODULE_CLASS = Command
+    COMPONENT_CLASS = Command

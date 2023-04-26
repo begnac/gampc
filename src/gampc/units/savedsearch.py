@@ -182,7 +182,7 @@ class SearchDatabase(db.Database):
 
 
 class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
-    MODULE_CLASS = SavedSearch
+    COMPONENT_CLASS = SavedSearch
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
@@ -216,7 +216,7 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
             ])
 
         self.new_resource_provider(SavedSearch.name + '.left-context.user-action').add_resources(
-            resource.UserAction('mod.savedsearch-new', _("New search"), 'edit'),
-            resource.UserAction('mod.savedsearch-edit', _("Edit search"), 'edit'),
-            resource.UserAction('mod.savedsearch-delete', _("Delete search"), 'edit'),
+            resource.MenuAction('edit', 'mod.savedsearch-new', _("New search")),
+            resource.MenuAction('edit', 'mod.savedsearch-edit', _("Edit search")),
+            resource.MenuAction('edit', 'mod.savedsearch-delete', _("Delete search")),
         )

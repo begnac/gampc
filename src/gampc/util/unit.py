@@ -29,14 +29,17 @@ from . import resource
 from .logger import logger
 
 
-class Unit(GObject.Object):
+class UnitLoadError(Exception):
+    pass
+
+
+class Unit(resource.ResourceProvider):
     REQUIRED_UNITS = []
 
     def __init__(self, name, manager):
         super().__init__()
         self.name = name
         self.manager = manager
-        self.providers = []
 
         loaded_required = []
         try:
@@ -50,25 +53,10 @@ class Unit(GObject.Object):
 
     def shutdown(self):
         logger.debug(f"Shutting down unit {self}")
+        self.remove_all_resources()
         for required in reversed(self.REQUIRED_UNITS):
             self.manager._free_unit(required)
-        del self.providers
         del self.manager
-
-    def new_resource_provider(self, name):
-        provider = resource.ResourceProvider(name)
-        self.providers.append(provider)
-        return provider
-
-    def link_providers(self, aggregator):
-        for provider in self.providers:
-            if provider.name in [aggregator.name] + aggregator.also_wants:
-                aggregator.link(provider)
-
-    def unlink_providers(self, aggregator):
-        for provider in reversed(self.providers):
-            if provider.name in [aggregator.name] + aggregator.also_wants:
-                aggregator.unlink(provider)
 
     def __del__(self):
         logger.debug("Deleting {self}".format(self=self))
@@ -151,7 +139,7 @@ class UnitManager(GObject.Object):
             unit = self._units[name] = unit_module.__unit__(name, self)
             unit.use_count = 0
             for aggregator in self._aggregators:
-                unit.link_providers(aggregator)
+                aggregator.link(unit)
         unit.use_count += 1
         return unit
 
@@ -162,26 +150,19 @@ class UnitManager(GObject.Object):
         unit.use_count -= 1
         if unit.use_count == 0:
             for aggregator in reversed(self._aggregators):
-                unit.unlink_providers(aggregator)
+                aggregator.unlink(unit)
             del self._units[name]
             unit.shutdown()
 
     def add_aggregator(self, aggregator):
         for unit in self._units.values():
-            unit.link_providers(aggregator)
+            aggregator.link(unit)
         self._aggregators.append(aggregator)
 
     def remove_aggregator(self, aggregator):
         self._aggregators.remove(aggregator)
         for unit in reversed(self._units.values()):
-            unit.unlink_providers(aggregator)
-
-    def create_aggregator(self, name, resource_added_cb, resource_removed_cb, *cb_params, also_wants=[]):
-        aggregator = resource.ResourceAggregator(name, also_wants)
-        aggregator.connect('resource-added', resource_added_cb, *cb_params)
-        aggregator.connect('resource-removed', resource_removed_cb, *cb_params)
-        self.add_aggregator(aggregator)
-        return aggregator
+            aggregator.unlink(unit)
 
     def __del__(self):
         logger.debug("Deleting {self}".format(self=self))

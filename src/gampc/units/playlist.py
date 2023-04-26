@@ -74,32 +74,37 @@ class ChoosePathDialog(dialog.AsyncTextDialog):
 
 
 class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
-    MODULE_CLASS = playlist.Playlist
+    COMPONENT_CLASS = playlist.Playlist
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.new_resource_provider('songlist.action').add_resources(
+        self.add_resources(
+            'app.menu',
+            resource.MenuAction('edit/component', 'mod.playlist-saveas(false)', _("Save as playlist")),
+        )
+
+        self.add_resources(
+            'songlist.action',
             resource.ActionModel('playlist-add', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b')),
             resource.ActionModel('playlist-saveas', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b'))
         )
 
-        self.new_resource_provider('app.menu').add_resources(
-            resource.UserAction('mod.playlist-saveas(false)', _("Save as playlist"), 'edit/component'),
+        self.add_resources(
+            'songlist.context.menu',
+            resource.MenuAction('other', 'mod.playlist-add(true)', _("Add to playlist")),
         )
 
-        self.new_resource_provider('songlist.context.menu').add_resources(
-            resource.UserAction('mod.playlist-add(true)', _("Add to playlist"), 'other'),
+        self.add_resources(
+            'songlist.left-context.menu',
+            resource.MenuAction('other', 'mod.playlist-add(false)', _("Add to playlist")),
         )
 
-        self.new_resource_provider('songlist.left-context.menu').add_resources(
-            resource.UserAction('mod.playlist-add(false)', _("Add to playlist"), 'other'),
-        )
-
-        self.new_resource_provider(playlist.Playlist.name + '.left-context.menu').add_resources(
-            resource.UserAction('mod.playlist-rename', _("Rename"), 'action'),
-            resource.UserAction('mod.playlist-delete', _("Delete"), 'action'),
-            resource.UserAction('mod.playlist-update-from-queue', _("Update from play queue"), 'action')
+        self.add_resources(
+            self.name + '.left-context.menu',
+            resource.MenuAction('action', 'mod.playlist-rename', _("Rename")),
+            resource.MenuAction('action', 'mod.playlist-delete', _("Delete")),
+            resource.MenuAction('action', 'mod.playlist-update-from-queue', _("Update from play queue"))
         )
 
         self.playlists = []

@@ -68,7 +68,7 @@ class Tanda(component.PanedComponent):
         self.left_treeview.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
 
         self.button_box = Gtk.ButtonBox(orientation=Gtk.Orientation.HORIZONTAL, layout_style=Gtk.ButtonBoxStyle.START, visible=True)
-        self.actions.add_action(Gio.PropertyAction(name='genre-filter', object=self, property_name='genre-filter'))
+        self.window_actions.add_action(Gio.PropertyAction(name='genre-filter', object=self, property_name='genre-filter'))
         for i, genre in enumerate(self.GENRES):
             button = Gtk.ModelButton(iconic=True, text=genre, centered=True, visible=True, can_focus=False, action_name='supermod.genre-filter', action_target=GLib.Variant.new_int32(i))
             self.button_box.pack_start(button, False, False, 0)
@@ -103,9 +103,9 @@ class Tanda(component.PanedComponent):
         self.signal_handler_connect(self.unit.db, 'verify-progress', self.db_verify_progress_cb)
         self.signal_handler_connect(self.unit.db, 'missing-song', self.db_missing_song_cb)
 
-        self.actions.add_action(resource.Action('tanda-switch-subcomponent', self.action_subcomponent_next_cb))
-        self.actions.add_action(resource.Action('tanda-verify', self.unit.db.action_tanda_verify_cb))
-        self.actions.add_action(resource.Action('tanda-cleanup-db', self.unit.db.action_cleanup_db_cb))
+        self.window_actions.add_action(resource.Action('tanda-switch-subcomponent', self.action_subcomponent_next_cb))
+        self.window_actions.add_action(resource.Action('tanda-verify', self.unit.db.action_tanda_verify_cb))
+        self.window_actions.add_action(resource.Action('tanda-cleanup-db', self.unit.db.action_cleanup_db_cb))
 
         self.signal_handler_connect(self.unit.unit_persistent, 'notify::protect-requested', lambda unit_persistent, param_spec: unit_persistent.protect_requested and self.problem_button.set_active(True))
 
@@ -273,10 +273,10 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
         self.current_tanda = None
         self.current_tanda_path = None
 
-        self.actions.add_action(resource.Action('tanda-delete', self.action_tanda_delete_cb))
-        self.actions.add_action(resource.Action('tanda-reset', self.action_tanda_reset_cb))
-        self.actions.add_action(resource.Action('tanda-reset-field', self.action_tanda_field_cb))
-        self.actions.add_action(resource.Action('tanda-fill-field', self.action_tanda_field_cb))
+        self.window_actions.add_action(resource.Action('tanda-delete', self.action_tanda_delete_cb))
+        self.window_actions.add_action(resource.Action('tanda-reset', self.action_tanda_reset_cb))
+        self.window_actions.add_action(resource.Action('tanda-reset-field', self.action_tanda_field_cb))
+        self.window_actions.add_action(resource.Action('tanda-fill-field', self.action_tanda_field_cb))
 
         self.tanda_treeview = data.RecordTreeView(self.unit.db.fields, self.tanda_data_func, True)
         self.tanda_treeview.set_name('tanda-treeview')
@@ -292,8 +292,8 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
         self.tanda_treeview.connect('cursor-changed', self.tanda_treeview_cursor_changed_cb)
         self.tanda_filter = data.TreeViewFilter(self.unit.unit_misc, self.tanda_treeview)
 
-        self.actions.remove('filter')
-        self.actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_filter, property_name='active'))
+        self.window_actions.remove('filter')
+        self.window_actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_filter, property_name='active'))
 
         self.treeview.set_vexpand(False)
         self.treeview_filter.scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
@@ -755,7 +755,7 @@ def get_last_played_weeks(tanda):
 
 
 class __unit__(unit.UnitMixinCss, songlist.UnitMixinPanedSongList, unit.Unit):
-    MODULE_CLASS = Tanda
+    COMPONENT_CLASS = Tanda
     CSS = b'#tanda-treeview.view { outline-width: 4px; outline-style: solid; }'
 
     def __init__(self, name, manager):
@@ -789,36 +789,41 @@ class __unit__(unit.UnitMixinCss, songlist.UnitMixinPanedSongList, unit.Unit):
 
         self.db = TandaDatabase(self.fields, self)
 
-        self.new_resource_provider('app.action').add_resources(
+        self.add_resources(
+            'app.action',
             resource.ActionModel('tanda-verify', self.db.action_tanda_verify_cb),
             resource.ActionModel('tanda-cleanup-db', self.db.action_cleanup_db_cb),
         )
 
-        self.new_resource_provider('app.menu').add_resources(
-            resource.UserAction('mod.tanda-fill-field', _("Fill tanda field"), 'edit/component', ['<Control>z']),
-            resource.UserAction('mod.tanda-reset-field', _("Reset tanda field"), 'edit/component', ['<Control><Shift>z']),
-            resource.UserAction('mod.tanda-reset', _("Reset tanda"), 'edit/component', ['<Control><Shift>r']),
-            resource.UserAction('mod.tanda-delete', _("Delete tanda"), 'edit/component', ['<Control>Delete']),
-            resource.UserAction('supermod.tanda-switch-subcomponent', _("Switch tanda view mode"), 'edit/component', ['<Control>Tab']),
-            resource.UserAction('supermod.tanda-verify', _("Verify tanda database"), 'edit/component', ['<Control><Shift>d']),
-            resource.UserAction('supermod.tanda-cleanup-db', _("Cleanup database"), 'edit/component'),
+        self.add_resources(
+            'app.menu',
+            resource.MenuAction('edit/component', 'mod.tanda-fill-field', _("Fill tanda field"), ['<Control>z']),
+            resource.MenuAction('edit/component', 'mod.tanda-reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
+            resource.MenuAction('edit/component', 'mod.tanda-reset', _("Reset tanda"), ['<Control><Shift>r']),
+            resource.MenuAction('edit/component', 'mod.tanda-delete', _("Delete tanda"), ['<Control>Delete']),
+            resource.MenuAction('edit/component', 'supermod.tanda-switch-subcomponent', _("Switch tanda view mode"), ['<Control>Tab']),
+            resource.MenuAction('edit/component', 'supermod.tanda-verify', _("Verify tanda database"), ['<Control><Shift>d']),
+            resource.MenuAction('edit/component', 'supermod.tanda-cleanup-db', _("Cleanup database")),
         )
 
-        self.new_resource_provider('songlist.action').add_resources(
+        self.add_resources(
+            'songlist.action',
             resource.ActionModel('tanda-define', self.db.action_tanda_define_cb),
         )
 
-        self.new_resource_provider('songlist.context.menu').add_resources(
-            resource.UserAction('mod.tanda-define', _("Define tanda"), 'other'),
+        self.add_resources(
+            'songlist.context.menu',
+            resource.MenuAction('other', 'mod.tanda-define', _("Define tanda")),
         )
 
-        self.new_resource_provider('tanda-edit.left-context.menu').add_resources(
-            resource.UserAction('mod.tanda-delete', _("Delete tanda"), 'edit'),
+        self.add_resources(
+            'tanda-edit.left-context.menu',
+            resource.MenuAction('edit', 'mod.tanda-delete', _("Delete tanda")),
         )
 
-        self.setup_menu('tanda-edit', 'context', ['songlist'])
-        self.setup_menu('tanda-edit', 'left-context', ['songlist'])
-        self.setup_menu('tanda-view', 'context', ['songlist'])
+        self.setup_menu('tanda-edit', 'context', ['songlistbase', 'songlist'])
+        self.setup_menu('tanda-edit', 'left-context', ['songlistbase', 'songlist'])
+        self.setup_menu('tanda-view', 'context', ['songlistbase', 'songlist'])
 
     def shutdown(self):
         del self.db

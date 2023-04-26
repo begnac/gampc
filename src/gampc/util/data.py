@@ -18,7 +18,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GObject, GLib, Gdk, Gtk, Pango
+from gi.repository import GObject
+from gi.repository import GLib
+from gi.repository import Gdk
+from gi.repository import Gtk
+from gi.repository import Pango
+
 import re
 import ast
 import cairo
@@ -371,7 +376,7 @@ class RecordTreeView(RecordTreeViewBase):
             v1 = getattr(store.get_record(i), name)
             v2 = getattr(store.get_record(j), name)
             return 0 if v1 == v2 else -1 if v1 is None or (v2 is not None and v1 < v2) else 1
-        except:
+        except AttributeError:
             return 0
 
     def get_selection_rows(self):
@@ -382,7 +387,7 @@ class RecordTreeView(RecordTreeViewBase):
         path, column = self.get_cursor()
         try:
             records = ast.literal_eval(raw)
-        except:
+        except Exception:
             return
         if not (isinstance(records, list) and all(isinstance(record, dict) for record in records)):
             return

@@ -35,6 +35,7 @@ from . import __program_name__, __version__, __program_description__, __copyrigh
 from .util import unit
 from .util import resource
 from .util.logger import logger
+from .util.misc import get_modifier_state
 
 
 class App(Gtk.Application):
@@ -86,8 +87,14 @@ class App(Gtk.Application):
         self.unit_component = self.unit_manager.get_unit('component')
         self.unit_window = self.unit_manager.get_unit('window')
 
-        self.action_aggregator = self.unit_manager.create_aggregator('app.action', self.action_added_cb, self.action_removed_cb)
-        self.menu_aggregator = self.unit_manager.create_aggregator('app.menu', self.menu_item_added_cb, self.menu_item_removed_cb)
+        self.action_aggregator = resource.ActionAggregator(['app.action'], self, self.task_hold_app, self.unit_persistent)
+        self.unit_manager.add_aggregator(self.action_aggregator)
+
+        self.fragile_accels = {}
+        self.menu_aggregator = resource.MenuAggregator(['app.menu'], self.menubar)
+        self.menu_aggregator.connect('resource-added', self.menubar_item_added_cb)
+        self.menu_aggregator.connect('resource-removed', self.menubar_item_removed_cb)
+        self.unit_manager.add_aggregator(self.menu_aggregator)
 
         self.unit_misc.connect('notify::block-fragile-accels', self.notify_block_fragile_accels_cb)
 
@@ -212,24 +219,22 @@ class App(Gtk.Application):
         return g
 
     def notify_block_fragile_accels_cb(self, unit_misc, param):
-        for menu_item in self.menu_aggregator.get_resources():
-            if isinstance(menu_item, resource.UserAction):
-                self.set_accels_for_action(menu_item.action, [] if self.unit_misc.block_fragile_accels and menu_item.accels_fragile else menu_item.accels)
+        for action in self.fragile_accels:
+            self.set_accels_for_action(action, [] if self.unit_misc.block_fragile_accels else self.fragile_accels[action])
 
-    def action_added_cb(self, aggregator, action):
-        self.add_action(action.generate(self.task_hold_app, self.unit_persistent))
+    def menubar_item_added_cb(self, aggregator, target, menu_item):
+        if isinstance(menu_item, resource.MenuAction) and menu_item.accels:
+            if menu_item.accels_fragile:
+                if menu_item.action in self.fragile_accels:
+                    raise ValueError
+                self.fragile_accels[menu_item.action] = menu_item.accels
+            if not (self.unit_misc.block_fragile_accels and menu_item.accels_fragile):
+                self.set_accels_for_action(menu_item.action, menu_item.accels)
 
-    def action_removed_cb(self, aggregator, action):
-        self.remove_action(action.get_name())
-
-    def menu_item_added_cb(self, aggregator, menu_item):
-        menu_item.insert_into(self.menubar)
-        if isinstance(menu_item, resource.UserAction) and not (self.unit_misc.block_fragile_accels and menu_item.accels_fragile):
-            self.set_accels_for_action(menu_item.action, menu_item.accels)
-
-    def menu_item_removed_cb(self, aggregator, menu_item):
-        menu_item.remove_from(self.menubar)
-        if isinstance(menu_item, resource.UserAction):
+    def menubar_item_removed_cb(self, aggregator, target, menu_item):
+        if isinstance(menu_item, resource.MenuAction) and menu_item.accels:
+            if menu_item.accels_fragile:
+                del self.fragile_accels[menu_item.action]
             self.set_accels_for_action(menu_item.action, [])
 
     def new_window_cb(self, action, parameter):
@@ -240,7 +245,7 @@ class App(Gtk.Application):
         self.get_active_window().destroy()
 
     def component_start_cb(self, action, parameter):
-        component = self.unit_component.get_component(parameter.unpack(), Gdk.Keymap.get_default().get_modifier_state() & Gdk.ModifierType.CONTROL_MASK)
+        component = self.unit_component.get_component(parameter.unpack(), get_modifier_state() & Gdk.ModifierType.CONTROL_MASK)
         self.display_component(component, action.get_name().endswith('new-window'))
 
     def display_component(self, component, new_window):
@@ -281,7 +286,7 @@ class App(Gtk.Application):
             if '/' not in menu_item.path:
                 section_labels[menu_item.path] = menu_item.label.replace('_', '')
                 section_order.append(menu_item.path)
-            elif isinstance(menu_item, resource.UserAction) and menu_item.accels:
+            elif isinstance(menu_item, resource.MenuAction) and menu_item.accels:
                 name = menu_item.path[:menu_item.path.find('/')]
                 if name not in items_by_section:
                     items_by_section[name] = []

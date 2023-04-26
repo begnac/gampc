@@ -18,9 +18,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import Gdk
+
+
 def format_time(time):
     time = int(time)
     hours = time // 3600
     minutes = (time // 60) % 60
     seconds = time % 60
     return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes:02}:{seconds:02}"
+
+
+def get_modifier_state():
+    return Gdk.Keymap.get_default().get_modifier_state()

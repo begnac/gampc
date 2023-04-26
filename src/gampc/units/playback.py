@@ -30,7 +30,8 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.new_resource_provider('app.action').add_resources(
+        self.add_resources(
+            'app.action',
             resource.ActionModel('play-or-pause', self.play_or_pause_cb, dangerous=True),
             resource.ActionModel('volume', self.change_volume_cb, parameter_type=GLib.VariantType.new('i')),
             resource.ActionModel('absolute-jump', self.absolute_jump_cb, dangerous=True, parameter_type=GLib.VariantType.new('i')),
@@ -39,23 +40,24 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
             resource.ActionModel('fadeout-then', self.fadeout_then_cb, parameter_type=GLib.VariantType.new('b')),
         )
 
-        self.new_resource_provider('app.menu').add_resources(
+        self.add_resources(
+            'app.menu',
             resource.MenuPath('playback/play'),
+            resource.MenuAction('playback/play', 'app.play-or-pause', _("_Play/pause"), ['<Control>Up', 'AudioPlay', 'space'], accels_fragile=True),
+            resource.MenuAction('playback/play', 'app.stop', _("_Stop"), ['<Control>Down', 'AudioStop'], accels_fragile=True),
+            resource.MenuAction('playback/play', 'app.fadeout-then(true)', _("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], accels_fragile=True),
             resource.MenuPath('playback/move'),
+            resource.MenuAction('playback/move', 'app.previous', _("_Previous"), ['<Control>Left', 'AudioPrev'], accels_fragile=True),
+            resource.MenuAction('playback/move', 'app.next', _("_Next"), ['<Control>Right', 'AudioNext'], accels_fragile=True),
+            resource.MenuAction('playback/move', 'app.fadeout-then(false)', _("Next [fadeout]"), ['<Control><Shift>Right'], accels_fragile=True),
             resource.MenuPath('playback/volume'),
+            resource.MenuAction('playback/volume', 'app.volume(5)', _("Volume up"), ['<Control>plus', '<Control>KP_Add']),
+            resource.MenuAction('playback/volume', 'app.volume(-5)', _("Volume down"), ['<Control>minus', '<Control>KP_Subtract']),
             resource.MenuPath('playback/jump'),
-            resource.UserAction('app.play-or-pause', _("_Play/pause"), 'playback/play', ['<Control>Up', 'AudioPlay', 'space'], accels_fragile=True),
-            resource.UserAction('app.stop', _("_Stop"), 'playback/play', ['<Control>Down', 'AudioStop'], accels_fragile=True),
-            resource.UserAction('app.fadeout-then(true)', _("Stop [fadeout]"), 'playback/play', ['<Control><Shift>Down', '<Shift>AudioStop'], accels_fragile=True),
-            resource.UserAction('app.previous', _("_Previous"), 'playback/move', ['<Control>Left', 'AudioPrev'], accels_fragile=True),
-            resource.UserAction('app.next', _("_Next"), 'playback/move', ['<Control>Right', 'AudioNext'], accels_fragile=True),
-            resource.UserAction('app.fadeout-then(false)', _("Next [fadeout]"), 'playback/move', ['<Control><Shift>Right'], accels_fragile=True),
-            resource.UserAction('app.volume(5)', _("Volume up"), 'playback/volume', ['<Control>plus', '<Control>KP_Add']),
-            resource.UserAction('app.volume(-5)', _("Volume down"), 'playback/volume', ['<Control>minus', '<Control>KP_Subtract']),
-            resource.UserAction('app.absolute-jump(0)', _("Restart playback"), 'playback/jump', ['<Alt>Up'], accels_fragile=True),
-            resource.UserAction('app.absolute-jump(-15)', _("End of song (-{} seconds)").format(15), 'playback/jump', ['<Alt>Down'], accels_fragile=True),
-            resource.UserAction('app.relative-jump(-5)', _("Skip backwards ({} seconds)").format(5), 'playback/jump', ['<Alt>Left'], accels_fragile=True),
-            resource.UserAction('app.relative-jump(5)', _("Skip forwards ({} seconds)").format(5), 'playback/jump', ['<Alt>Right'], accels_fragile=True),
+            resource.MenuAction('playback/jump', 'app.absolute-jump(0)', _("Restart playback"), ['<Alt>Up'], accels_fragile=True),
+            resource.MenuAction('playback/jump', 'app.absolute-jump(-15)', _("End of song (-{} seconds)").format(15), ['<Alt>Down'], accels_fragile=True),
+            resource.MenuAction('playback/jump', 'app.relative-jump(-5)', _("Skip backwards ({} seconds)").format(5), ['<Alt>Left'], accels_fragile=True),
+            resource.MenuAction('playback/jump', 'app.relative-jump(5)', _("Skip forwards ({} seconds)").format(5), ['<Alt>Right'], accels_fragile=True),
         )
 
         self.fading = False
@@ -79,7 +81,7 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
         stop = parameter.unpack()
         self.fading = True
         N = 30
-        T = 5
+        T = 7
 
         try:
             if not self.unit_server.ampd_server_properties.state:

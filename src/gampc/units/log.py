@@ -68,7 +68,7 @@ class Log(component.Component):
 
 
 class __unit__(component.UnitMixinComponent, unit.Unit):
-    MODULE_CLASS = Log
+    COMPONENT_CLASS = Log
 
     def __init__(self, name, manager):
         super().__init__(name, manager)

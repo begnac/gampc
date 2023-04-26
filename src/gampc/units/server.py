@@ -77,7 +77,8 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
 
         self.separator_song = {'file': self.SEPARATOR_FILE}
 
-        self.new_resource_provider('app.action').add_resources(
+        self.add_resources(
+            'app.action',
             resource.PropertyActionModel('server-profile', self),
             resource.ActionModel('connect', self.ampd_connect),
             resource.ActionModel('disconnect', self.ampd_disconnect),
@@ -86,19 +87,15 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
             *(resource.PropertyActionModel(name, self.server_options[name], property_name='value') for name in ampd.OPTION_NAMES)
         )
 
-        self.new_resource_provider('app.menu').add_resources(
-            # resource.MenuPath('server/server/options'),
+        self.add_resources(
+            'app.menu',
             resource.MenuPath('server/server/actions'),
             resource.MenuPath('server/server/output'),
             resource.MenuPath('server/server/connection'),
-            resource.UserAction('app.update', _("Update database"), 'server/server/actions'),
-            # resource.UserAction('app.random', _("Random mode"), 'server/server/options'),
-            # resource.UserAction('app.repeat', _("Repeat mode"), 'server/server/options'),
-            # resource.UserAction('app.consume', _("Consume mode"), 'server/server/options'),
-            # resource.UserAction('app.single', _("Single mode"), 'server/server/options'),
-            resource.UserAction('app.connect', _("Connect"), 'server/server/connection', ['<Alt><Shift>c']),
-            resource.UserAction('app.disconnect', _("Disconnect"), 'server/server/connection', ['<Alt><Shift>d']),
-            resource.UserAction('app.connect-to-previous', _("Connect to previous"), 'server/server/connection', ['<Control><Alt>p']),
+            resource.MenuAction('server/server/actions', 'app.update', _("Update database")),
+            resource.MenuAction('server/server/connection', 'app.connect', _("Connect"), ['<Alt><Shift>c']),
+            resource.MenuAction('server/server/connection', 'app.disconnect', _("Disconnect"), ['<Alt><Shift>d']),
+            resource.MenuAction('server/server/connection', 'app.connect-to-previous', _("Connect to previous"), ['<Control><Alt>p']),
         )
 
     def shutdown(self):
