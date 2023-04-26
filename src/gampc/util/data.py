@@ -28,6 +28,8 @@ import re
 import ast
 import cairo
 
+from .misc import get_modifier_state
+
 
 def store_set_rows(store, rows, func):
     if not rows:
@@ -453,7 +455,7 @@ class RecordTreeView(RecordTreeViewBase):
         if dest is None:
             return False
         self.set_drag_dest_row(*dest)
-        if context.get_actions() & Gdk.DragAction.MOVE and not Gdk.Keymap.get_default().get_modifier_state() & Gdk.ModifierType.CONTROL_MASK:
+        if context.get_actions() & Gdk.DragAction.MOVE and not get_modifier_state() & Gdk.ModifierType.CONTROL_MASK:
             action = Gdk.DragAction.MOVE
         else:
             action = Gdk.DragAction.COPY
