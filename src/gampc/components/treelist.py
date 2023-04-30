@@ -118,7 +118,7 @@ class TreeListIconColumn(Gtk.TreeViewColumn):
             cell.set_property('font', None)
 
 
-class TreeList(songlist.SongList, component.PanedComponent):
+class TreeList(component.ComponentMixinPaned, songlist.SongList):
     def __init__(self, unit):
         super().__init__(unit)
 

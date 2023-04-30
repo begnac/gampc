@@ -27,9 +27,6 @@ class Browser(treelist.TreeList, songlist.SongList):
 
     left_title = _("Directory")
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def init_left_store(self):
         return self.unit.left_store
 

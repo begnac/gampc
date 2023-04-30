@@ -40,7 +40,7 @@ class __unit__(unit.Unit):
     def shutdown(self):
         for components in self._components.values():
             for component in components:
-                component.destroy()
+                component.shutdown()
         super().shutdown()
 
     def register_component_factory(self, name, factory):
@@ -62,9 +62,15 @@ class __unit__(unit.Unit):
     def get_free_component(self):
         for components in self._components.values():
             for component in components:
-                if not component.widget.get_root():
+                if not component.win:
                     return component
 
     def remove_component(self, component):
-        self._components[component.name].remove(component)
-        component.destroy()
+        component.shutdown()
+        for name in self._components:
+            if component in self._components[name]:
+                self._components[name].remove(component)
+                if not self._components[name]:
+                    del self._components[name]
+                return
+        raise RuntimeError

@@ -26,37 +26,32 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        menus = [
+        items = [
             resource.MenuPath('edit/songlist'),
             resource.MenuPath('edit/songlist/base'),
-        ]
-
-        actions = [
             # resource.MenuAction('edit/songlist/base', 'mod.selectall', _("Select all"), ['<Control>a'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'mod.cut', _("Cut"), ['<Control>x'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'mod.copy', _("Copy"), ['<Control>c'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'mod.paste', _("Paste"), ['<Control>v'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'mod.paste-before', _("Paste before"), ['<Control>b']),
-            resource.MenuAction('edit/songlist/base', 'mod.delete', _("Delete"), ['Delete'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'mod.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'songlistbase.cut', _("Cut"), ['<Control>x'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'songlistbase.copy', _("Copy"), ['<Control>c'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'songlistbase.paste', _("Paste"), ['<Control>v'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'songlistbase.paste-before', _("Paste before"), ['<Control>b']),
+            resource.MenuAction('edit/songlist/base', 'songlistbase.delete', _("Delete"), ['Delete'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'songlistbase.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
         ]
 
         self.add_resources(
             'app.menu',
-            *menus,
-            resource.MenuAction('edit/global', 'mod.save', _("Save"), ['<Control>s']),
-            resource.MenuAction('edit/global', 'mod.reset', _("Reset"), ['<Control>r']),
-            resource.MenuAction('edit/global', 'mod.filter', _("Filter"), ['<Control><Shift>f']),
-            *actions,
+            resource.MenuAction('edit/global', 'songlistbase.save', _("Save"), ['<Control>s']),
+            resource.MenuAction('edit/global', 'songlistbase.reset', _("Reset"), ['<Control>r']),
+            resource.MenuAction('edit/global', 'songlistbase.filter', _("Filter"), ['<Control><Shift>f']),
+            *items,
         )
 
         self.add_resources(
             'songlistbase.context.menu',
             resource.MenuPath('action'),
             resource.MenuPath('edit'),
-            *menus,
             resource.MenuPath('other'),
-            *actions,
+            *items,
         )
 
         self.add_resources(

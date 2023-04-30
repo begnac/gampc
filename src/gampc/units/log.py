@@ -47,9 +47,8 @@ class Log(component.Component):
     def __init__(self, unit):
         super().__init__(unit)
         self.label = Gtk.Label(selectable=True, visible=True, halign=Gtk.Align.START, valign=Gtk.Align.START)
-        self.scrolled_label = Gtk.ScrolledWindow(visible=True)
+        self.widget = self.scrolled_label = Gtk.ScrolledWindow(visible=True)
         self.scrolled_label.add(self.label)
-        self.add(self.scrolled_label)
 
         handler = unit.handler
         self.signal_handler_connect(handler, 'notify::log', self.handler_notify_log_cb)

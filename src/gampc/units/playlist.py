@@ -95,19 +95,19 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
 
         self.add_resources(
             'songlist.context.menu',
-            resource.MenuAction('other', 'mod.playlist-add(true)', _("Add to playlist")),
+            resource.MenuAction('other', 'songlist.playlist-add(true)', _("Add to playlist")),
         )
 
         self.add_resources(
             'songlist.left-context.menu',
-            resource.MenuAction('other', 'mod.playlist-add(false)', _("Add to playlist")),
+            resource.MenuAction('other', 'songlist.playlist-add(false)', _("Add to playlist")),
         )
 
         self.add_resources(
             self.name + '.left-context.menu',
-            resource.MenuAction('action', 'mod.playlist-rename', _("Rename")),
-            resource.MenuAction('action', 'mod.playlist-delete', _("Delete")),
-            resource.MenuAction('action', 'mod.playlist-update-from-queue', _("Update from play queue"))
+            resource.MenuAction('action', 'playlist.rename', _("Rename")),
+            resource.MenuAction('action', 'playlist.delete', _("Delete")),
+            resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
         )
 
         self.playlists = []

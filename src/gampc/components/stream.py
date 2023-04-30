@@ -32,8 +32,8 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
 
         super().__init__(unit)
 
-        self.window_actions.add_action(resource.Action('stream-add', self.action_add_cb))
-        self.window_actions.add_action(resource.Action('stream-modify', self.action_modify_cb))
+        self.actions.add_action(resource.Action('add', self.action_add_cb))
+        self.actions.add_action(resource.Action('modify', self.action_modify_cb))
 
         self.ssde_struct = ssde.Dict(
             label=_("Internet stream"),

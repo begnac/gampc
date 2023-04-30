@@ -60,12 +60,12 @@ class __unit__(songlist.UnitMixinSongList, unit.Unit):
 
         self.add_resources(
             'app.menu',
-            resource.MenuAction('edit/component', 'mod.playqueue-shuffle', _("Shuffle")),
-            resource.MenuAction('edit/component', 'mod.playqueue-go-to-current', _("Go to current song"), ['<Control>z'])
+            resource.MenuAction('edit/component', 'playqueue.shuffle', _("Shuffle")),
+            resource.MenuAction('edit/component', 'playqueue.go-to-current', _("Go to current song"), ['<Control>z'])
         )
 
         self.add_resources(
-            'songlist.action',
+            'songlistbase.action',
             resource.ActionModel('playqueue-ext-add-high-priority', action_playqueue_add_high_priority_cb,
                                  dangerous=True, parameter_type=GLib.VariantType.new('b')),
             *(resource.ActionModel('playqueue-ext' + verb, action_playqueue_add_replace_cb,
@@ -75,17 +75,17 @@ class __unit__(songlist.UnitMixinSongList, unit.Unit):
 
         for name, parameter in (('context', '(true)'), ('left-context', '(false)')):
             self.add_resources(
-                f'songlist.{name}.menu',
-                resource.MenuAction('action', 'mod.playqueue-ext-add' + parameter, _("Add to play queue")),
-                resource.MenuAction('action', 'mod.playqueue-ext-replace' + parameter, _("Replace play queue")),
-                resource.MenuAction('action', 'mod.playqueue-ext-add-high-priority' + parameter, _("Add to play queue with high priority")),
+                f'songlistbase.{name}.menu',
+                resource.MenuAction('action', 'songlistbase.playqueue-ext-add' + parameter, _("Add to play queue")),
+                resource.MenuAction('action', 'songlistbase.playqueue-ext-replace' + parameter, _("Replace play queue")),
+                resource.MenuAction('action', 'songlistbase.playqueue-ext-add-high-priority' + parameter, _("Add to play queue with high priority")),
             )
 
         self.add_resources(
             self.name + '.context.menu',
             resource.MenuPath('other/playqueue-priority', _("Priority for random mode"), is_submenu=True),
-            resource.MenuAction('other/playqueue-priority', 'mod.playqueue-high-priority', _("High")),
-            resource.MenuAction('other/playqueue-priority', 'mod.playqueue-normal-priority', _("Normal")),
-            resource.MenuAction('other/playqueue-priority', 'mod.playqueue-choose-priority', _("Choose")),
-            resource.MenuAction('other', 'mod.playqueue-shuffle', _("Shuffle")),
+            resource.MenuAction('other/playqueue-priority', 'playqueue.high-priority', _("High")),
+            resource.MenuAction('other/playqueue-priority', 'playqueue.normal-priority', _("Normal")),
+            resource.MenuAction('other/playqueue-priority', 'playqueue.choose-priority', _("Choose")),
+            resource.MenuAction('other', 'playqueue.shuffle', _("Shuffle")),
         )

@@ -31,29 +31,32 @@ from ..util import unit
 from ..util.logger import logger
 
 
-class Component(Gtk.Bin):
-    action_prefix = 'mod'
+class Component(GObject.Object):
     use_resources = []
 
     status = GObject.Property()
     full_title = GObject.Property(type=str)
 
     def __init__(self, unit):
-        super().__init__(visible=True, full_title=unit.title)
+        super().__init__(full_title=unit.title)
         self.unit = unit
+        self.manager = unit.manager
         self.config = self.unit.config
         self.ampd = self.unit.ampd.sub_executor()
         self.signal_handlers = []
-        self.window_actions = Gio.SimpleActionGroup()
+        self.actions_dict = {}
+        self.action_aggregator_dict = {}
         self.window_signals = {}
         self.win = None
 
-        self.action_aggregator = resource.ActionAggregator([provider + '.action' for provider in [unit.name] + self.use_resources], self.window_actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
-        unit.manager.add_aggregator(self.action_aggregator)
+        for provider in [unit.name] + self.use_resources:
+            actions = self.actions_dict[provider] = Gio.SimpleActionGroup()
+            action_aggregator = self.action_aggregator_dict[provider] = resource.ActionAggregator([provider + '.action'], actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
+            unit.manager.add_aggregator(action_aggregator)
+        self.actions = self.actions_dict[unit.name]
 
         self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(unit.title, self.status) if self.status else unit.title)
 
-        self.connect('destroy', self.__destroy_cb)
         self.signal_handler_connect(unit.unit_server.ampd_client, 'client-connected', self.client_connected_cb)
         if self.ampd.get_is_connected():
             self.client_connected_cb(unit.unit_server.ampd_client)
@@ -61,13 +64,21 @@ class Component(Gtk.Bin):
     def __del__(self):
         logger.debug('Deleting {}'.format(self))
 
-    @staticmethod
-    def __destroy_cb(self):
+    def shutdown(self):
+        if self.win is not None:
+            raise RuntimeError
         self.signal_handlers_disconnect()
+        for action_aggregator in self.action_aggregator_dict.values():
+            self.manager.remove_aggregator(action_aggregator)
         self.ampd.close()
-        del self.action_aggregator
         del self.window_signals
-        del self.window_actions
+        del self.actions
+        del self.actions_dict
+
+    def add_actions_provider(self, name):
+        actions = self.actions_dict[name] = Gio.SimpleActionGroup()
+        action_aggregator = self.action_aggregator_dict[name] = resource.ActionAggregator([name + '.action'], actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
+        unit.manager.add_aggregator(action_aggregator)
 
     def signal_handler_connect(self, target, *args):
         handler = target.connect(*args)
@@ -78,29 +89,34 @@ class Component(Gtk.Bin):
             target.disconnect(handler)
         self.signal_handlers = []
 
+    def insert_action_groups(self, widget):
+        for prefix, actions in self.actions_dict.items():
+            widget.insert_action_group(prefix, actions)
+
+    def remove_action_groups(self, widget):
+        for prefix in self.actions_dict:
+            widget.insert_action_group(prefix, None)
+
     def setup_context_menu(self, name, widget):
-        if name not in self.unit.menu_aggregators:
-            return
+        widget.connect('button-press-event', self.context_menu_button_press_event_cb, name)
+
+    def context_menu_button_press_event_cb(self, widget, event, name):
+        if event.type != Gdk.EventType.BUTTON_PRESS or event.button != 3 or name not in self.unit.menu_aggregators:
+            return False
         model = self.unit.menu_aggregators[name].menu
         if model.get_n_items() == 0:
-            return
+            return False
         menu = Gtk.Menu.new_from_model(model)
-        menu.insert_action_group(self.action_prefix, self.window_actions)
-        widget.connect('button-press-event', self.context_menu_button_press_event_cb, menu)
-
-    @staticmethod
-    def context_menu_button_press_event_cb(widget, event, menu):
-        if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3:
-            menu.popup_at_pointer(event)
-            return True
-        return False
+        self.insert_action_groups(menu)
+        menu.popup_at_pointer(event)
+        return True
 
     @staticmethod
     def client_connected_cb(client):
         pass
 
 
-class PanedComponent(Component):
+class ComponentMixinPaned:
     def __init__(self, unit):
         super().__init__(unit)
 
@@ -114,15 +130,15 @@ class PanedComponent(Component):
         self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config.pane_separator._get(), visible=True)
         self.paned.connect('notify::position', self.paned_notify_position_cb)
         self.paned.add1(self.scrolled_left_treeview)
-        super().add(self.paned)
+        self.paned.add2(self.widget)
+        self.widget = self.paned
 
-        self.setup_context_menu('.'.join([unit.name, 'left-context']), self.left_treeview)
+        self.setup_context_menu('left-context', self.left_treeview)
 
         self.starting = True
-        self.connect('map', self.__map_cb)
+        self.paned.connect('map', self.__map_cb)
 
-    @staticmethod
-    def __map_cb(self):
+    def __map_cb(self, widget):
         if self.starting:
             self.left_treeview.grab_focus()
             self.starting = False
@@ -132,12 +148,6 @@ class PanedComponent(Component):
 
     def left_store_set_rows(self, rows):
         data.store_set_rows(self.left_store, rows, lambda i, name: self.left_store.set_value(i, 0, name))
-
-    def add(self, child):
-        self.paned.add2(child)
-
-    def remove(self, child):
-        self.paned.remove2(child)
 
 
 class UnitMixinComponent(unit.UnitMixinConfig, unit.UnitMixinServer):
@@ -166,10 +176,9 @@ class UnitMixinComponent(unit.UnitMixinConfig, unit.UnitMixinServer):
         return self.COMPONENT_CLASS(self)
 
     def setup_menu(self, name, kind, providers=[]):
-        full_name = '.'.join([name, kind])
-        aggregator = resource.MenuAggregator(['.'.join([full_name, 'menu'])] + ['.'.join([provider, kind, 'menu']) for provider in providers])
+        aggregator = resource.MenuAggregator(['.'.join([provider, kind, 'menu']) for provider in [name] + providers])
         self.manager.add_aggregator(aggregator)
-        self.menu_aggregators[full_name] = aggregator
+        self.menu_aggregators[kind] = aggregator
 
 
 class UnitMixinPanedComponent(UnitMixinComponent, unit.UnitMixinConfig):

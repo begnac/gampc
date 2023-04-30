@@ -31,7 +31,7 @@ from ..components import component
 from ..components import songlist
 
 
-class SavedSearch(songlist.SongList, component.PanedComponent):
+class SavedSearch(component.ComponentMixinPaned, songlist.SongList):
     title = _("Saved Searches")
     name = 'savedsearch'
     key = '9'

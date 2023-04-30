@@ -52,29 +52,29 @@ class SongListBase(component.Component):
         self.treeview = data.RecordTreeView(self.fields, self.data_func, self.sortable)
         self.store = self.treeview.get_model()
 
-        self.window_actions.add_action(resource.Action('reset', self.action_reset_cb))
-        self.window_actions.add_action(resource.Action('copy', self.action_copy_delete_cb))
+        self.base_actions = self.actions_dict['songlistbase']
+        self.base_actions.add_action(resource.Action('reset', self.action_reset_cb))
+        self.base_actions.add_action(resource.Action('copy', self.action_copy_delete_cb))
 
         if self.record_new_cb != NotImplemented:
-            self.window_actions.add_action(resource.Action('paste', self.action_paste_cb))
-            self.window_actions.add_action(resource.Action('paste-before', self.action_paste_cb))
+            self.base_actions.add_action(resource.Action('paste', self.action_paste_cb))
+            self.base_actions.add_action(resource.Action('paste-before', self.action_paste_cb))
             self.signal_handler_connect(self.store, 'record-new', self.record_new_cb)
 
         if self.record_delete_cb != NotImplemented:
-            self.window_actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
-            self.window_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
+            self.base_actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
+            self.base_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
             self.signal_handler_connect(self.store, 'record-delete', self.record_delete_cb)
 
         self.set_editable(True)
 
-        self.treeview_filter = data.TreeViewFilter(self.unit.unit_misc, self.treeview)
-        self.add(self.treeview_filter)
-        self.window_actions.add_action(Gio.PropertyAction(name='filter', object=self.treeview_filter, property_name='active'))
+        self.widget = self.treeview_filter = data.TreeViewFilter(self.unit.unit_misc, self.treeview)
+        self.base_actions.add_action(Gio.PropertyAction(name='filter', object=self.treeview_filter, property_name='active'))
 
-        self.setup_context_menu('.'.join([self.unit.name, 'context']), self.treeview)
+        self.setup_context_menu('context', self.treeview)
         self.treeview.connect('row-activated', self.treeview_row_activated_cb)
 
-        self.connect('map', self.set_color)
+        self.widget.connect('map', self.set_color)
         self.signal_handler_connect(self.unit.unit_persistent, 'notify::dark', self.set_color)
 
     def set_editable(self, editable):
@@ -92,12 +92,12 @@ class SongListBase(component.Component):
             self.treeview.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, dndtargets, Gdk.DragAction.COPY)
 
         for name in ['paste', 'paste-before', 'delete', 'cut']:
-            action_ = self.window_actions.lookup(name)
+            action_ = self.base_actions.lookup(name)
             if action_ is not None:
                 action_.set_enabled(editable)
 
-    def set_color(self, *args):
-        self.color = self.get_style_context().get_color(Gtk.StateFlags.NORMAL)
+    def set_color(self, widget, *args):
+        self.color = widget.get_style_context().get_color(Gtk.StateFlags.NORMAL)
 
     def action_copy_delete_cb(self, action, parameter):
         records, refs = self.treeview.get_selection_rows()
@@ -196,8 +196,8 @@ class SongListBase(component.Component):
 class SongListBaseWithEditDel(SongListBase):
     def __init__(self, unit):
         super().__init__(unit)
-        self.window_actions.add_action(resource.Action('save', self.action_save_cb))
-        self.window_actions.add_action(resource.Action('undelete', self.action_undelete_cb))
+        self.base_actions.add_action(resource.Action('save', self.action_save_cb))
+        self.base_actions.add_action(resource.Action('undelete', self.action_undelete_cb))
 
     def action_undelete_cb(self, action, parameter):
         store, paths = self.treeview.get_selection().get_selected_rows()

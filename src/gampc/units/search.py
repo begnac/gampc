@@ -34,8 +34,6 @@ class Search(songlist.SongList):
 
     def __init__(self, unit):
         super().__init__(unit)
-        widget = self.get_child()
-        self.remove(widget)
 
         self.entry = Gtk.SearchEntry(visible=True)
         self.entry.connect('activate', self.entry_activate_cb)
@@ -46,12 +44,12 @@ class Search(songlist.SongList):
         for name in self.fields.names:
             self.field_choice.append_text(name)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
-        box.add(widget)
+        box.add(self.widget)
         box.add(self.entry)
-        self.add(box)
+        self.widget = box
 
-        self.connect('map', self.action_search_cb)
-        self.window_actions.add_action(resource.Action('search', self.action_search_cb))
+        self.widget.connect('map', self.action_search_cb)
+        self.actions.add_action(resource.Action('search', self.action_search_cb))
 
     def action_search_cb(self, *args):
         self.entry.grab_focus()

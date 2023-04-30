@@ -24,7 +24,6 @@ from gi.repository import GdkPixbuf
 from gi.repository import Pango
 from gi.repository import Gtk
 
-import os
 import xdg
 import time
 import asyncio
@@ -139,12 +138,9 @@ class Current(component.Component):
         self.current.pack_start(artist_performer_box, True, True, 0)
         self.current.pack_start(info_box, True, True, 0)
 
-        main_box = Gtk.Box(visible=True, margin_bottom=20, margin_left=20, margin_right=20, margin_top=20)
-        main_box.pack_start(self.welcome, True, True, 0)
-        main_box.pack_start(self.current, True, True, 0)
-
-
-
+        self.widget = self.main_box = Gtk.Box(visible=True, margin_bottom=20, margin_left=20, margin_right=20, margin_top=20)
+        self.main_box.pack_start(self.welcome, True, True, 0)
+        self.main_box.pack_start(self.current, True, True, 0)
 
         self.unit.unit_server.bind_property('current-song', self.welcome, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: not y)
         self.unit.unit_server.bind_property('current-song', self.current, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: bool(y))
@@ -153,8 +149,8 @@ class Current(component.Component):
 
         self.width = 0
         self.css_provider = Gtk.CssProvider.new()
-        self.get_style_context().add_provider(self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        self.connect('size-allocate', self.size_allocate_cb)
+        self.widget.get_style_context().add_provider(self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self.widget.connect('size-allocate', self.size_allocate_cb)
         self.bind_property('size', self.app_icon, 'pixel-size', GObject.BindingFlags(0), lambda x, y: y * 5)
 
         for field in self.labels.keys():
@@ -180,18 +176,15 @@ class Current(component.Component):
                                                 lambda x, y, z: self.set_size() or y.get(z, ''),
                                                 None, field)
 
-        self.add(main_box)
-        self.connect('map', self.__map_cb)
-        self.connect('destroy', self.__destroy_cb)
+        self.widget.connect('map', self.__map_cb)
+        self.widget.connect('destroy', self.__destroy_cb)
 
-    @staticmethod
-    def __destroy_cb(self):
+    def __destroy_cb(self, widget):
         if self.fading:
             self.fading.cancel()
             self.fading = None
 
-    @staticmethod
-    def __map_cb(self):
+    def __map_cb(self, widget):
         self.width = 0
         self.set_size()
 
@@ -243,8 +236,7 @@ class Current(component.Component):
         if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS and event.button == 1:
             self.win.action_toggle_fullscreen_cb()
 
-    @staticmethod
-    def size_allocate_cb(self, allocation):
+    def size_allocate_cb(self, widget, allocation):
         self.width = allocation.width
         self.set_size()
 

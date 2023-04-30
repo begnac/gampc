@@ -44,9 +44,7 @@ from ..components import songlist
 from . import search
 
 
-class Tanda(component.PanedComponent):
-    action_prefix = 'supermod'
-
+class Tanda(component.ComponentMixinPaned, component.Component):
     GENRES = ('Tango', 'Vals', 'Milonga', _("Other"), _("All"))
     GENRE_OTHER = len(GENRES) - 2
     GENRE_ALL = len(GENRES) - 1
@@ -55,6 +53,8 @@ class Tanda(component.PanedComponent):
     genre_filter = GObject.Property(type=int, default=0)
 
     def __init__(self, unit):
+        self.widget = self.right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
+
         super().__init__(unit)
 
         self.all_tandas = self.filtered_tandas = []
@@ -65,7 +65,7 @@ class Tanda(component.PanedComponent):
         self.left_treeview.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
 
         self.button_box = Gtk.ButtonBox(orientation=Gtk.Orientation.HORIZONTAL, layout_style=Gtk.ButtonBoxStyle.START, visible=True)
-        self.window_actions.add_action(Gio.PropertyAction(name='genre-filter', object=self, property_name='genre-filter'))
+        self.actions.add_action(Gio.PropertyAction(name='genre-filter', object=self, property_name='genre-filter'))
         for i, genre in enumerate(self.GENRES):
             button = Gtk.ModelButton(iconic=True, text=genre, centered=True, visible=True, can_focus=False, action_name='supermod.genre-filter', action_target=GLib.Variant.new_int32(i))
             self.button_box.pack_start(button, False, False, 0)
@@ -82,15 +82,13 @@ class Tanda(component.PanedComponent):
         self.button_box.pack_end(self.switcher, False, False, 0)
         self.button_box.set_child_secondary(self.switcher, True)
 
-        self.right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
         self.right_box.pack_start(self.button_box, False, False, 0)
         self.right_box.add(self.stack)
-        self.add(self.right_box)
 
         self.edit = TandaEdit(unit)
         self.view = TandaView(unit)
-        self.stack.add_titled(self.edit, 'edit', _("Edit tandas"))
-        self.stack.add_titled(self.view, 'view', _("View tandas"))
+        self.stack.add_titled(self.edit.widget, 'edit', _("Edit tandas"))
+        self.stack.add_titled(self.view.widget, 'view', _("View tandas"))
         self.subcomponents = [self.edit, self.view]
         for c in self.subcomponents:
             self.bind_property('current-tandaid', c, 'current-tandaid', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
@@ -100,26 +98,22 @@ class Tanda(component.PanedComponent):
         self.signal_handler_connect(self.unit.db, 'verify-progress', self.db_verify_progress_cb)
         self.signal_handler_connect(self.unit.db, 'missing-song', self.db_missing_song_cb)
 
-        self.window_actions.add_action(resource.Action('tanda-switch-subcomponent', self.action_subcomponent_next_cb))
-        self.window_actions.add_action(resource.Action('tanda-verify', self.unit.db.action_tanda_verify_cb))
-        self.window_actions.add_action(resource.Action('tanda-cleanup-db', self.unit.db.action_cleanup_db_cb))
+        self.actions.add_action(resource.Action('tanda-switch-subcomponent', self.action_subcomponent_next_cb))
+        self.actions.add_action(resource.Action('tanda-verify', self.unit.db.action_tanda_verify_cb))
+        self.actions.add_action(resource.Action('tanda-cleanup-db', self.unit.db.action_cleanup_db_cb))
+
+        self.actions_dict['tanda-edit'] = self.edit.actions
 
         self.signal_handler_connect(self.unit.unit_persistent, 'notify::protect-requested', lambda unit_persistent, param_spec: unit_persistent.protect_requested and self.problem_button.set_active(True))
 
         self.read_db()
 
-    def set_window(self, win=None):
-        super().set_window(win)
-        self.subcomponents[self.subcomponent_index].set_window(self.win)
-
     def init_left_store(self):
         return Gtk.ListStore(str)
 
     def action_subcomponent_next_cb(self, action, param):
-        self.subcomponents[self.subcomponent_index].set_window()
         self.subcomponent_index = (self.subcomponent_index + 1) % len(self.subcomponents)
-        self.stack.set_visible_child(self.subcomponents[self.subcomponent_index])
-        self.subcomponents[self.subcomponent_index].set_window(self.win)
+        self.stack.set_visible_child(self.subcomponents[self.subcomponent_index].widget)
 
     def tanda_filter_holds(self, tanda):
         if tanda.get('Note') == '0' and self.problem_button.get_active():
@@ -229,7 +223,7 @@ class TandaSubComponent(component.Component):
 
     def __init__(self, unit):
         super().__init__(unit)
-        self.connect('map', lambda self: self.set_cursor_tandaid(self.current_tandaid))
+        self.widget.connect('map', lambda widget: self.set_cursor_tandaid(self.current_tandaid))
         self.color = Gdk.RGBA()
 
     def init_tandaid_treeview(self, treeview):
@@ -261,22 +255,20 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
     duplicate_field = '_duplicate_edit'
 
     def __init__(self, unit):
-        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
-
         super().__init__(unit)
 
         self.current_tanda = None
         self.current_tanda_path = None
 
-        self.window_actions.add_action(resource.Action('tanda-delete', self.action_tanda_delete_cb))
-        self.window_actions.add_action(resource.Action('tanda-reset', self.action_tanda_reset_cb))
-        self.window_actions.add_action(resource.Action('tanda-reset-field', self.action_tanda_field_cb))
-        self.window_actions.add_action(resource.Action('tanda-fill-field', self.action_tanda_field_cb))
+        self.actions.add_action(resource.Action('delete', self.action_tanda_delete_cb))
+        self.actions.add_action(resource.Action('reset', self.action_tanda_reset_cb))
+        self.actions.add_action(resource.Action('reset-field', self.action_tanda_field_cb))
+        self.actions.add_action(resource.Action('fill-field', self.action_tanda_field_cb))
 
         self.tanda_treeview = data.RecordTreeView(self.unit.db.fields, self.tanda_data_func, True)
         self.tanda_treeview.set_name('tanda-treeview')
         self.tanda_treeview.connect('button-press-event', self.tanda_treeview_button_press_event_cb)
-        self.setup_context_menu('tanda-edit.left-context', self.tanda_treeview)
+        self.setup_context_menu('tanda-context', self.tanda_treeview)
         self.init_tandaid_treeview(self.tanda_treeview)
 
         for name in self.unit.db.fields.basic_names:
@@ -287,19 +279,19 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
         self.tanda_treeview.connect('cursor-changed', self.tanda_treeview_cursor_changed_cb)
         self.tanda_filter = data.TreeViewFilter(self.unit.unit_misc, self.tanda_treeview)
 
-        self.window_actions.remove('filter')
-        self.window_actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_filter, property_name='active'))
+        self.actions.remove('filter')
+        self.actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_filter, property_name='active'))
 
         self.treeview.set_vexpand(False)
         self.treeview_filter.scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
 
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
         self.box.pack_start(self.tanda_filter, True, True, 0)
-        super().add(self.box)
+        self.box.pack_end(self.widget, False, False, 0)
+
+        self.widget = self.box
 
         self.queue = []
-
-    def add(self, widget):
-        self.box.pack_end(widget, False, False, 0)
 
     @ampd.task
     async def client_connected_cb(self, client):
@@ -476,8 +468,14 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
             self.set_modified()
         self.tanda_treeview.queue_draw()
 
+    def get_focus(self):
+        window = self.widget.get_toplevel()
+        if isinstance(window, Gtk.Window):
+            return window.get_focus()
+        return None
+
     def action_copy_delete_cb(self, action, parameter):
-        focus = self.win.get_focus()
+        focus = self.get_focus()
         if focus == self.tanda_treeview and action.get_name() == 'copy':
             path, column = focus.get_cursor()
             if column:
@@ -492,14 +490,14 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
             super().action_copy_delete_cb(action, parameter)
 
     def action_paste_cb(self, action, parameter):
-        focus = self.win.get_focus()
+        focus = self.get_focus()
         if isinstance(focus, Gtk.Entry):
             focus.emit('paste-clipboard')
         else:
             Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).request_text(self.clipboard_paste_cb, action.get_name().endswith('before'))
 
     def clipboard_paste_cb(self, clipboard, raw, before):
-        focus = self.win.get_focus()
+        focus = self.get_focus()
         if focus == self.tanda_treeview:
             store, paths = focus.get_selection().get_selected_rows()
             to_paste = ast.literal_eval(raw)
@@ -523,6 +521,8 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
 
 
 class TandaView(TandaSubComponent, songlist.SongList):
+    action_prefix = 'tanda-view'
+
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
     duplicate_field = '_duplicate_view'
 
@@ -793,13 +793,13 @@ class __unit__(unit.UnitMixinCss, songlist.UnitMixinPanedSongList, unit.Unit):
 
         self.add_resources(
             'app.menu',
-            resource.MenuAction('edit/component', 'mod.tanda-fill-field', _("Fill tanda field"), ['<Control>z']),
-            resource.MenuAction('edit/component', 'mod.tanda-reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
-            resource.MenuAction('edit/component', 'mod.tanda-reset', _("Reset tanda"), ['<Control><Shift>r']),
-            resource.MenuAction('edit/component', 'mod.tanda-delete', _("Delete tanda"), ['<Control>Delete']),
-            resource.MenuAction('edit/component', 'supermod.tanda-switch-subcomponent', _("Switch tanda view mode"), ['<Control>Tab']),
-            resource.MenuAction('edit/component', 'supermod.tanda-verify', _("Verify tanda database"), ['<Control><Shift>d']),
-            resource.MenuAction('edit/component', 'supermod.tanda-cleanup-db', _("Cleanup database")),
+            resource.MenuAction('edit/component', 'tanda-edit.fill-field', _("Fill tanda field"), ['<Control>z']),
+            resource.MenuAction('edit/component', 'tanda-edit.reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
+            resource.MenuAction('edit/component', 'tanda-edit.reset', _("Reset tanda"), ['<Control><Shift>r']),
+            resource.MenuAction('edit/component', 'tanda-edit.delete', _("Delete tanda"), ['<Control>Delete']),
+            resource.MenuAction('edit/component', 'tanda.switch-subcomponent', _("Switch tanda view mode"), ['<Control>Tab']),
+            resource.MenuAction('edit/component', 'tanda.verify', _("Verify tanda database"), ['<Control><Shift>d']),
+            resource.MenuAction('edit/component', 'tanda.cleanup-db', _("Cleanup database")),
         )
 
         self.add_resources(
@@ -809,12 +809,12 @@ class __unit__(unit.UnitMixinCss, songlist.UnitMixinPanedSongList, unit.Unit):
 
         self.add_resources(
             'songlist.context.menu',
-            resource.MenuAction('other', 'mod.tanda-define', _("Define tanda")),
+            resource.MenuAction('other', 'songlist.tanda-define', _("Define tanda")),
         )
 
         self.add_resources(
             'tanda-edit.left-context.menu',
-            resource.MenuAction('edit', 'mod.tanda-delete', _("Delete tanda")),
+            resource.MenuAction('edit', 'tanda-edit.tanda-delete', _("Delete tanda")),
         )
 
         self.setup_menu('tanda-edit', 'context', ['songlistbase', 'songlist'])

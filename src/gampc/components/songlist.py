@@ -34,10 +34,10 @@ class SongList(songlistbase.SongListBase):
     use_resources = ['songlistbase', 'songlist']
     DND_TARGET = 'GAMPC_SONG'
 
-    def __init__(self, unit):
+    def __init__(self, unit, *args, **kwargs):
         self.fields = unit.unit_songlist.fields
-        super().__init__(unit)
-        self.window_actions.add_action(resource.Action('delete-file', self.action_delete_file_cb))
+        super().__init__(unit, *args, **kwargs)
+        self.actions_dict['songlist'].add_action(resource.Action('delete-file', self.action_delete_file_cb))
 
     def records_set_fields(self, songs):
         for song in songs:
@@ -80,8 +80,8 @@ class SongListWithEditDel(SongList, songlistbase.SongListBaseWithEditDel):
 class SongListWithAdd(SongList, songlistbase.SongListBaseWithAdd):
     def __init__(self, unit):
         super().__init__(unit)
-        self.window_actions.add_action(resource.Action('add-separator', self.action_add_separator_cb))
-        self.window_actions.add_action(resource.Action('add-url', self.action_add_url_cb))
+        self.actions_dict['songlist'].add_action(resource.Action('add-separator', self.action_add_separator_cb))
+        self.actions_dict['songlist'].add_action(resource.Action('add-url', self.action_add_url_cb))
 
     def action_add_separator_cb(self, action, parameter):
         self.add_record(dict(self.unit.unit_server.separator_song))

@@ -90,7 +90,7 @@ class MenuActionMinimal(MenuPathBase):
     def create_item(self):
         item = super().create_item()
         item.set_detailed_action(self.name)
-        item.set_attribute_value('hidden-when', GLib.Variant.new_string('action-missing'))
+        # item.set_attribute_value('hidden-when', GLib.Variant.new_string('action-missing'))
         return item
 
 

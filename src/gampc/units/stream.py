@@ -59,15 +59,16 @@ class __unit__(songlistbase.UnitMixinSongListBase, unit.Unit):
         self.add_resources(
             'app.menu',
             resource.MenuPath('edit/component/stream'),
-            resource.MenuAction('edit/component/stream', 'mod.stream-add', _("Add stream"), ),
-            resource.MenuAction('edit/component/stream', 'mod.stream-modify', _("Modify stream"), ['F2']),
+            resource.MenuAction('edit/component/stream', 'stream.add', _("Add stream"), ),
+            resource.MenuAction('edit/component/stream', 'stream.modify', _("Modify stream"), ['F2']),
         )
 
         self.add_resources(
             'stream.context.menu',
-            resource.MenuPath('stream'),
-            resource.MenuAction('stream', 'mod.stream-add', _("Add stream")),
-            resource.MenuAction('stream', 'mod.stream-modify', _("Modify stream")),
+            resource.MenuPath('edit/component'),
+            resource.MenuPath('edit/component/stream'),
+            resource.MenuAction('edit/component/stream', 'stream.add', _("Add stream"), ),
+            resource.MenuAction('edit/component/stream', 'stream.modify', _("Modify stream"), ['F2']),
         )
 
         self.fields = data.FieldFamily(self.config.fields)

@@ -37,9 +37,9 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
 
         menu = [
             resource.MenuPath('edit/songlist/special'),
-            resource.MenuAction('edit/songlist/special', 'mod.add-separator', _("Add separator")),
-            resource.MenuAction('edit/songlist/special', 'mod.add-url', _("Add URL or filename")),
-            resource.MenuAction('edit/songlist/special', 'mod.delete-file', _("Move files to trash"), ['<Control>Delete']),
+            resource.MenuAction('edit/songlist/special', 'songlist.add-separator', _("Add separator")),
+            resource.MenuAction('edit/songlist/special', 'songlist.add-url', _("Add URL or filename")),
+            resource.MenuAction('edit/songlist/special', 'songlist.delete-file', _("Move files to trash"), ['<Control>Delete']),
         ]
 
         self.add_resources('app.menu', *menu)
