@@ -78,6 +78,10 @@ class SongListBase(component.Component):
         self.widget.connect('map', self.set_color)
         self.signal_handler_connect(self.unit.unit_persistent, 'notify::dark', self.set_color)
 
+    def shutdown(self):
+        del self.songlistbase_actions
+        super().shutdown()
+
     def set_editable(self, editable):
         dndtargets = [Gtk.TargetEntry.new(self.DND_TARGET, Gtk.TargetFlags(0), 0)]
 

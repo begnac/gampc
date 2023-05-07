@@ -48,11 +48,10 @@ class Component(GObject.Object):
         self.actions_dict = {}
         self.action_aggregator_dict = {}
         self.window_signals = {}
-        self.win = None
 
         self.actions = self.add_actions_provider(self.name)
 
-        self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(unit.title, self.status) if self.status else unit.title)
+        self.status_binding = self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(unit.title, self.status) if self.status else unit.title)
 
         self.signal_handler_connect(unit.unit_server.ampd_client, 'client-connected', self.client_connected_cb)
         if self.ampd.get_is_connected():
@@ -62,15 +61,22 @@ class Component(GObject.Object):
         logger.debug('Deleting {}'.format(self))
 
     def shutdown(self):
-        if self.win is not None:
+        if self.get_window() is not None:
             raise RuntimeError
         self.signal_handlers_disconnect()
+        self.widget.destroy()
+        self.status_binding.unbind()
         for action_aggregator in self.action_aggregator_dict.values():
             self.manager.remove_aggregator(action_aggregator)
         self.ampd.close()
         del self.window_signals
         del self.actions
         del self.actions_dict
+        del self.action_aggregator_dict
+
+    def get_window(self):
+        toplevel = self.widget.get_toplevel()
+        return toplevel if isinstance(toplevel, Gtk.Window) else None
 
     def add_actions_provider(self, name):
         actions = self.actions_dict[name] = Gio.SimpleActionGroup()

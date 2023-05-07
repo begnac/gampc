@@ -69,7 +69,7 @@ class Tanda(component.ComponentMixinPaned, component.Component):
         for i, genre in enumerate(self.GENRES):
             button = Gtk.ModelButton(iconic=True, text=genre, centered=True, visible=True, can_focus=False, action_name='supermod.genre-filter', action_target=GLib.Variant.new_int32(i))
             self.button_box.add(button)
-        self.connect('notify::genre-filter', lambda *args: self.filter_tandas(False))
+        self.signal_handler_connect(self, 'notify::genre-filter', lambda *args: self.filter_tandas(False))
 
         self.problem_button = Gtk.ToggleButton(image=Gtk.Image(icon_name='object-select-symbolic'), visible=True, can_focus=False, active=unit.unit_persistent.protect_requested, tooltip_text=_("Filter zero note"))
         self.problem_button.connect('toggled', lambda *args: self.filter_tandas(False))
@@ -110,6 +110,12 @@ class Tanda(component.ComponentMixinPaned, component.Component):
         self.signal_handler_connect(self.unit.unit_persistent, 'notify::protect-requested', lambda unit_persistent, param_spec: unit_persistent.protect_requested and self.problem_button.set_active(True))
 
         self.read_db()
+
+    def shutdown(self):
+        self.change_subcomponent_actions(False)
+        self.edit.shutdown()
+        self.view.shutdown()
+        super().shutdown()
 
     def init_left_store(self):
         return Gtk.ListStore(str)

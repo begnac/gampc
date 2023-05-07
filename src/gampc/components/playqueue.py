@@ -41,7 +41,7 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         for name in self.songlistbase_actions.list_actions():
             if name.startswith('playqueue-ext-'):
                 self.songlistbase_actions.remove(name)
-        self.signal_handler_connect(self.treeview, 'cursor-changed', self.cursor_changed_cb)
+        self.treeview.connect('cursor-changed', self.cursor_changed_cb)
         self.cursor_by_profile = {}
         self.set_cursor = False
 

@@ -41,6 +41,7 @@ class __unit__(unit.Unit):
         for components in self._components.values():
             for component in components:
                 component.shutdown()
+        del self._components
         super().shutdown()
 
     def register_component_factory(self, name, factory):
@@ -62,7 +63,7 @@ class __unit__(unit.Unit):
     def get_free_component(self):
         for components in self._components.values():
             for component in components:
-                if not component.win:
+                if not component.get_window():
                     return component
 
     def remove_component(self, component):

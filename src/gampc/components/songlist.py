@@ -40,6 +40,10 @@ class SongList(songlistbase.SongListBase):
         self.songlist_actions = self.add_actions_provider('songlist')
         self.songlist_actions.add_action(resource.Action('delete-file', self.action_delete_file_cb))
 
+    def shutdown(self):
+        del self.songlist_actions
+        super().shutdown()
+
     def records_set_fields(self, songs):
         for song in songs:
             gfile = Gio.File.new_for_path(GLib.build_filenamev([self.unit.unit_songlist.config.music_dir._get(), song['file']]))
@@ -53,7 +57,7 @@ class SongList(songlistbase.SongListBase):
         store, paths = self.treeview.get_selection().get_selected_rows()
         deleted = [self.store.get_record(self.store.get_iter(p)) for p in paths]
         if deleted:
-            dialog = Gtk.Dialog(parent=self.win, title=_("Move to trash"))
+            dialog = Gtk.Dialog(parent=self.get_window(), title=_("Move to trash"))
             dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
             dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
             dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash bin?")] + [song.file for song in deleted]), visible=True))
@@ -89,7 +93,7 @@ class SongListWithAdd(SongList, songlistbase.SongListBaseWithAdd):
 
     def action_add_url_cb(self, action, parameter):
         struct = ssde.Text(label=_("URL or filename to add"), default='http://')
-        url = struct.edit(self.win)
+        url = struct.edit(self.get_window())
         if url:
             self.add_record(dict(file=url))
 

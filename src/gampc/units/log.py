@@ -46,7 +46,7 @@ class Handler(logging.Handler, GObject.Object):
 class Log(component.Component):
     def __init__(self, unit):
         super().__init__(unit)
-        self.label = Gtk.Label(selectable=True, visible=True, halign=Gtk.Align.START, valign=Gtk.Align.START)
+        self.label = Gtk.Label(selectable=True, visible=True, vexpand=True, halign=Gtk.Align.START, valign=Gtk.Align.START)
         self.widget = self.scrolled_label = Gtk.ScrolledWindow(visible=True)
         self.scrolled_label.add(self.label)
 

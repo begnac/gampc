@@ -249,18 +249,19 @@ class App(Gtk.Application):
         self.display_component(component, action.get_name().endswith('new-window'))
 
     def display_component(self, component, new_window):
-        win = None if new_window else component.win or self.get_active_window()
-        if win is None:
-            win = self.unit_window.new_window(self)
-        if component.win is None:
-            win.change_component(component)
-        win.present()
+        if new_window:
+            window = self.unit_window.new_window(self)
+        else:
+            window = component.get_window() or self.get_active_window() or self.unit_window.new_window(self)
+        if component.get_window() is None:
+            window.change_component(component)
+        window.present()
 
     def component_stop_cb(self, action, parameter):
-        win = self.get_active_window()
-        component = win.component
+        window = self.get_active_window()
+        component = window.component
         if component:
-            win.change_component(self.unit_component.get_free_component())
+            window.change_component(self.unit_component.get_free_component())
             self.unit_component.remove_component(component)
 
     def quit(self, *args):

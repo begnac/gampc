@@ -83,6 +83,9 @@ class Window(Gtk.ApplicationWindow):
         self.update_title()
         self.update_subtitle()
 
+    def __del__(self):
+        logger.debug("Deleting {}".format(self))
+
     @staticmethod
     def destroy_cb(self):
         logger.debug("Destroying window: {}".format(self))
@@ -92,8 +95,10 @@ class Window(Gtk.ApplicationWindow):
         self.remove_action('toggle-fullscreen')
         self.remove_action('volume-popup')
         self.unit.unit_server.disconnect_by_func(self.update_subtitle)
+        self.unit.unit_server.ampd_server_properties.disconnect_by_func(self.set_time_scale_sensitive)
         self.unit.unit_server.ampd_server_properties.disconnect_by_func(self.update_title)
         self.unit.unit_server.disconnect_by_func(self.notify_current_song_cb)
+        self.unit.unit_persistent.disconnect_by_func(self.set_time_scale_sensitive)
 
     def change_component(self, component):
         if self.component is not None:

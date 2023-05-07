@@ -177,12 +177,12 @@ class Current(component.Component):
                                                 None, field)
 
         self.widget.connect('map', self.__map_cb)
-        self.widget.connect('destroy', self.__destroy_cb)
 
-    def __destroy_cb(self, widget):
+    def shutdown(self):
         if self.fading:
             self.fading.cancel()
             self.fading = None
+        super().shutdown()
 
     def __map_cb(self, widget):
         self.width = 0
@@ -234,7 +234,7 @@ class Current(component.Component):
 
     def do_button_press_event(self, event):
         if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS and event.button == 1:
-            self.win.action_toggle_fullscreen_cb()
+            self.get_window().action_toggle_fullscreen_cb()
 
     def size_allocate_cb(self, widget, allocation):
         self.width = allocation.width

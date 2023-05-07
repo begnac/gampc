@@ -18,7 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GObject
 from gi.repository import Gio
 
 import zeroconf
@@ -114,6 +113,7 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
         await self.azc.async_close()
 
         del self.asb
+        del self.azc
 
     async def zeroconf_profiles_handler(self, service_type, name, state_change, **kwargs):
         match = re.fullmatch(ZEROCONF_NAME_REGEXP, name)
