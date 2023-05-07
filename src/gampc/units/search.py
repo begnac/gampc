@@ -24,10 +24,11 @@ import ampd
 
 from ..util import resource
 from ..util import unit
+from ..components import component
 from ..components import songlist
 
 
-class Search(songlist.SongList):
+class Search(component.ComponentMixinEntry, songlist.SongList):
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
 
     sortable = True
@@ -35,18 +36,10 @@ class Search(songlist.SongList):
     def __init__(self, unit):
         super().__init__(unit)
 
-        self.entry = Gtk.SearchEntry(visible=True)
-        self.entry.connect('activate', self.entry_activate_cb)
-        self.entry.connect('focus-in-event', self.entry_focus_cb)
-        self.entry.connect('focus-out-event', self.entry_focus_cb)
         self.field_choice = Gtk.ComboBoxText(visible=True)
         self.field_choice.append_text(_("any field"))
         for name in self.fields.names:
             self.field_choice.append_text(name)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
-        box.add(self.widget)
-        box.add(self.entry)
-        self.widget = box
 
         self.widget.connect('map', self.action_search_cb)
         self.actions.add_action(resource.Action('search', self.action_search_cb))
@@ -79,10 +72,6 @@ class Search(songlist.SongList):
         if condition:
             songs = await (self.ampd.find if find else self.ampd.search)(*condition)
             self.set_records(songs)
-
-    def entry_focus_cb(self, entry, event):
-        self.unit.unit_misc.block_fragile_accels = event.in_
-        return False
 
     @staticmethod
     def parse(s):

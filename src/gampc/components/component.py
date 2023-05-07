@@ -148,6 +148,29 @@ class ComponentMixinPaned:
         data.store_set_rows(self.left_store, rows, lambda i, name: self.left_store.set_value(i, 0, name))
 
 
+class ComponentMixinEntry:
+    def __init__(self, unit):
+        super().__init__(unit)
+
+        self.entry = Gtk.Entry(visible=True)
+        self.entry.connect('activate', self.entry_activate_cb)
+        self.entry.connect('focus-in-event', self.entry_focus_cb)
+        self.entry.connect('focus-out-event', self.entry_focus_cb)
+
+        box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
+        box.add(self.widget)
+        box.add(self.entry)
+        self.widget = box
+
+    def entry_focus_cb(self, entry, event):
+        self.unit.unit_misc.block_fragile_accels = event.in_
+        return False
+
+
+def component_with_entry(component):
+    return type(component.__name__, (ComponentMixinEntry, component), {})
+
+
 class UnitMixinComponent(unit.UnitMixinConfig, unit.UnitMixinServer):
     def __init__(self, name, manager, *, menus=[]):
         self.REQUIRED_UNITS = ['component', 'persistent'] + self.REQUIRED_UNITS

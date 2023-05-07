@@ -26,29 +26,19 @@ from ..util import unit
 from ..components import component
 
 
+@component.component_with_entry
 class Command(component.Component):
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, unit):
+        super().__init__(unit)
         self.label = Gtk.Label(max_width_chars=50, wrap=True, selectable=True, visible=True)
-        self.entry = Gtk.Entry(visible=True)
-        self.entry.connect('activate', self.entry_activate_cb)
-        self.entry.connect('focus-in-event', self.entry_focus_cb)
-        self.entry.connect('focus-out-event', self.entry_focus_cb)
-        scrolled = Gtk.ScrolledWindow(visible=True, vexpand=True)
+        self.widget = scrolled = Gtk.ScrolledWindow(visible=True, vexpand=True)
         scrolled.add(self.label)
-        self.widget = box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
-        box.add(scrolled)
-        box.add(self.entry)
         self.widget.connect('map', lambda widget: self.entry.grab_focus())
 
     @ampd.task
     async def entry_activate_cb(self, entry):
         reply = await self.ampd._raw(entry.get_text())
         self.label.set_label('\n'.join(str(x) for x in reply) if reply else _("Empty reply"))
-
-    def entry_focus_cb(self, entry, event):
-        self.unit.unit_misc.block_fragile_accels = event.in_
-        return False
 
 
 class __unit__(component.UnitMixinComponent, unit.Unit):

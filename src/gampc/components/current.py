@@ -101,7 +101,7 @@ class Current(component.Component):
         self.app_label = Gtk.Label(visible=True, label="GAMPC")
         self.app_label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold", 0 -1 scale 5'))
 
-        self.welcome = Gtk.Box(spacing=50)
+        self.welcome = Gtk.Box(vexpand=True, spacing=50)
         self.welcome.add(Gtk.Label(visible=True, hexpand=True))
         self.welcome.add(self.app_icon)
         self.welcome.add(self.app_label)
