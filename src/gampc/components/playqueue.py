@@ -38,9 +38,9 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         self.actions.add_action(resource.Action('shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
         self.actions.add_action(resource.Action('go-to-current', self.action_go_to_current_cb))
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
-        for name in self.base_actions.list_actions():
+        for name in self.songlistbase_actions.list_actions():
             if name.startswith('playqueue-ext-'):
-                self.base_actions.remove(name)
+                self.songlistbase_actions.remove(name)
         self.signal_handler_connect(self.treeview, 'cursor-changed', self.cursor_changed_cb)
         self.cursor_by_profile = {}
         self.set_cursor = False

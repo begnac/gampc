@@ -128,6 +128,9 @@ class HeaderBar(Gtk.HeaderBar):
         super().__init__(visible=True, show_close_button=True)
 
         self.volume_button = Gtk.VolumeButton(visible=True, orientation=Gtk.Orientation.VERTICAL)
+        self.volume_button.get_adjustment().set_upper(100)
+        self.volume_button.get_adjustment().set_step_increment(1)
+        self.volume_button.get_adjustment().set_page_increment(5)
         self.playback_buttons = PlaybackButtons()
         self.time_scale = TimeScale()
         self.bitrate_label = Gtk.Label(visible=True)

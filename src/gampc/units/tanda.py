@@ -98,11 +98,14 @@ class Tanda(component.ComponentMixinPaned, component.Component):
         self.signal_handler_connect(self.unit.db, 'verify-progress', self.db_verify_progress_cb)
         self.signal_handler_connect(self.unit.db, 'missing-song', self.db_missing_song_cb)
 
-        self.actions.add_action(resource.Action('tanda-switch-subcomponent', self.action_subcomponent_next_cb))
-        self.actions.add_action(resource.Action('tanda-verify', self.unit.db.action_tanda_verify_cb))
-        self.actions.add_action(resource.Action('tanda-cleanup-db', self.unit.db.action_cleanup_db_cb))
+        self.actions.add_action(resource.Action('switch-subcomponent', self.action_subcomponent_next_cb))
+        self.actions.add_action(resource.Action('verify', self.unit.db.action_tanda_verify_cb))
+        self.actions.add_action(resource.Action('cleanup-db', self.unit.db.action_cleanup_db_cb))
 
-        self.actions_dict['tanda-edit'] = self.edit.actions
+        self.subcomponent_actions_names = 'songlistbase', 'songlist'
+        for name in self.subcomponent_actions_names:
+            self.actions_dict[name] = Gio.SimpleActionGroup()
+        self.change_subcomponent_actions(True)
 
         self.signal_handler_connect(self.unit.unit_persistent, 'notify::protect-requested', lambda unit_persistent, param_spec: unit_persistent.protect_requested and self.problem_button.set_active(True))
 
@@ -111,9 +114,21 @@ class Tanda(component.ComponentMixinPaned, component.Component):
     def init_left_store(self):
         return Gtk.ListStore(str)
 
+    def change_subcomponent_actions(self, add):
+        for group_name in self.subcomponent_actions_names:
+            subcomponent_actions = self.subcomponents[self.subcomponent_index].actions_dict[group_name]
+            actions = self.actions_dict[group_name]
+            for name in subcomponent_actions.list_actions():
+                if add:
+                    actions.add_action(subcomponent_actions.lookup_action(name))
+                else:
+                    actions.remove_action(name)
+
     def action_subcomponent_next_cb(self, action, param):
+        self.change_subcomponent_actions(False)
         self.subcomponent_index = (self.subcomponent_index + 1) % len(self.subcomponents)
         self.stack.set_visible_child(self.subcomponents[self.subcomponent_index].widget)
+        self.change_subcomponent_actions(True)
 
     def tanda_filter_holds(self, tanda):
         if tanda.get('Note') == '0' and self.problem_button.get_active():
@@ -221,8 +236,8 @@ class Tanda(component.ComponentMixinPaned, component.Component):
 class TandaSubComponent(component.Component):
     current_tandaid = GObject.Property()
 
-    def __init__(self, unit):
-        super().__init__(unit)
+    def __init__(self, unit, *, name):
+        super().__init__(unit, name=name)
         self.widget.connect('map', lambda widget: self.set_cursor_tandaid(self.current_tandaid))
         self.color = Gdk.RGBA()
 
@@ -255,7 +270,7 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
     duplicate_field = '_duplicate_edit'
 
     def __init__(self, unit):
-        super().__init__(unit)
+        super().__init__(unit, name='tanda-edit')
 
         self.current_tanda = None
         self.current_tanda_path = None
@@ -268,7 +283,7 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
         self.tanda_treeview = data.RecordTreeView(self.unit.db.fields, self.tanda_data_func, True)
         self.tanda_treeview.set_name('tanda-treeview')
         self.tanda_treeview.connect('button-press-event', self.tanda_treeview_button_press_event_cb)
-        self.setup_context_menu('tanda-context', self.tanda_treeview)
+        self.setup_context_menu(f'{self.name}.left-context', self.tanda_treeview)
         self.init_tandaid_treeview(self.tanda_treeview)
 
         for name in self.unit.db.fields.basic_names:
@@ -521,13 +536,11 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
 
 
 class TandaView(TandaSubComponent, songlist.SongList):
-    action_prefix = 'tanda-view'
-
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
     duplicate_field = '_duplicate_view'
 
     def __init__(self, unit):
-        super().__init__(unit)
+        super().__init__(unit, name='tanda-view')
         self.init_tandaid_treeview(self.treeview)
 
     def set_tandas(self, tandas):
@@ -747,7 +760,7 @@ def get_last_played_weeks(tanda):
     return None
 
 
-class __unit__(unit.UnitMixinCss, songlist.UnitMixinPanedSongList, unit.Unit):
+class __unit__(songlist.UnitMixinPanedSongList, unit.UnitMixinCss, unit.Unit):
     title = _("Tandas")
     key = '6'
 
@@ -814,7 +827,7 @@ class __unit__(unit.UnitMixinCss, songlist.UnitMixinPanedSongList, unit.Unit):
 
         self.add_resources(
             'tanda-edit.left-context.menu',
-            resource.MenuAction('edit', 'tanda-edit.tanda-delete', _("Delete tanda")),
+            resource.MenuAction('edit', 'tanda-edit.delete', _("Delete tanda")),
         )
 
         self.setup_menu('tanda-edit', 'context', ['songlistbase', 'songlist'])

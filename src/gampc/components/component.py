@@ -37,9 +37,10 @@ class Component(GObject.Object):
     status = GObject.Property()
     full_title = GObject.Property(type=str)
 
-    def __init__(self, unit):
+    def __init__(self, unit, *, name=None):
         super().__init__(full_title=unit.title)
         self.unit = unit
+        self.name = name or unit.name
         self.manager = unit.manager
         self.config = self.unit.config
         self.ampd = self.unit.ampd.sub_executor()
@@ -49,11 +50,7 @@ class Component(GObject.Object):
         self.window_signals = {}
         self.win = None
 
-        for provider in [unit.name] + self.use_resources:
-            actions = self.actions_dict[provider] = Gio.SimpleActionGroup()
-            action_aggregator = self.action_aggregator_dict[provider] = resource.ActionAggregator([provider + '.action'], actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
-            unit.manager.add_aggregator(action_aggregator)
-        self.actions = self.actions_dict[unit.name]
+        self.actions = self.add_actions_provider(self.name)
 
         self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(unit.title, self.status) if self.status else unit.title)
 
@@ -78,7 +75,8 @@ class Component(GObject.Object):
     def add_actions_provider(self, name):
         actions = self.actions_dict[name] = Gio.SimpleActionGroup()
         action_aggregator = self.action_aggregator_dict[name] = resource.ActionAggregator([name + '.action'], actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
-        unit.manager.add_aggregator(action_aggregator)
+        self.unit.manager.add_aggregator(action_aggregator)
+        return actions
 
     def signal_handler_connect(self, target, *args):
         handler = target.connect(*args)
@@ -133,7 +131,7 @@ class ComponentMixinPaned:
         self.paned.add2(self.widget)
         self.widget = self.paned
 
-        self.setup_context_menu('left-context', self.left_treeview)
+        self.setup_context_menu(f'{self.name}.left-context', self.left_treeview)
 
         self.starting = True
         self.paned.connect('map', self.__map_cb)
@@ -176,9 +174,9 @@ class UnitMixinComponent(unit.UnitMixinConfig, unit.UnitMixinServer):
         return self.COMPONENT_CLASS(self)
 
     def setup_menu(self, name, kind, providers=[]):
-        aggregator = resource.MenuAggregator(['.'.join([provider, kind, 'menu']) for provider in [name] + providers])
+        aggregator = resource.MenuAggregator([f'{provider}.{kind}.menu' for provider in [name] + providers])
         self.manager.add_aggregator(aggregator)
-        self.menu_aggregators[kind] = aggregator
+        self.menu_aggregators[f'{name}.{kind}'] = aggregator
 
 
 class UnitMixinPanedComponent(UnitMixinComponent, unit.UnitMixinConfig):
