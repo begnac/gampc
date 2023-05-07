@@ -133,8 +133,8 @@ def test(o):
     return False
 
 
-T.add_objects(lambda o: 'Window' == o.__class__.__name__)
-# T.add_objects(test)
+# T.add_objects(lambda o: 'Window' == o.__class__.__name__)
+T.add_objects(test)
 
 
 T.improve()
