@@ -23,7 +23,7 @@ from gi.repository import GLib
 from gi.repository import Gdk
 from gi.repository import Gtk
 
-from ..util.misc import format_time, get_modifier_state
+from ..util.misc import format_time
 
 
 class ButtonBox(Gtk.Box):
@@ -33,7 +33,7 @@ class ButtonBox(Gtk.Box):
         for name in names:
             button = Gtk.Button(visible=True, action_name=f'app.{name}')
             setattr(self, name.replace('-', '_'), button)
-            self.pack_start(button, False, False, 0)
+            self.add(button)
 
 
 class PlaybackButtons(ButtonBox):
@@ -89,10 +89,10 @@ class TimeScale(Gtk.Box):
         self.scale.connect('button-press-event', self.button_press_event_cb)
         self.scale.connect('button-release-event', self.button_release_event_cb)
 
-        self.label_box.pack_start(self.elapsed_label, False, False, 0)
-        self.label_box.pack_start(self.duration_label, False, False, 0)
-        self.pack_start(self.scale, False, False, 0)
-        self.pack_start(self.label_box, False, False, 0)
+        self.label_box.add(self.elapsed_label)
+        self.label_box.add(self.duration_label)
+        self.add(self.scale)
+        self.add(self.label_box)
 
     def button_press_event_cb(self, scale, event):
         if event.button == 1 and event.type == Gdk.EventType.BUTTON_PRESS and self.elapsed_binding:

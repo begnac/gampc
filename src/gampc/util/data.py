@@ -289,36 +289,6 @@ class RecordStoreSort(StoreBase, Gtk.TreeModelSort):
         self.bind_property('filter-active', self.store, 'filter-active')
 
 
-class AutoScrollTreeView(Gtk.TreeView):
-    def __init__(self, *args, **kwargs):
-        self.key_just_pressed = None
-
-        super().__init__(*args, **kwargs)
-
-        self.connect('key-press-event', self.key_press_event_cb)
-        self.connect('cursor-changed', self.cursor_changed_cb)
-        self.connect('destroy', lambda self: self.key_just_pressed and GLib.source_remove(self.key_just_pressed))
-
-    @staticmethod
-    def key_press_event_cb(self, event):
-        if event.type == Gdk.EventType.KEY_PRESS:
-            if self.key_just_pressed:
-                GLib.source_remove(self.key_just_pressed)
-            self.key_just_pressed = GLib.timeout_add(200, self.key_press_event_timeout)
-
-    def key_press_event_timeout(self):
-        self.key_just_pressed = None
-        return GLib.SOURCE_REMOVE
-
-    @staticmethod
-    def cursor_changed_cb(self):
-        if not self.key_just_pressed:
-            return
-        path, col = self.get_cursor()
-        if path:
-            self.scroll_to_cell(path, None, True, 0.5, 0.5)
-
-
 class RecordTreeViewBase(Gtk.TreeView):
     def __init__(self, model_class, fields, data_func=None, **kwargs):
         super().__init__(model=model_class(), search_column=0, enable_search=False, enable_grid_lines=Gtk.TreeViewGridLines.BOTH, **kwargs)
@@ -354,7 +324,6 @@ class RecordTreeViewBase(Gtk.TreeView):
         self.handler_unblock_by_func(self.columns_changed_cb)
 
 
-# class RecordTreeView(RecordTreeViewBase, AutoScrollTreeView):
 class RecordTreeView(RecordTreeViewBase):
     def __init__(self, fields, data_func, sortable):
         super().__init__(RecordStoreSort if sortable else RecordStoreFilter, fields, data_func, visible=True, vexpand=True, rubber_banding=True)
@@ -529,11 +498,11 @@ class TreeViewFilter(Gtk.Box):
         filter_scroller = Gtk.ScrolledWindow(visible=True)
         filter_scroller.add(self.filter_treeview)
         filter_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
-        self.pack_start(filter_scroller, False, False, 0)
+        self.add(filter_scroller)
 
         self.scroller = Gtk.ScrolledWindow(visible=True)
         self.scroller.add(treeview)
-        self.pack_start(self.scroller, True, True, 0)
+        self.add(self.scroller)
         self.treeview = treeview
         treeview.bind_property('hadjustment', self.filter_treeview, 'hadjustment', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL)
         self.bind_property('active', self.filter_treeview, 'visible')

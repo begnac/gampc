@@ -34,11 +34,11 @@ class Command(component.Component):
         self.entry.connect('activate', self.entry_activate_cb)
         self.entry.connect('focus-in-event', self.entry_focus_cb)
         self.entry.connect('focus-out-event', self.entry_focus_cb)
-        scrolled = Gtk.ScrolledWindow(visible=True)
+        scrolled = Gtk.ScrolledWindow(visible=True, vexpand=True)
         scrolled.add(self.label)
         self.widget = box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
-        box.pack_start(scrolled, True, True, 0)
-        box.pack_end(self.entry, False, False, 0)
+        box.add(scrolled)
+        box.add(self.entry)
         self.widget.connect('map', lambda widget: self.entry.grab_focus())
 
     @ampd.task

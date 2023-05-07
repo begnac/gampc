@@ -64,11 +64,11 @@ class Tanda(component.ComponentMixinPaned, component.Component):
         self.left_treeview.insert_column_with_attributes(0, _("Artist"), Gtk.CellRendererText(), text=0)
         self.left_treeview.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
 
-        self.button_box = Gtk.ButtonBox(orientation=Gtk.Orientation.HORIZONTAL, layout_style=Gtk.ButtonBoxStyle.START, visible=True)
+        self.button_box = Gtk.ButtonBox(visible=True, orientation=Gtk.Orientation.HORIZONTAL, layout_style=Gtk.ButtonBoxStyle.START)
         self.actions.add_action(Gio.PropertyAction(name='genre-filter', object=self, property_name='genre-filter'))
         for i, genre in enumerate(self.GENRES):
             button = Gtk.ModelButton(iconic=True, text=genre, centered=True, visible=True, can_focus=False, action_name='supermod.genre-filter', action_target=GLib.Variant.new_int32(i))
-            self.button_box.pack_start(button, False, False, 0)
+            self.button_box.add(button)
         self.connect('notify::genre-filter', lambda *args: self.filter_tandas(False))
 
         self.problem_button = Gtk.ToggleButton(image=Gtk.Image(icon_name='object-select-symbolic'), visible=True, can_focus=False, active=unit.unit_persistent.protect_requested, tooltip_text=_("Filter zero note"))
@@ -77,12 +77,12 @@ class Tanda(component.ComponentMixinPaned, component.Component):
         self.stack = Gtk.Stack(visible=True, transition_type=Gtk.StackTransitionType.CROSSFADE)
         self.switcher = Gtk.StackSwitcher(visible=True, stack=self.stack)
 
-        self.button_box.pack_end(self.problem_button, False, False, 0)
+        self.button_box.add(self.problem_button)
         self.button_box.set_child_secondary(self.problem_button, True)
-        self.button_box.pack_end(self.switcher, False, False, 0)
+        self.button_box.add(self.switcher)
         self.button_box.set_child_secondary(self.switcher, True)
 
-        self.right_box.pack_start(self.button_box, False, False, 0)
+        self.right_box.add(self.button_box)
         self.right_box.add(self.stack)
 
         self.edit = TandaEdit(unit)
@@ -301,8 +301,8 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
         self.treeview_filter.scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
 
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
-        self.box.pack_start(self.tanda_filter, True, True, 0)
-        self.box.pack_end(self.widget, False, False, 0)
+        self.box.add(self.tanda_filter)
+        self.box.add(self.widget)
 
         self.widget = self.box
 

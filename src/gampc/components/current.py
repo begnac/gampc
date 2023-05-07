@@ -75,15 +75,15 @@ class Current(component.Component):
 
     @staticmethod
     def make_label_image_box():
-        label = Gtk.Label(visible=True, ellipsize=Pango.EllipsizeMode.MIDDLE, lines=3, wrap=True)
+        label = Gtk.Label(visible=True, vexpand=True, ellipsize=Pango.EllipsizeMode.MIDDLE, lines=3, wrap=True)
 
-        image = Gtk.Image(visible=True)
+        image = Gtk.Image(visible=True, vexpand=True)
         image_label = Gtk.Label(visible=True)
 
         box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
-        box.pack_start(label, True, True, 0)
-        box.pack_start(image, True, True, 0)
-        box.pack_start(image_label, False, False, 0)
+        box.add(label)
+        box.add(image)
+        box.add(image_label)
 
         return box, label, image, image_label
 
@@ -102,10 +102,10 @@ class Current(component.Component):
         self.app_label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold", 0 -1 scale 5'))
 
         self.welcome = Gtk.Box(spacing=50)
-        self.welcome.pack_start(Gtk.Label(visible=True), True, True, 0)
-        self.welcome.pack_start(self.app_icon, False, False, 0)
-        self.welcome.pack_start(self.app_label, False, False, 0)
-        self.welcome.pack_start(Gtk.Label(visible=True), True, True, 0)
+        self.welcome.add(Gtk.Label(visible=True, hexpand=True))
+        self.welcome.add(self.app_icon)
+        self.welcome.add(self.app_label)
+        self.welcome.add(Gtk.Label(visible=True, hexpand=True))
 
         artist_box, self.labels['Artist'], self.images['Artist'], self.image_labels['Artist'] = self.make_label_image_box()
         self.labels['Artist'].set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Serif Bold", 0 -1 scale 2'))
@@ -117,30 +117,30 @@ class Current(component.Component):
         artist_performer_box.add(artist_box)
         artist_performer_box.add(performer_box)
 
-        self.labels['Title'] = title_label = Gtk.Label(visible=True, ellipsize=Pango.EllipsizeMode.MIDDLE)
+        self.labels['Title'] = title_label = Gtk.Label(visible=True, vexpand=True, ellipsize=Pango.EllipsizeMode.MIDDLE)
         title_label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold Italic", 0 -1 scale 3'))
 
         self.labels['Genre'] = genre_label = Gtk.Label(visible=True)
         self.labels['Date'] = date_label = Gtk.Label(visible=True)
         self.labels['Composer'] = composer_label = Gtk.Label(visible=True)
         data_box = Gtk.Box(visible=True, halign=Gtk.Align.CENTER, spacing=14)
-        data_box.pack_start(genre_label, False, False, 0)
-        data_box.pack_start(Gtk.Label(visible=True, label="/"), False, False, 0)
-        data_box.pack_start(date_label, False, False, 0)
-        data_box.pack_start(Gtk.Label(visible=True, label="/"), False, False, 0)
-        data_box.pack_start(composer_label, False, False, 0)
+        data_box.add(genre_label)
+        data_box.add(Gtk.Label(visible=True, label="/"))
+        data_box.add(date_label)
+        data_box.add(Gtk.Label(visible=True, label="/"))
+        data_box.add(composer_label)
 
         info_box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
-        info_box.pack_start(title_label, True, True, 0)
-        info_box.pack_start(data_box, False, False, 0)
+        info_box.add(title_label)
+        info_box.add(data_box)
 
-        self.current = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, homogeneous=True)
-        self.current.pack_start(artist_performer_box, True, True, 0)
-        self.current.pack_start(info_box, True, True, 0)
+        self.current = Gtk.Box(hexpand=True, orientation=Gtk.Orientation.VERTICAL, homogeneous=True)
+        self.current.add(artist_performer_box)
+        self.current.add(info_box)
 
         self.widget = self.main_box = Gtk.Box(visible=True, margin_bottom=20, margin_left=20, margin_right=20, margin_top=20)
-        self.main_box.pack_start(self.welcome, True, True, 0)
-        self.main_box.pack_start(self.current, True, True, 0)
+        self.main_box.add(self.welcome)
+        self.main_box.add(self.current)
 
         self.unit.unit_server.bind_property('current-song', self.welcome, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: not y)
         self.unit.unit_server.bind_property('current-song', self.current, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: bool(y))

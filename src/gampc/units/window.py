@@ -51,10 +51,12 @@ class Window(Gtk.ApplicationWindow):
         self.unit.unit_server.ampd_server_properties.connect('notify::state', self.update_title)
         self.unit.unit_server.connect('notify::server-label', self.update_subtitle)
 
+        box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
         self.main = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
         self.info_box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
-        self.main.pack_end(self.info_box, False, False, 0)
-        self.add(self.main)
+        box.add(self.main)
+        box.add(self.info_box)
+        self.add(box)
 
         self.headerbar = headerbar.HeaderBar()
         self.set_titlebar(self.headerbar)
@@ -106,7 +108,7 @@ class Window(Gtk.ApplicationWindow):
             for name, cb in self.component.window_signals.items():
                 self.connect(name, cb)
             self.component.insert_action_groups(self)
-            self.main.pack_start(self.component.widget, True, True, 0)
+            self.main.add(self.component.widget)
             self.component.connect('notify::title-extra', self.update_title)
             self.component.connect('notify::full-title', self.update_subtitle)
         self.update_subtitle()
