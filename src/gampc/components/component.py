@@ -162,6 +162,8 @@ class ComponentMixinEntry:
         box.add(self.entry)
         self.widget = box
 
+        self.widget.connect('map', lambda widget: self.entry.grab_focus())
+
     def entry_focus_cb(self, entry, event):
         self.unit.unit_misc.block_fragile_accels = event.in_
         return False

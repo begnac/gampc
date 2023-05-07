@@ -41,7 +41,6 @@ class Search(component.ComponentMixinEntry, songlist.SongList):
         for name in self.fields.names:
             self.field_choice.append_text(name)
 
-        self.widget.connect('map', self.action_search_cb)
         self.actions.add_action(resource.Action('search', self.action_search_cb))
 
     def action_search_cb(self, *args):

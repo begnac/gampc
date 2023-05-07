@@ -31,3 +31,7 @@ def format_time(time):
 
 def get_modifier_state():
     return Gdk.Keymap.get_default().get_modifier_state()
+
+
+def preprend_mixin(mixin):
+    return lambda class_: type(class_.__name__, (mixin, class_), {})

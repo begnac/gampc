@@ -22,18 +22,18 @@ from gi.repository import Gtk
 
 import ampd
 
+from ..util import misc
 from ..util import unit
 from ..components import component
 
 
-@component.component_with_entry
+@misc.preprend_mixin(component.ComponentMixinEntry)
 class Command(component.Component):
     def __init__(self, unit):
         super().__init__(unit)
         self.label = Gtk.Label(max_width_chars=50, wrap=True, selectable=True, visible=True)
         self.widget = scrolled = Gtk.ScrolledWindow(visible=True, vexpand=True)
         scrolled.add(self.label)
-        self.widget.connect('map', lambda widget: self.entry.grab_focus())
 
     @ampd.task
     async def entry_activate_cb(self, entry):
