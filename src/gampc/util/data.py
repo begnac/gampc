@@ -438,7 +438,7 @@ class RecordTreeViewFilter(RecordTreeViewBase):
     }
 
     def __init__(self, unit_misc, filter_, fields, **kwargs):
-        super().__init__(RecordStore, fields, self.data_func, can_focus=True, **kwargs)
+        super().__init__(RecordStore, fields, self.data_func, can_focus=True, headers_visible=False, **kwargs)
         self.unit_misc = unit_misc
         store = self.get_model()
         self.filter_ = filter_
@@ -506,7 +506,6 @@ class TreeViewFilter(Gtk.Box):
         self.treeview = treeview
         treeview.bind_property('hadjustment', self.filter_treeview, 'hadjustment', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL)
         self.bind_property('active', self.filter_treeview, 'visible')
-        self.bind_property('active', treeview, 'headers-visible', GObject.BindingFlags.INVERT_BOOLEAN)
         self.bind_property('active', treeview.get_model(), 'filter-active')
         self.connect('notify::active', self.notify_active_cb)
         self.filter_treeview.connect('changed', lambda _: self.treeview.get_model().refilter())
