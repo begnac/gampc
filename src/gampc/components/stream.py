@@ -60,7 +60,7 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
         self.load_streams()
 
     def action_add_cb(self, action, parameter):
-        value = self.unit.ssde_struct.edit(self.win, size=self.config.edit_dialog_size._get(), scrolled=True)
+        value = self.unit.ssde_struct.edit(self.get_window(), size=self.config.edit_dialog_size._get(), scrolled=True)
         if value:
             self.add_record(value)
 
@@ -70,7 +70,7 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
             return
         i = self.store.get_iter(path)
         value = self.store.get_record(i).get_data()
-        value = self.ssde_struct.edit(self.win, value, size=self.configself.config.edit_dialog_size._get(), scrolled=True)
+        value = self.ssde_struct.edit(self.get_window(), value, size=self.config.edit_dialog_size._get(), scrolled=True)
         if value is not None:
             self.modify_record(i, value)
 
