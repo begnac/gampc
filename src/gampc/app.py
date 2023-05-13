@@ -109,6 +109,7 @@ class App(Gtk.Application):
 
         self.add_action(resource.Action('new-window', self.new_window_cb))
         self.add_action(resource.Action('close-window', self.close_window_cb))
+        self.add_action(resource.Action('BAD', self.BAD_cb))
         self.add_action(resource.Action('help', self.help_cb))
         self.add_action(resource.Action('about', self.about_cb))
         self.add_action(resource.Action('notify', self.task_hold_app(self.action_notify_cb)))
@@ -275,6 +276,9 @@ class App(Gtk.Application):
         dialog = Gtk.AboutDialog(parent=self.get_active_window(), program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=Gtk.License.GPL_3_0, logo_icon_name='face-cool-gampc', website='http://math.univ-lyon1.fr/~begnac', website_label=_("Author's website"))
         dialog.run()
         dialog.destroy()
+
+    def BAD_cb(self, *args):
+        print(self.get_active_window().get_focus())
 
     def help_cb(self, *args):
         window = Gtk.ShortcutsWindow(title="Window", transient_for=self.get_active_window(), modal=True)

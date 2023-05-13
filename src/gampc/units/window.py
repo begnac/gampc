@@ -22,8 +22,6 @@ from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
 
-import ampd
-
 from ..util import resource
 from ..util import unit
 from ..util.logger import logger
@@ -40,12 +38,12 @@ class Window(Gtk.ApplicationWindow):
         self.is_fullscreen = False
         self.component = None
 
-        self.set_default_size(self.unit.config.width._get(default=1000),
-                              self.unit.config.height._get(default=600))
-        if self.unit.config.maximized._get(default=False):
-            self.maximize()
+        self.default_width = self.unit.config.width._get(default=1000)
+        self.default_height = self.unit.config.height._get(default=600)
+        self.set_default_size(self.default_width, self.default_height)
 
         self.connect('destroy', self.destroy_cb)
+        self.connect('map', self.map_cb)
 
         self.unit.unit_server.connect('notify::current-song', self.notify_current_song_cb)
         self.unit.unit_server.ampd_server_properties.connect('notify::state', self.update_title)
@@ -85,6 +83,11 @@ class Window(Gtk.ApplicationWindow):
 
     def __del__(self):
         logger.debug("Deleting {}".format(self))
+
+    @staticmethod
+    def map_cb(self):
+        self.width_delta = self.get_allocation().width - self.default_width
+        self.height_delta = self.get_allocation().height - self.default_height
 
     @staticmethod
     def destroy_cb(self):
@@ -149,9 +152,8 @@ class Window(Gtk.ApplicationWindow):
 
     def do_configure_event(self, event):
         if not self.is_fullscreen:
-            self.unit.config.width._set(event.width)
-            self.unit.config.height._set(event.height)
-            self.unit.config.maximized._set(self.is_maximized())
+            self.unit.config.width._set(event.width - self.width_delta)
+            self.unit.config.height._set(event.height - self.height_delta)
         Gtk.ApplicationWindow.do_configure_event(self, event)
 
     def action_toggle_fullscreen_cb(self, *args):

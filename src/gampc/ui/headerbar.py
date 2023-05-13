@@ -31,7 +31,7 @@ class ButtonBox(Gtk.Box):
         super().__init__(visible=True)
 
         for name in names:
-            button = Gtk.Button(visible=True, action_name=f'app.{name}')
+            button = Gtk.Button(visible=True, can_focus=False, action_name=f'app.{name}')
             setattr(self, name.replace('-', '_'), button)
             self.add(button)
 
@@ -69,7 +69,7 @@ class TimeScale(Gtk.Box):
     def __init__(self):
         super().__init__(visible=True, orientation=Gtk.Orientation.HORIZONTAL)
 
-        self.scale = Gtk.Scale(visible=True, restrict_to_fill_level=False, show_fill_level=True, width_request=150, draw_value=False, has_origin=False)
+        self.scale = Gtk.Scale(visible=True, can_focus=False, restrict_to_fill_level=False, show_fill_level=True, width_request=150, draw_value=False, has_origin=False)
         self.elapsed_label = Gtk.Label(visible=True)
         self.duration_label = Gtk.Label(visible=True)
         self.label_box = Gtk.Box()
@@ -127,7 +127,7 @@ class HeaderBar(Gtk.HeaderBar):
     def __init__(self):
         super().__init__(visible=True, show_close_button=True)
 
-        self.volume_button = Gtk.VolumeButton(visible=True, orientation=Gtk.Orientation.VERTICAL)
+        self.volume_button = Gtk.VolumeButton(visible=True, can_focus=False, orientation=Gtk.Orientation.VERTICAL)
         self.volume_button.get_adjustment().set_upper(100)
         self.volume_button.get_adjustment().set_step_increment(1)
         self.volume_button.get_adjustment().set_page_increment(5)

@@ -51,6 +51,7 @@ class __unit__(unit.Unit):
             resource.MenuAction('gampc/window', 'win.volume-popup', _("Adjust volume"), ['<Alt>v']),
             resource.MenuAction('gampc/app', 'app.quit', _("Quit"), ['<Control>q']),
 
+            resource.MenuAction('help', 'app.BAD', _("BAD"), ['<Control><Shift>b']),
             resource.MenuAction('help', 'app.help', _("Help"), ['<Control>h', 'F1']),
             resource.MenuAction('help', 'app.about', _("About")),
         )
