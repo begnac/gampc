@@ -36,28 +36,29 @@ class ButtonBox(Gtk.Box):
             self.add(button)
 
 
-class PlaybackButtons(ButtonBox):
+class PlaybackButtons(Gtk.Box):
     playing = GObject.Property(type=bool, default=False)
 
     def __init__(self):
-        super().__init__('previous', 'play-or-pause', 'stop', 'next')
+        super().__init__(visible=True)
 
-        self.icon_play = Gtk.Image(visible=True, icon_name='media-playback-start-symbolic')
-        self.icon_pause = Gtk.Image(visible=True, icon_name='media-playback-pause-symbolic')
+        play_or_pause = Gtk.Button(visible=True, can_focus=False, action_name='app.play-or-pause')
+        icon_play = Gtk.Image(visible=True, icon_name='media-playback-start-symbolic')
+        icon_pause = Gtk.Image(visible=True, icon_name='media-playback-pause-symbolic')
+        self.bind_property('playing', play_or_pause, 'image', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: icon_pause if value else icon_play)
 
-        self.previous.set_image(Gtk.Image(visible=True, icon_name='media-skip-backward-symbolic'))
-        self.stop.set_image(Gtk.Image(visible=True, icon_name='media-playback-stop-symbolic'))
-        self.next.set_image(Gtk.Image(visible=True, icon_name='media-skip-forward-symbolic'))
+        self.add(Gtk.Button(visible=True, can_focus=False, action_name='app.previous', image=Gtk.Image(visible=True, icon_name='media-skip-backward-symbolic')))
+        self.add(play_or_pause)
+        self.add(Gtk.Button(visible=True, can_focus=False, action_name='app.stop', image=Gtk.Image(visible=True, icon_name='media-playback-stop-symbolic')))
+        self.add(Gtk.Button(visible=True, can_focus=False, action_name='app.next', image=Gtk.Image(visible=True, icon_name='media-skip-forward-symbolic')))
 
-        self.bind_property('playing', self.play_or_pause, 'image', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: self.icon_pause if value else self.icon_play)
 
-
-class OptionButtons(ButtonBox):
+class OptionButtons(Gtk.Box):
     def __init__(self):
-        super().__init__('random', 'repeat')
+        super().__init__(visible=True)
 
-        self.random.set_image(Gtk.Image(visible=True, icon_name='media-playlist-shuffle-symbolic'))
-        self.repeat.set_image(Gtk.Image(visible=True, icon_name='media-playlist-repeat-symbolic'))
+        self.add(Gtk.ToggleButton(visible=True, can_focus=False, action_name='app.random', image=Gtk.Image(visible=True, icon_name='media-playlist-shuffle-symbolic')))
+        self.add(Gtk.ToggleButton(visible=True, can_focus=False, action_name='app.repeat', image=Gtk.Image(visible=True, icon_name='media-playlist-repeat-symbolic')))
         # self.consume.set_image(Gtk.Image(visible=True, icon_name='media-skip-backward-symbolic'))
         # self.single.set_image(Gtk.Image(visible=True, icon_name='zoom-original-symbolic'))
 

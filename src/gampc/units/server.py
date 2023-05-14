@@ -33,9 +33,6 @@ from ..util.logger import logger
 class ServerOption(GObject.Object):
     value = GObject.Property(type=bool, default=False)
 
-    def __init__(self):
-        GObject.Object.__init__(self)
-
 
 class __unit__(unit.UnitMixinConfig, unit.Unit):
     REQUIRED_UNITS = ['menubar', 'profiles']
