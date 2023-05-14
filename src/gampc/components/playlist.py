@@ -95,7 +95,7 @@ class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, tre
         if self.selected_node is None or not self.selected_node.modified:
             return
         records = [song for i, p, song in self.store if song._status != self.RECORD_DELETED]
-        result = await self.unit.save_playlist(self.selected_node.joined_path, [record.file for record in records], self.win)
+        result = await self.unit.save_playlist(self.selected_node.joined_path, [record.file for record in records], self.widget.get_toplevel())
         if result:
             self.treeview.get_selection().unselect_all()
             super().left_treeview_selection_changed_cb()
@@ -106,14 +106,14 @@ class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, tre
         if not self.selected_node:
             return
         playlist_path = self.selected_node.joined_path
-        await self.unit.rename_playlist(playlist_path, self.win, self.selected_node.kind == NODE_FOLDER)
+        await self.unit.rename_playlist(playlist_path, self.widget.get_toplevel(), self.selected_node.kind == NODE_FOLDER)
 
     @ampd.task
     async def action_playlist_delete_cb(self, action, parameter):
         if not self.selected_node:
             return
         playlist_path = self.selected_node.joined_path
-        if not await self.unit.confirm(self.win, _("Delete playlist {name}?").format(name=playlist_path)):
+        if not await self.unit.confirm(self.widget.get_toplevel(), _("Delete playlist {name}?").format(name=playlist_path)):
             return
         await self.ampd.rm(playlist_path.replace('/', PSEUDO_SEPARATOR))
 
@@ -122,4 +122,4 @@ class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, tre
         if not self.selected_node:
             return
         playlist_path = self.selected_node.joined_path
-        await self.unit.save_playlist(playlist_path, await self.ampd.playlist(), self.win)
+        await self.unit.save_playlist(playlist_path, await self.ampd.playlist(), self.widget.get_toplevel())

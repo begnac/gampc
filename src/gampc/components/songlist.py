@@ -112,7 +112,7 @@ class SongListWithEditDelNew(SongListWithAdd, songlistbase.SongListBaseWithEditD
 #     def save_files(self, songs):
 #         deleted = [song for song in songs if song._status == self.RECORD_DELETED]
 #         if deleted:
-#             dialog = Gtk.Dialog(parent=self.win, title=_("Move to trash"))
+#             dialog = Gtk.Dialog(parent=self.widget.get_toplevel(), title=_("Move to trash"))
 #             dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
 #             dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
 #             dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash?")] + [song.file for song in deleted]), visible=True))

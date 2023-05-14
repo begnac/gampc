@@ -78,7 +78,7 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         if '-choose-' in action.get_name():
             priority = sum(int(song.get('Prio', 0)) for song in songs) // len(songs)
             struct = ssde.Integer(default=priority, min_value=0, max_value=255)
-            priority = await struct.edit_async(self.win)
+            priority = await struct.edit_async(self.widget.get_toplevel())
             if priority is None:
                 return
         else:

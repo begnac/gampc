@@ -211,7 +211,7 @@ class Tanda(component.ComponentMixinPaned, component.Component):
             self.status = None
 
     def db_missing_song_cb(self, db, song_file, *fields):
-        search_window = Gtk.Window(destroy_with_parent=True, transient_for=self.win, window_position=Gtk.WindowPosition.CENTER_ON_PARENT,
+        search_window = Gtk.Window(destroy_with_parent=True, transient_for=self.widget.get_toplevel(), window_position=Gtk.WindowPosition.CENTER_ON_PARENT,
                                    default_width=500, default_height=500,
                                    title=_("Replace {}").format(' / '.join(fields)))
         search_window.update_title = lambda *args: None
@@ -435,7 +435,7 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
         i = self.tanda_store.get_iter(path)
         tanda = self.tanda_store.get_record(i)
         title = ' / '.join(filter(lambda x: x, (tanda.Artist, tanda.Years, tanda.Performer)))
-        dialog = Gtk.Dialog(parent=self.win, title=_("Delete tanda"))
+        dialog = Gtk.Dialog(parent=self.widget.get_toplevel(), title=_("Delete tanda"))
         dialog.get_content_area().add(Gtk.Label(label=_("Delete {tanda}?").format(tanda=title), visible=True))
         dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         dialog.add_button(_("_OK"), Gtk.ResponseType.OK)

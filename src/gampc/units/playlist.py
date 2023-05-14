@@ -224,7 +224,7 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
     async def action_playlist_add_saveas_cb(self, songlist_, action, parameter):
         filenames = list(songlist_.get_filenames(parameter.get_boolean()))
         if not filenames:
-            dialog_ = dialog.AsyncDialog(parent=songlist_.win, title="")
+            dialog_ = dialog.AsyncDialog(parent=songlist_.widget.get_toplevel(), title="")
             dialog_.get_content_area().add(Gtk.Label(label=_("Nothing to save!"), visible=True))
             dialog_.add_button(_("_OK"), Gtk.ResponseType.OK)
             await dialog_.run_async()
@@ -233,11 +233,11 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
 
         saveas = '-saveas' in action.get_name()
         title = _("Save as playlist") if saveas else _("Add to playlist")
-        dialog_ = ChoosePathDialog(parent=songlist_.win, title=title, paths=self.playlist_paths())
+        dialog_ = ChoosePathDialog(parent=songlist_.widget.get_toplevel(), title=title, paths=self.playlist_paths())
         playlist_path = await dialog_.run_async(destroy=True)
         if playlist_path is None:
             return
         playlist_name = playlist_path.replace('/', playlist.PSEUDO_SEPARATOR)
         if not saveas and playlist_name in self.playlists:
             filenames = await self.ampd.listplaylist(playlist_name) + filenames
-        await self.save_playlist(playlist_path, filenames, songlist_.win)
+        await self.save_playlist(playlist_path, filenames, songlist_.widget.get_toplevel())

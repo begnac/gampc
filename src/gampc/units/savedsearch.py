@@ -86,7 +86,7 @@ class SavedSearch(component.ComponentMixinPaned, songlist.SongList):
                 self.left_treeview.set_cursor(Gtk.TreePath.new_from_indices([n]))
 
     def action_search_new_cb(self, *args):
-        value = self.unit.ssde_struct.edit(self.win, size=self.config.edit_dialog_size._get(), scrolled=True)
+        value = self.unit.ssde_struct.edit(self.widget.get_toplevel(), size=self.config.edit_dialog_size._get(), scrolled=True)
         if value:
             self.db.add_search(value)
             self.setup_searches(value['name'])
@@ -99,7 +99,7 @@ class SavedSearch(component.ComponentMixinPaned, songlist.SongList):
     def edit_search(self, p):
         name = self.left_store.get_value(self.left_store.get_iter(p), 0)
         value = self.db.get_search(name)
-        new_value = self.unit.ssde_struct.edit(self.win, value, size=self.configself.config.edit_dialog_size._get(), scrolled=True)
+        new_value = self.unit.ssde_struct.edit(self.widget.get_toplevel(), value, size=self.configself.config.edit_dialog_size._get(), scrolled=True)
         if new_value:
             self.db.delete_search(name)
             self.db.add_search(new_value)
@@ -112,7 +112,7 @@ class SavedSearch(component.ComponentMixinPaned, songlist.SongList):
             return
         name = self.left_store.get_value(self.left_store.get_iter(path), 0)
 
-        dialog = Gtk.Dialog(parent=self.win, title=_("Delete search"))
+        dialog = Gtk.Dialog(parent=self.widget.get_toplevel(), title=_("Delete search"))
         dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
         dialog.get_content_area().add(Gtk.Label(label=_("Delete search '{}'?").format(name), visible=True))
