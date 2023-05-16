@@ -26,16 +26,6 @@ from gi.repository import Gtk
 from ..util.misc import format_time
 
 
-class ButtonBox(Gtk.Box):
-    def __init__(self, *names):
-        super().__init__(visible=True)
-
-        for name in names:
-            button = Gtk.Button(visible=True, can_focus=False, action_name=f'app.{name}')
-            setattr(self, name.replace('-', '_'), button)
-            self.add(button)
-
-
 class PlaybackButtons(Gtk.Box):
     playing = GObject.Property(type=bool, default=False)
 
