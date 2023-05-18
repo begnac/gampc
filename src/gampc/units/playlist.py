@@ -84,7 +84,7 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
 
         self.add_resources(
             'app.menu',
-            resource.MenuAction('edit/component', 'mod.playlist-saveas(false)', _("Save as playlist")),
+            resource.MenuAction('edit/component', 'songlist.playlist-saveas(false)', _("Save as playlist")),
         )
 
         self.add_resources(

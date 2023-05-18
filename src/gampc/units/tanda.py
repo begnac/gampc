@@ -67,7 +67,7 @@ class Tanda(component.ComponentMixinPaned, component.Component):
         self.button_box = Gtk.ButtonBox(visible=True, orientation=Gtk.Orientation.HORIZONTAL, layout_style=Gtk.ButtonBoxStyle.START)
         self.actions.add_action(Gio.PropertyAction(name='genre-filter', object=self, property_name='genre-filter'))
         for i, genre in enumerate(self.GENRES):
-            button = Gtk.ModelButton(iconic=True, text=genre, centered=True, visible=True, can_focus=False, action_name='supermod.genre-filter', action_target=GLib.Variant.new_int32(i))
+            button = Gtk.ModelButton(iconic=True, text=genre, centered=True, visible=True, can_focus=False, action_name='tanda.genre-filter', action_target=GLib.Variant.new_int32(i))
             self.button_box.add(button)
         self.signal_handler_connect(self, 'notify::genre-filter', lambda *args: self.filter_tandas(False))
 

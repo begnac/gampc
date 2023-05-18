@@ -112,5 +112,5 @@ class __unit__(songlist.UnitMixinSongList, unit.Unit):
         super().__init__(name, manager)
         self.add_resources(
             'app.menu',
-            resource.MenuAction('edit/component', 'mod.search', _("Search"), ['<Control><Shift>f']),
+            resource.MenuAction('edit/component', 'search.search', _("Search"), ['<Control><Alt>f']),
         )
