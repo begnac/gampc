@@ -495,9 +495,12 @@ class TreeViewFilter(Gtk.Box):
         self.filter_ = Record()
         self.filter_treeview = RecordTreeViewFilter(unit_misc, self.filter_, treeview.fields)
 
-        self.add(self.filter_treeview)
+        filter_scroller = Gtk.ScrolledWindow(visible=True)
+        filter_scroller.add(self.filter_treeview)
+        filter_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
+        self.add(filter_scroller)
 
-        self.scroller = Gtk.ScrolledWindow(visible=True, can_focus=False)
+        self.scroller = Gtk.ScrolledWindow(visible=True)
         self.scroller.add(treeview)
         self.add(self.scroller)
         self.treeview = treeview
