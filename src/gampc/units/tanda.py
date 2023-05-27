@@ -102,6 +102,7 @@ class Tanda(component.ComponentMixinPaned, component.Component):
         self.actions.add_action(resource.Action('verify', self.unit.db.action_tanda_verify_cb))
         self.actions.add_action(resource.Action('cleanup-db', self.unit.db.action_cleanup_db_cb))
 
+        self.actions_dict['tanda-edit'] = self.edit.actions
         self.subcomponent_actions_names = 'songlistbase', 'songlist'
         for name in self.subcomponent_actions_names:
             self.actions_dict[name] = Gio.SimpleActionGroup()
