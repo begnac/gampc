@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
 from gi.repository import Gtk
 
 import ampd
@@ -32,9 +33,7 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
 
     def __init__(self, unit):
         super().__init__(unit)
-        self.actions.add_action(resource.Action('high-priority', self.action_priority_cb))
-        self.actions.add_action(resource.Action('normal-priority', self.action_priority_cb))
-        self.actions.add_action(resource.Action('choose-priority', self.action_priority_cb))
+        self.actions.add_action(resource.Action('priority', self.action_priority_cb, parameter_type=GLib.VariantType.new('i')))
         self.actions.add_action(resource.Action('shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
         self.actions.add_action(resource.Action('go-to-current', self.action_go_to_current_cb))
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
@@ -75,14 +74,13 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         if not songs:
             return
 
-        if '-choose-' in action.get_name():
+        priority = parameter.unpack()
+        if priority == -1:
             priority = sum(int(song.get('Prio', 0)) for song in songs) // len(songs)
             struct = ssde.Integer(default=priority, min_value=0, max_value=255)
             priority = await struct.edit_async(self.widget.get_toplevel())
             if priority is None:
                 return
-        else:
-            priority = 255 if '-high-' in action.get_name() else 0
         if songs:
             await self.ampd.prioid(priority, *(song['Id'] for song in songs))
 

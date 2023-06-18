@@ -84,8 +84,8 @@ class __unit__(songlist.UnitMixinSongList, unit.Unit):
         self.add_resources(
             self.name + '.context.menu',
             resource.MenuPath('other/playqueue-priority', _("Priority for random mode"), is_submenu=True),
-            resource.MenuAction('other/playqueue-priority', 'playqueue.high-priority', _("High")),
-            resource.MenuAction('other/playqueue-priority', 'playqueue.normal-priority', _("Normal")),
-            resource.MenuAction('other/playqueue-priority', 'playqueue.choose-priority', _("Choose")),
+            resource.MenuAction('other/playqueue-priority', 'playqueue.priority(255)', _("High")),
+            resource.MenuAction('other/playqueue-priority', 'playqueue.priority(0)', _("Normal")),
+            resource.MenuAction('other/playqueue-priority', 'playqueue.priority(-1)', _("Choose")),
             resource.MenuAction('other', 'playqueue.shuffle', _("Shuffle")),
         )
