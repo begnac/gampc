@@ -95,7 +95,7 @@ class Person(Gtk.Box):
         self.image_cache = image_cache
         self.condition = condition
 
-        self.label = Gtk.Label(vexpand=True, ellipsize=Pango.EllipsizeMode.MIDDLE, lines=3, wrap=True)
+        self.label = Gtk.Label(vexpand=True, ellipsize=Pango.EllipsizeMode.MIDDLE, wrap=True, lines=3)
         self.label.connect('notify::label', self.notify_label_cb)
 
         self.image = Gtk.Image(vexpand=True)
@@ -163,7 +163,7 @@ class Info(Gtk.Box):
         artist_performer_box.add(self.artist)
         artist_performer_box.add(self.performer)
 
-        self.title_label = Gtk.Label(visible=True, vexpand=True, ellipsize=Pango.EllipsizeMode.MIDDLE)
+        self.title_label = Gtk.Label(visible=True, vexpand=True, wrap=True)
         self.title_label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold Italic", 0 -1 scale 3'))
 
         self.genre_label = Gtk.Label(visible=True)
