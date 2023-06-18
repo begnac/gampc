@@ -23,8 +23,6 @@ from gi.repository import Gtk
 
 import logging
 
-from ..util.logger import logger
-
 
 class Handeler(logging.Handler):
     MAX_INFOBARS = 5
@@ -47,7 +45,7 @@ class Handeler(logging.Handler):
         self.infobars.remove(infobar)
         self.box.remove(infobar)
 
-    def cull_infobars(self, n = 0):
+    def cull_infobars(self, n=0):
         while len(self.infobars) > n:
             self.remove_infobar(self.infobars[0])
 
@@ -58,7 +56,7 @@ class Handeler(logging.Handler):
         message_icon = 'error' if record.levelno >= 40 else 'warning' if record.levelno >= 30 else 'information'
         infobar = Gtk.InfoBar(visible=True, message_type=message_type, show_close_button=True)
         infobar.get_content_area().add(Gtk.Image(visible=True, icon_name='dialog-' + message_icon, icon_size=Gtk.IconSize.LARGE_TOOLBAR))
-        infobar.get_content_area().add(Gtk.Label(visible=True, label=record.msg))
+        infobar.get_content_area().add(Gtk.Label(visible=True, wrap=True, label=record.msg))
         infobar.connect('response', self.remove_infobar)
         infobar.timeout = GLib.timeout_add(self.timeout, self.remove_infobar_timeout, infobar)
         self.box.add(infobar)
