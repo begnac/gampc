@@ -707,7 +707,6 @@ class TandaDatabase(GObject.Object, db.Database):
 
     @ampd.task
     async def action_tanda_verify_cb(self, action, param):
-        await self.ampd.idle(ampd.CONNECT)
         await self.ampd.update()
         await self.ampd.idle(ampd.UPDATE)
         await self.ampd.idle(ampd.UPDATE)
