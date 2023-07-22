@@ -152,8 +152,9 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
 
     @ampd.task
     async def _reconnect(self):
-        await asyncio.sleep(1)
-        await self.ampd_client.connect_to_server(self.profile.address)
+        reply = await self.ampd.idle(ampd.CONNECT, timeout=1)
+        if reply & ampd.TIMEOUT:
+            await self.ampd_client.connect_to_server(self.profile.address)
 
     @ampd.task
     async def idle_database(self):
