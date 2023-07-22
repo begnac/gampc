@@ -301,8 +301,9 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
         self.tanda_treeview.connect('cursor-changed', self.tanda_treeview_cursor_changed_cb)
         self.tanda_filter = data.TreeViewFilter(self.unit.unit_misc, self.tanda_treeview)
 
-        self.actions.remove('filter')
-        self.actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_filter, property_name='active'))
+        # Ugly hack but works
+        self.songlistbase_actions.remove('filter')
+        self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_filter, property_name='active'))
 
         self.treeview.set_vexpand(False)
         self.treeview_filter.scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
