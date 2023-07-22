@@ -225,7 +225,7 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
         filenames = list(songlist_.get_filenames(parameter.get_boolean()))
         if not filenames:
             dialog_ = dialog.AsyncDialog(parent=songlist_.widget.get_toplevel(), title="")
-            dialog_.get_content_area().add(Gtk.Label(label=_("Nothing to save!"), visible=True))
+            dialog_.get_content_area().add(Gtk.Label(label=_("Nothing to save!")))
             dialog_.add_button(_("_OK"), Gtk.ResponseType.OK)
             await dialog_.run_async()
             dialog_.destroy()

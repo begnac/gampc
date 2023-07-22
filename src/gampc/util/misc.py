@@ -30,7 +30,7 @@ def format_time(time):
 
 
 def get_modifier_state():
-    return Gdk.Keymap.get_default().get_modifier_state()
+    return Gdk.Display.get_default().get_default_seat().get_keyboard().get_modifier_state()
 
 
 def preprend_mixin(mixin):

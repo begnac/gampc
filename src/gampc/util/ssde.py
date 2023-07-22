@@ -65,7 +65,7 @@ class DialogEditor(Gtk.Dialog):
             self._renderers[target] = renderer
 
         self._store = Gtk.TreeStore(EditorRow)
-        self._treeview = Gtk.TreeView(visible=True, headers_visible=False, show_expanders=True, enable_tree_lines=True, enable_search=False, model=self._store)
+        self._treeview = Gtk.TreeView(headers_visible=False, show_expanders=True, enable_tree_lines=True, enable_search=False, model=self._store)
         self._treeview.connect('key-press-event', self._key_press_event_cb)
         self._treeview.connect('row-activated', self.row_activated_cb)
         self._treeview.insert_column_with_data_func(0, '', Gtk.CellRendererText(), self._label_data_func)
@@ -74,7 +74,7 @@ class DialogEditor(Gtk.Dialog):
         if size:
             self.set_default_size(*size)
         if scrolled:
-            scrolled_window = Gtk.ScrolledWindow(visible=True, expand=True)
+            scrolled_window = Gtk.ScrolledWindow(expand=True)
             scrolled_window.add(self._treeview)
             self.get_content_area().add(scrolled_window)
         else:

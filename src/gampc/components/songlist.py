@@ -60,7 +60,7 @@ class SongList(songlistbase.SongListBase):
             dialog = Gtk.Dialog(parent=self.get_window(), title=_("Move to trash"))
             dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
             dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
-            dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash bin?")] + [song.file for song in deleted]), visible=True))
+            dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash bin?")] + [song.file for song in deleted])))
             reply = dialog.run()
             dialog.destroy()
             if reply != Gtk.ResponseType.OK:
@@ -115,7 +115,7 @@ class SongListWithEditDelNew(SongListWithAdd, songlistbase.SongListBaseWithEditD
 #             dialog = Gtk.Dialog(parent=self.widget.get_toplevel(), title=_("Move to trash"))
 #             dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
 #             dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
-#             dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash?")] + [song.file for song in deleted]), visible=True))
+#             dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash?")] + [song.file for song in deleted])))
 #             reply = dialog.run()
 #             dialog.destroy()
 #             if reply != Gtk.ResponseType.OK:

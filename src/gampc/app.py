@@ -74,7 +74,8 @@ class App(Gtk.Application):
             'menubar', 'misc', 'profiles', 'server',
             'output', 'persistent',
             'playback', 'window',
-            'current', 'playqueue', 'browser', 'search', 'stream', 'playlist', 'tanda', 'command', 'log'
+            # 'current', 'playqueue', 'browser', 'search', 'stream', 'playlist', 'tanda', 'command',
+            'log'
         ]
 
         # units = self.unit_manager.get_unit('config').config.access('units', default_units)
@@ -115,10 +116,12 @@ class App(Gtk.Application):
         self.add_action(resource.Action('notify', self.task_hold_app(self.action_notify_cb)))
         self.add_action(resource.Action('quit', self.quit))
         self.add_action(resource.Action('component-start', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
-        self.add_action(resource.Action('component-start-new-window', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
+        # self.add_action(resource.Action('component-start-new-window', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
         self.add_action(resource.Action('component-stop', self.component_stop_cb))
 
         self.unit_server.ampd_connect()
+
+        self.connect('window-removed', lambda self, window: window.shutdown())
 
     def do_shutdown(self):
         logger.debug("Shutting down")
@@ -239,15 +242,17 @@ class App(Gtk.Application):
             self.set_accels_for_action(menu_item.action, [])
 
     def new_window_cb(self, action, parameter):
-        component = self.unit_component.get_component('current', False)
+        # component = self.unit_component.get_component('current', False)
+        component = self.unit_component.get_component('log', False)
         self.display_component(component, True)
 
     def close_window_cb(self, action, parameter):
         self.get_active_window().destroy()
 
     def component_start_cb(self, action, parameter):
-        component = self.unit_component.get_component(parameter.unpack(), get_modifier_state() & Gdk.ModifierType.CONTROL_MASK)
-        self.display_component(component, action.get_name().endswith('new-window'))
+        component = self.unit_component.get_component(parameter.unpack(), True if get_modifier_state() & Gdk.ModifierType.CONTROL_MASK else False)
+        # self.display_component(component, action.get_name().endswith('new-window'))
+        self.display_component(component, False)
 
     def display_component(self, component, new_window):
         if new_window:
@@ -297,18 +302,18 @@ class App(Gtk.Application):
                     items_by_section[name] = []
                 items_by_section[name].append(menu_item)
 
-        section = Gtk.ShortcutsSection(title=None, section_name='section', visible=True)
+        section = Gtk.ShortcutsSection(title=None, section_name='section')
         window.add(section)
 
         for name in section_order:
             if name not in items_by_section:
                 continue
-            group = Gtk.ShortcutsGroup(title=section_labels[name], name=name, visible=True)
+            group = Gtk.ShortcutsGroup(title=section_labels[name], name=name)
             section.add(group)
 
             for menu_item in items_by_section[name]:
                 shortcut = Gtk.ShortcutsShortcut(accelerator=' '.join(menu_item.accels),
-                                                 title=menu_item.label.replace('_', ''), visible=True)
+                                                 title=menu_item.label.replace('_', ''))
                 group.add(shortcut)
 
         window.show()

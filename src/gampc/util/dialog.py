@@ -50,7 +50,7 @@ class AsyncDialog(Gtk.Dialog):
 class AsyncMessageDialog(AsyncDialog):
     def __init__(self, *, message, cancel_button=True, title=None, **kwargs):
         super().__init__(title=title or message, **kwargs)
-        self.get_content_area().add(Gtk.Label(label=message, visible=True))
+        self.get_content_area().add(Gtk.Label(label=message))
         if cancel_button:
             self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         self.add_button(_("_OK"), Gtk.ResponseType.OK)
@@ -66,7 +66,7 @@ class AsyncTextDialog(AsyncDialog):
         self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         self.ok_button = self.add_button(_("_OK"), Gtk.ResponseType.OK)
 
-        self.entry = Gtk.Entry(visible=True)
+        self.entry = Gtk.Entry()
         self.get_content_area().add(self.entry)
         if text is not None:
             self.entry.set_text(text)

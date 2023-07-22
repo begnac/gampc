@@ -53,7 +53,7 @@ class Tanda(component.ComponentMixinPaned, component.Component):
     genre_filter = GObject.Property(type=int, default=0)
 
     def __init__(self, unit):
-        self.widget = self.right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
+        self.widget = self.right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
         super().__init__(unit)
 
@@ -64,18 +64,18 @@ class Tanda(component.ComponentMixinPaned, component.Component):
         self.left_treeview.insert_column_with_attributes(0, _("Artist"), Gtk.CellRendererText(), text=0)
         self.left_treeview.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
 
-        self.button_box = Gtk.ButtonBox(visible=True, orientation=Gtk.Orientation.HORIZONTAL, layout_style=Gtk.ButtonBoxStyle.START)
+        self.button_box = Gtk.ButtonBox(orientation=Gtk.Orientation.HORIZONTAL, layout_style=Gtk.ButtonBoxStyle.START)
         self.actions.add_action(Gio.PropertyAction(name='genre-filter', object=self, property_name='genre-filter'))
         for i, genre in enumerate(self.GENRES):
-            button = Gtk.ModelButton(iconic=True, text=genre, centered=True, visible=True, can_focus=False, action_name='tanda.genre-filter', action_target=GLib.Variant.new_int32(i))
+            button = Gtk.ModelButton(iconic=True, text=genre, centered=True, can_focus=False, action_name='tanda.genre-filter', action_target=GLib.Variant.new_int32(i))
             self.button_box.add(button)
         self.signal_handler_connect(self, 'notify::genre-filter', lambda *args: self.filter_tandas(False))
 
-        self.problem_button = Gtk.ToggleButton(image=Gtk.Image(icon_name='object-select-symbolic'), visible=True, can_focus=False, active=unit.unit_persistent.protect_requested, tooltip_text=_("Filter zero note"))
+        self.problem_button = Gtk.ToggleButton(image=Gtk.Image(icon_name='object-select-symbolic'), can_focus=False, active=unit.unit_persistent.protect_requested, tooltip_text=_("Filter zero note"))
         self.problem_button.connect('toggled', lambda *args: self.filter_tandas(False))
 
-        self.stack = Gtk.Stack(visible=True, transition_type=Gtk.StackTransitionType.CROSSFADE)
-        self.switcher = Gtk.StackSwitcher(visible=True, stack=self.stack)
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
+        self.switcher = Gtk.StackSwitcher(stack=self.stack)
 
         self.button_box.add(self.problem_button)
         self.button_box.set_child_secondary(self.problem_button, True)
@@ -218,11 +218,11 @@ class Tanda(component.ComponentMixinPaned, component.Component):
         search_window.update_title = lambda *args: None
         search_component = search.Search(self.unit)
         search_component.entry.set_text(' '.join('{}="{}"'.format(field, fields[i]) for i, field in enumerate(db.MISSING_SONG_FIELDS)))
-        button_box = Gtk.ButtonBox(visible=True, layout_style=Gtk.ButtonBoxStyle.CENTER)
-        cancel_button = Gtk.Button(visible=True, label=_("_Cancel"), use_underline=True)
+        button_box = Gtk.ButtonBox(layout_style=Gtk.ButtonBoxStyle.CENTER)
+        cancel_button = Gtk.Button(label=_("_Cancel"), use_underline=True)
         cancel_button.connect('clicked', lambda button: button.get_toplevel().destroy())
         button_box.add(cancel_button)
-        ok_button = Gtk.Button(visible=True, label=_("_OK"), use_underline=True)
+        ok_button = Gtk.Button(label=_("_OK"), use_underline=True)
         ok_button.connect('clicked', self.db_missing_song_ok_cb, db, search_component, song_file)
         button_box.add(ok_button)
         search_component.get_child().add(button_box)
@@ -308,7 +308,7 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
         self.treeview.set_vexpand(False)
         self.treeview_filter.scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
 
-        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.box.add(self.tanda_filter)
         self.box.add(self.widget)
 
@@ -438,7 +438,7 @@ class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
         tanda = self.tanda_store.get_record(i)
         title = ' / '.join(filter(lambda x: x, (tanda.Artist, tanda.Years, tanda.Performer)))
         dialog = Gtk.Dialog(parent=self.widget.get_toplevel(), title=_("Delete tanda"))
-        dialog.get_content_area().add(Gtk.Label(label=_("Delete {tanda}?").format(tanda=title), visible=True))
+        dialog.get_content_area().add(Gtk.Label(label=_("Delete {tanda}?").format(tanda=title)))
         dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
         reply = dialog.run()

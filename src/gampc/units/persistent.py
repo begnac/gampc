@@ -108,8 +108,9 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
 
     @staticmethod
     def notify_dark_cb(self, param):
-        css = Gtk.CssProvider.get_named('Adwaita', 'dark' if self.dark else None)
-        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        css = Gtk.CssProvider()
+        css.load_named('Adwaita', 'dark' if self.dark else None)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     @ampd.task
     async def notify_option_cb(self, properties, param):

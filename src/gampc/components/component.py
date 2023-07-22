@@ -64,7 +64,7 @@ class Component(GObject.Object):
         if self.get_window() is not None:
             raise RuntimeError
         self.signal_handlers_disconnect()
-        self.widget.destroy()
+        # self.widget.destroy()
         self.status_binding.unbind()
         for action_aggregator in self.action_aggregator_dict.values():
             self.manager.remove_aggregator(action_aggregator)
@@ -75,8 +75,8 @@ class Component(GObject.Object):
         del self.action_aggregator_dict
 
     def get_window(self):
-        toplevel = self.widget.get_toplevel()
-        return toplevel if isinstance(toplevel, Gtk.Window) else None
+        root = self.widget.get_root()
+        return root if isinstance(root, Gtk.Window) else None
 
     def add_actions_provider(self, name):
         actions = self.actions_dict[name] = Gio.SimpleActionGroup()
@@ -125,13 +125,13 @@ class ComponentMixinPaned:
         super().__init__(unit)
 
         self.left_store = self.init_left_store()
-        self.left_treeview = Gtk.TreeView(model=self.left_store, visible=True)
-        self.scrolled_left_treeview = Gtk.ScrolledWindow(visible=True)
+        self.left_treeview = Gtk.TreeView(model=self.left_store)
+        self.scrolled_left_treeview = Gtk.ScrolledWindow()
         self.scrolled_left_treeview.add(self.left_treeview)
         self.left_treeview.get_selection().connect('changed', self.left_treeview_selection_changed_cb)
         self.left_treeview.set_search_equal_func(lambda store, col, key, i: key.lower() not in store.get_value(i, col).lower())
 
-        self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config.pane_separator._get(), visible=True)
+        self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config.pane_separator._get())
         self.paned.connect('notify::position', self.paned_notify_position_cb)
         self.paned.add1(self.scrolled_left_treeview)
         self.paned.add2(self.widget)
@@ -158,12 +158,12 @@ class ComponentMixinEntry:
     def __init__(self, unit):
         super().__init__(unit)
 
-        self.entry = Gtk.Entry(visible=True)
+        self.entry = Gtk.Entry()
         self.entry.connect('activate', self.entry_activate_cb)
         self.entry.connect('focus-in-event', self.entry_focus_cb)
         self.entry.connect('focus-out-event', self.entry_focus_cb)
 
-        box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.add(self.widget)
         box.add(self.entry)
         self.widget = box

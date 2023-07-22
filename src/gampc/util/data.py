@@ -326,7 +326,7 @@ class RecordTreeViewBase(Gtk.TreeView):
 
 class RecordTreeView(RecordTreeViewBase):
     def __init__(self, fields, data_func, sortable):
-        super().__init__(RecordStoreSort if sortable else RecordStoreFilter, fields, data_func, visible=True, vexpand=True, rubber_banding=True)
+        super().__init__(RecordStoreSort if sortable else RecordStoreFilter, fields, data_func, vexpand=True, rubber_banding=True)
         self.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
 
         self.sortable = sortable
@@ -490,17 +490,17 @@ class TreeViewFilter(Gtk.Box):
     active = GObject.Property(type=bool, default=False)
 
     def __init__(self, unit_misc, treeview):
-        super().__init__(visible=True, orientation=Gtk.Orientation.VERTICAL)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
         self.filter_ = Record()
         self.filter_treeview = RecordTreeViewFilter(unit_misc, self.filter_, treeview.fields)
 
-        filter_scroller = Gtk.ScrolledWindow(visible=True, can_focus=False)
+        filter_scroller = Gtk.ScrolledWindow(can_focus=False)
         filter_scroller.add(self.filter_treeview)
         filter_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.add(filter_scroller)
 
-        self.scroller = Gtk.ScrolledWindow(visible=True, can_focus=False)
+        self.scroller = Gtk.ScrolledWindow(can_focus=False)
         self.scroller.add(treeview)
         self.add(self.scroller)
         self.treeview = treeview

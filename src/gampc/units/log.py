@@ -46,13 +46,14 @@ class Handler(logging.Handler, GObject.Object):
 class Log(component.Component):
     def __init__(self, unit):
         super().__init__(unit)
-        self.label = Gtk.Label(selectable=True, visible=True, vexpand=True, halign=Gtk.Align.START, valign=Gtk.Align.START)
-        self.widget = self.scrolled_label = Gtk.ScrolledWindow(visible=True)
-        self.scrolled_label.add(self.label)
+        self.label = Gtk.Label(selectable=True, vexpand=True, halign=Gtk.Align.START, valign=Gtk.Align.START)
+        self.widget = self.scrolled_label = Gtk.ScrolledWindow()
+        self.scrolled_label.set_child(self.label)
 
         handler = unit.handler
         self.signal_handler_connect(handler, 'notify::log', self.handler_notify_log_cb)
-        self.scrolled_label.get_vadjustment().connect('changed', self.adjustment_changed_cb)
+        self.signal_handler_connect(self.scrolled_label.get_vadjustment(), 'changed', self.adjustment_changed_cb)
+        # self.scrolled_label.get_vadjustment().connect('changed', self.adjustment_changed_cb)
         self.handler_notify_log_cb(handler, None)
 
     def handler_notify_log_cb(self, handler, param):

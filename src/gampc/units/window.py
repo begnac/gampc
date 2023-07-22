@@ -42,19 +42,18 @@ class Window(Gtk.ApplicationWindow):
         self.default_height = self.unit.config.height._get(default=600)
         self.set_default_size(self.default_width, self.default_height)
 
-        self.connect('destroy', self.destroy_cb)
         self.connect('map', self.map_cb)
 
         self.unit.unit_server.connect('notify::current-song', self.notify_current_song_cb)
         self.unit.unit_server.ampd_server_properties.connect('notify::state', self.update_title)
         self.unit.unit_server.connect('notify::server-label', self.update_subtitle)
 
-        box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
-        self.main = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
-        self.info_box = Gtk.Box(visible=True, orientation=Gtk.Orientation.VERTICAL)
-        box.add(self.main)
-        box.add(self.info_box)
-        self.add(box)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(self.main)
+        box.append(self.info_box)
+        self.set_child(box)
 
         self.headerbar = headerbar.HeaderBar()
         self.set_titlebar(self.headerbar)
@@ -89,8 +88,7 @@ class Window(Gtk.ApplicationWindow):
         self.width_delta = self.get_allocation().width - self.default_width
         self.height_delta = self.get_allocation().height - self.default_height
 
-    @staticmethod
-    def destroy_cb(self):
+    def shutdown(self):
         logger.debug("Destroying window: {}".format(self))
         self.change_component(None)
         logger.removeHandler(self.logging_handler)
@@ -116,7 +114,7 @@ class Window(Gtk.ApplicationWindow):
             for name, cb in self.component.window_signals.items():
                 self.connect(name, cb)
             self.component.insert_action_groups(self)
-            self.main.add(self.component.widget)
+            self.main.prepend(self.component.widget)
             self.component.connect('notify::title-extra', self.update_title)
             self.component.connect('notify::full-title', self.update_subtitle)
         self.update_subtitle()

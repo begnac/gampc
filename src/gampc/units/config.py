@@ -99,7 +99,7 @@ class LoadedConfigNode(ConfigNode):
     def _load(self):
         self._filename = self._name + '.json'
 
-        for path in xdg.BaseDirectory.load_config_paths('gampc'):
+        for path in xdg.BaseDirectory.load_config_paths('gampc-gtk4'):
             fullpath = os.path.join(path, self._filename)
             if os.path.exists(fullpath):
                 self._base = json.loads(open(fullpath, 'rb').read().decode('utf-8'))
@@ -108,7 +108,7 @@ class LoadedConfigNode(ConfigNode):
             self._base = {}
 
     def _save(self):
-        path = os.path.join(xdg.BaseDirectory.save_config_path('gampc'), self._filename)
+        path = os.path.join(xdg.BaseDirectory.save_config_path('gampc-gtk4'), self._filename)
         tree = self._get_tree()
         if tree:
             s = json.dumps(tree, sort_keys=True, indent=2, ensure_ascii=False) + '\n'

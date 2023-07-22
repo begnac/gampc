@@ -115,7 +115,7 @@ class SavedSearch(component.ComponentMixinPaned, songlist.SongList):
         dialog = Gtk.Dialog(parent=self.widget.get_toplevel(), title=_("Delete search"))
         dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
-        dialog.get_content_area().add(Gtk.Label(label=_("Delete search '{}'?").format(name), visible=True))
+        dialog.get_content_area().add(Gtk.Label(label=_("Delete search '{}'?").format(name)))
         reply = dialog.run()
         dialog.destroy()
         if reply == Gtk.ResponseType.OK:

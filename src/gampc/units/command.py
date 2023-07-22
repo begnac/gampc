@@ -31,8 +31,8 @@ from ..components import component
 class Command(component.Component):
     def __init__(self, unit):
         super().__init__(unit)
-        self.label = Gtk.Label(max_width_chars=50, wrap=True, selectable=True, visible=True)
-        self.widget = scrolled = Gtk.ScrolledWindow(visible=True, vexpand=True)
+        self.label = Gtk.Label(max_width_chars=50, wrap=True, selectable=True)
+        self.widget = scrolled = Gtk.ScrolledWindow(vexpand=True)
         scrolled.add(self.label)
 
     @ampd.task

@@ -76,21 +76,21 @@ class Welcome(Gtk.Box):
     def __init__(self):
         super().__init__(vexpand=True, spacing=50)
 
-        self.app_icon = Gtk.Image(visible=True, icon_name='face-cool-gampc')
+        self.app_icon = Gtk.Image(icon_name='face-cool-gampc')
         self.bind_property('size', self.app_icon, 'pixel-size', GObject.BindingFlags(0), lambda x, y: y * 5)
 
-        self.app_label = Gtk.Label(visible=True, label="GAMPC")
+        self.app_label = Gtk.Label(label="GAMPC")
         self.app_label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold", 0 -1 scale 5'))
 
-        self.add(Gtk.Label(visible=True, hexpand=True))
+        self.add(Gtk.Label(hexpand=True))
         self.add(self.app_icon)
         self.add(self.app_label)
-        self.add(Gtk.Label(visible=True, hexpand=True))
+        self.add(Gtk.Label(hexpand=True))
 
 
 class Person(Gtk.Box):
     def __init__(self, image_cache, condition=None):
-        super().__init__(visible=True, orientation=Gtk.Orientation.VERTICAL)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
         self.image_cache = image_cache
         self.condition = condition
@@ -159,24 +159,24 @@ class Info(Gtk.Box):
         self.performer = Person(self.pixbufs, lambda name: name != 'Instrumental')
         self.performer.label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans", 0 -1 scale 2'))
 
-        artist_performer_box = Gtk.Box(visible=True, vexpand=True, homogeneous=True, spacing=50)
+        artist_performer_box = Gtk.Box(vexpand=True, homogeneous=True, spacing=50)
         artist_performer_box.add(self.artist)
         artist_performer_box.add(self.performer)
 
-        self.title_label = Gtk.Label(visible=True, vexpand=True, wrap=True)
+        self.title_label = Gtk.Label(vexpand=True, wrap=True)
         self.title_label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold Italic", 0 -1 scale 3'))
 
-        self.genre_label = Gtk.Label(visible=True)
-        self.date_label = Gtk.Label(visible=True)
-        self.composer_label = Gtk.Label(visible=True)
-        data_box = Gtk.Box(visible=True, vexpand=True, halign=Gtk.Align.CENTER, spacing=14)
+        self.genre_label = Gtk.Label()
+        self.date_label = Gtk.Label()
+        self.composer_label = Gtk.Label()
+        data_box = Gtk.Box(vexpand=True, halign=Gtk.Align.CENTER, spacing=14)
         data_box.add(self.genre_label)
-        data_box.add(Gtk.Label(visible=True, label="/"))
+        data_box.add(Gtk.Label(label="/"))
         data_box.add(self.date_label)
-        data_box.add(Gtk.Label(visible=True, label="/"))
+        data_box.add(Gtk.Label(label="/"))
         data_box.add(self.composer_label)
 
-        info_box = Gtk.Box(visible=True, vexpand=True, orientation=Gtk.Orientation.VERTICAL)
+        info_box = Gtk.Box(vexpand=True, orientation=Gtk.Orientation.VERTICAL)
         info_box.add(self.title_label)
         info_box.add(data_box)
 
@@ -209,7 +209,7 @@ class Current(component.Component):
             ('Composer', self.info.composer_label),
         )
 
-        self.widget = self.main_box = Gtk.Box(visible=True, margin_bottom=20, margin_left=20, margin_right=20, margin_top=20)
+        self.widget = self.main_box = Gtk.Box(margin_bottom=20, margin_left=20, margin_right=20, margin_top=20)
         self.main_box.add(welcome)
         self.main_box.add(self.info)
 
