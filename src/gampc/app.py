@@ -74,7 +74,8 @@ class App(Gtk.Application):
             'menubar', 'misc', 'profiles', 'server',
             'output', 'persistent',
             'playback', 'window',
-            # 'current', 'playqueue', 'browser', 'search', 'stream', 'playlist', 'tanda', 'command',
+            'current',
+            # 'playqueue', 'browser', 'search', 'stream', 'playlist', 'tanda', 'command',
             'log'
         ]
 
@@ -242,8 +243,7 @@ class App(Gtk.Application):
             self.set_accels_for_action(menu_item.action, [])
 
     def new_window_cb(self, action, parameter):
-        # component = self.unit_component.get_component('current', False)
-        component = self.unit_component.get_component('log', False)
+        component = self.unit_component.get_component('current', False)
         self.display_component(component, True)
 
     def close_window_cb(self, action, parameter):

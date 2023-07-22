@@ -35,7 +35,6 @@ class Window(Gtk.ApplicationWindow):
     def __init__(self, app, unit):
         super().__init__(application=app, show_menubar=True)
         self.unit = unit
-        self.is_fullscreen = False
         self.component = None
 
         self.default_width = self.unit.config.width._get(default=1000)
@@ -148,14 +147,8 @@ class Window(Gtk.ApplicationWindow):
             chunks.append(self.unit.unit_server.server_label)
         self.headerbar.set_subtitle(' / '.join(chunks))
 
-    def do_configure_event(self, event):
-        if not self.is_fullscreen:
-            self.unit.config.width._set(event.width - self.width_delta)
-            self.unit.config.height._set(event.height - self.height_delta)
-        Gtk.ApplicationWindow.do_configure_event(self, event)
-
     def action_toggle_fullscreen_cb(self, *args):
-        if self.is_fullscreen:
+        if self.is_fullscreen():
             self.unfullscreen()
         else:
             self.fullscreen()
@@ -165,12 +158,6 @@ class Window(Gtk.ApplicationWindow):
             self.volume_button.emit('popup')
         else:
             self.volume_button.emit('popdown')
-
-    def do_window_state_event(self, event):
-        self.is_fullscreen = bool(event.new_window_state & Gdk.WindowState.FULLSCREEN)
-        self.set_show_menubar(not self.is_fullscreen)
-        self.headerbar.set_visible(not self.is_fullscreen)
-        return Gtk.ApplicationWindow.do_window_state_event(self, event)
 
 
 class __unit__(unit.UnitMixinConfig, unit.UnitMixinServer, unit.Unit):

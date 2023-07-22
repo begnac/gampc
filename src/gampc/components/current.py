@@ -19,15 +19,14 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gdk
 from gi.repository import GdkPixbuf
 from gi.repository import Pango
 from gi.repository import Gtk
 
 import xdg
-import time
-import asyncio
-import ampd
+# import time
+# import asyncio
+# import ampd
 
 from . import component
 
@@ -76,16 +75,16 @@ class Welcome(Gtk.Box):
     def __init__(self):
         super().__init__(vexpand=True, spacing=50)
 
-        self.app_icon = Gtk.Image(icon_name='face-cool-gampc')
-        self.bind_property('size', self.app_icon, 'pixel-size', GObject.BindingFlags(0), lambda x, y: y * 5)
+        self.icon = Gtk.Image(icon_name='face-cool-gampc')
+        self.bind_property('size', self.icon, 'pixel-size', GObject.BindingFlags(0), lambda x, y: y * 5)
 
-        self.app_label = Gtk.Label(label="GAMPC")
-        self.app_label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold", 0 -1 scale 5'))
+        self.label = Gtk.Label(label="GAMPC")
+        self.label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold", 0 -1 scale 5'))
 
-        self.add(Gtk.Label(hexpand=True))
-        self.add(self.app_icon)
-        self.add(self.app_label)
-        self.add(Gtk.Label(hexpand=True))
+        self.append(Gtk.Label(hexpand=True))
+        self.append(self.icon)
+        self.append(self.label)
+        self.append(Gtk.Label(hexpand=True))
 
 
 class Person(Gtk.Box):
@@ -101,15 +100,12 @@ class Person(Gtk.Box):
         self.image = Gtk.Image(vexpand=True)
         self.image_label = Gtk.Label()
 
-        self.image.connect('size-allocate', self.image_size_allocate_cb)
-
-        self.add(self.label)
-        self.add(self.image)
-        self.add(self.image_label)
+        self.append(self.label)
+        self.append(self.image)
+        self.append(self.image_label)
 
     def clear(self):
         self.image.clear()
-        self.last_wh = None
 
     def notify_label_cb(self, label, param):
         self.clear()
@@ -127,23 +123,11 @@ class Person(Gtk.Box):
             self.image.set_visible(True)
             self.image_label.set_visible(True)
             self.image_label.set_label(name)
+            self.image.set_from_pixbuf(self.pixbuf)
         else:
             self.label.set_visible(True)
             self.image.set_visible(False)
             self.image_label.set_visible(False)
-
-    def image_size_allocate_cb(self, image, allocation):
-        new_wh = allocation.width, allocation.height
-        if self.last_wh == new_wh:
-            return
-        self.last_wh = new_wh
-        ratio = self.pixbuf.get_height() / self.pixbuf.get_width()
-        if allocation.width * ratio < allocation.height:
-            allocation.height = allocation.width * ratio
-        else:
-            allocation.width = allocation.height / ratio
-        pixbuf = self.pixbuf.scale_simple(allocation.width, allocation.height, GdkPixbuf.InterpType.BILINEAR)
-        image.set_from_pixbuf(pixbuf)
 
 
 class Info(Gtk.Box):
@@ -160,8 +144,8 @@ class Info(Gtk.Box):
         self.performer.label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans", 0 -1 scale 2'))
 
         artist_performer_box = Gtk.Box(vexpand=True, homogeneous=True, spacing=50)
-        artist_performer_box.add(self.artist)
-        artist_performer_box.add(self.performer)
+        artist_performer_box.append(self.artist)
+        artist_performer_box.append(self.performer)
 
         self.title_label = Gtk.Label(vexpand=True, wrap=True)
         self.title_label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold Italic", 0 -1 scale 3'))
@@ -170,22 +154,30 @@ class Info(Gtk.Box):
         self.date_label = Gtk.Label()
         self.composer_label = Gtk.Label()
         data_box = Gtk.Box(vexpand=True, halign=Gtk.Align.CENTER, spacing=14)
-        data_box.add(self.genre_label)
-        data_box.add(Gtk.Label(label="/"))
-        data_box.add(self.date_label)
-        data_box.add(Gtk.Label(label="/"))
-        data_box.add(self.composer_label)
+        data_box.append(self.genre_label)
+        data_box.append(Gtk.Label(label="/"))
+        data_box.append(self.date_label)
+        data_box.append(Gtk.Label(label="/"))
+        data_box.append(self.composer_label)
 
         info_box = Gtk.Box(vexpand=True, orientation=Gtk.Orientation.VERTICAL)
-        info_box.add(self.title_label)
-        info_box.add(data_box)
+        info_box.append(self.title_label)
+        info_box.append(data_box)
 
-        self.add(artist_performer_box)
-        self.add(info_box)
+        self.append(artist_performer_box)
+        self.append(info_box)
 
     def clear(self):
         self.artist.clear()
         self.performer.clear()
+
+
+class MyBoxLayout(Gtk.BoxLayout):
+    size = GObject.Property(type=int)
+
+    def do_allocate(self, box, width, height, baseline):
+        self.size = width + height
+        return Gtk.BoxLayout.do_allocate(self, box, width, height, baseline)
 
 
 class Current(component.Component):
@@ -193,9 +185,6 @@ class Current(component.Component):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.window_signals['check-resize'] = self.window_check_resize_cb
-
-        self.labels = {}
 
         welcome = Welcome()
         self.info = Info()
@@ -209,22 +198,21 @@ class Current(component.Component):
             ('Composer', self.info.composer_label),
         )
 
-        self.widget = self.main_box = Gtk.Box(margin_bottom=20, margin_left=20, margin_right=20, margin_top=20)
-        self.main_box.add(welcome)
-        self.main_box.add(self.info)
+        self.layout = MyBoxLayout()
+        self.layout.connect('notify::size', self.notify_size_cb)
+        self.widget = self.main_box = Gtk.Box(margin_bottom=20, margin_start=20, margin_end=20, margin_top=20, layout_manager=self.layout)
+        self.main_box.append(welcome)
+        self.main_box.append(self.info)
 
         self.unit.unit_server.bind_property('current-song', welcome, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: not y)
         self.unit.unit_server.bind_property('current-song', self.info, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: bool(y))
         self.signal_handler_connect(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
         self.fading = None
 
-        self.width = 0
-        self.css_provider = Gtk.CssProvider.new()
+        self.css_provider = Gtk.CssProvider()
         self.widget.get_style_context().add_provider(self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        self.widget.connect('size-allocate', self.size_allocate_cb)
+        # self.widget.connect('size-allocate', self.size_allocate_cb)
         self.bind_property('size', welcome, 'size')
-
-        self.widget.connect('map', self.__map_cb)
 
     def shutdown(self):
         if self.fading:
@@ -232,18 +220,11 @@ class Current(component.Component):
             self.fading = None
         super().shutdown()
 
-    def __map_cb(self, widget):
-        self.width = 0
-        self.set_size()
-
     def notify_current_song_cb(self, server, param):
         for field, label in self.labels:
             label.set_label(server.current_song.get(field, ''))
         self.set_size()
         # self.fader()
-
-    def window_check_resize_cb(self, win):
-        self.info.clear()
 
     # @ampd.task
     # async def fader(self, *args):
@@ -268,15 +249,14 @@ class Current(component.Component):
     #         if self.fading == task:
     #             self.fading = None
 
-    def size_allocate_cb(self, widget, allocation):
-        self.width = allocation.width
-        self.set_size()
-
     def set_size(self):
-        scale = 50.0
+        scale = 100.0
         song = self.unit.unit_server.current_song
         if song:
             scale += 3 * max(len(song.get('Artist', '')) - 20, len(song.get('Title', '')) - 20, 0)
-        self.size = self.width / scale
-        css = b'* { font-size: ' + str(self.size).encode() + b'px; }'
-        self.css_provider.load_from_data(css)
+        self.size = self.layout.size / scale
+        css = f'* {{ font-size: {self.size}px; }}'
+        self.css_provider.load_from_data(css, -1)
+
+    def notify_size_cb(self, layout, param):
+        self.set_size()
