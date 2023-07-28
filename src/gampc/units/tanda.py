@@ -225,8 +225,8 @@ class Tanda(component.ComponentMixinPaned, component.Component):
         ok_button = Gtk.Button(visible=True, label=_("_OK"), use_underline=True)
         ok_button.connect('clicked', self.db_missing_song_ok_cb, db, search_component, song_file)
         button_box.add(ok_button)
-        search_component.get_child().add(button_box)
-        search_window.add(search_component)
+        search_component.widget.add(button_box)
+        search_window.add(search_component.widget)
         search_window.present()
 
     @staticmethod
@@ -237,7 +237,7 @@ class Tanda(component.ComponentMixinPaned, component.Component):
             song = search_component.store.get_record(i).get_data()
             db.replace_song(song_file, song)
             db.emit('changed', -1)
-            search_component.get_toplevel().destroy()
+            search_component.widget.get_toplevel().destroy()
 
 
 class TandaSubComponent(component.Component):
