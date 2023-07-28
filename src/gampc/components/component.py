@@ -158,21 +158,23 @@ class ComponentMixinEntry:
     def __init__(self, unit):
         super().__init__(unit)
 
+        self.entry_focus = Gtk.EventControllerFocus()
+        self.entry_focus.connect('enter', self.entry_focus_cb, True)
+        self.entry_focus.connect('leave', self.entry_focus_cb, False)
+
         self.entry = Gtk.Entry()
         self.entry.connect('activate', self.entry_activate_cb)
-        self.entry.connect('focus-in-event', self.entry_focus_cb)
-        self.entry.connect('focus-out-event', self.entry_focus_cb)
+        self.entry.add_controller(self.entry_focus)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        box.add(self.widget)
-        box.add(self.entry)
+        box.append(self.widget)
+        box.append(self.entry)
         self.widget = box
 
         self.widget.connect('map', lambda widget: self.entry.grab_focus())
 
-    def entry_focus_cb(self, entry, event):
-        self.unit.unit_misc.block_fragile_accels = event.in_
-        return False
+    def entry_focus_cb(self, controller, block):
+        self.unit.unit_misc.block_fragile_accels = block
 
 
 def component_with_entry(component):

@@ -33,7 +33,7 @@ class Command(component.Component):
         super().__init__(unit)
         self.label = Gtk.Label(max_width_chars=50, wrap=True, selectable=True)
         self.widget = scrolled = Gtk.ScrolledWindow(vexpand=True)
-        scrolled.add(self.label)
+        scrolled.set_child(self.label)
 
     @ampd.task
     async def entry_activate_cb(self, entry):
