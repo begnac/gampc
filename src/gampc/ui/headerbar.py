@@ -138,7 +138,13 @@ class TimeScale(Gtk.Box):
 
 class HeaderBar(Gtk.HeaderBar):
     def __init__(self):
-        super().__init__()
+        self.title = Gtk.Label(css_classes=['title'])
+        self.subtitle = Gtk.Label(css_classes=['subtitle'])
+        self.titlebox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
+        self.titlebox.append(self.title)
+        self.titlebox.append(self.subtitle)
+
+        super().__init__(title_widget=self.titlebox)
 
         self.volume_button = Gtk.VolumeButton(can_focus=False, orientation=Gtk.Orientation.VERTICAL)
         self.volume_button.get_adjustment().set_upper(100)
@@ -154,12 +160,6 @@ class HeaderBar(Gtk.HeaderBar):
         self.protected_image = Gtk.Image(icon_name='security-high-symbolic', tooltip_text=_("Protected mode"))
         for widget in self.option_buttons, self.protected_image:
             self.pack_end(widget)
-
-        self.title = Gtk.Label(css_classes=['title'])
-        self.subtitle = Gtk.Label(css_classes=['subtitle'])
-        self.titlebox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.titlebox.append(self.title)
-        self.titlebox.append(self.subtitle)
 
     def set_title(self, title):
         self.title.set_label(title)
