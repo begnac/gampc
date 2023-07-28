@@ -74,9 +74,8 @@ class App(Gtk.Application):
             'menubar', 'misc', 'profiles', 'server',
             'output', 'persistent',
             'playback', 'window',
-            'current',
-            # 'playqueue', 'browser', 'search', 'stream', 'playlist', 'tanda', 'command',
-            'log'
+            'current', 'playqueue', 'browser', 'search', 'stream', 'playlist', 'tanda',
+            'command', 'log'
         ]
 
         # units = self.unit_manager.get_unit('config').config.access('units', default_units)
@@ -117,7 +116,7 @@ class App(Gtk.Application):
         self.add_action(resource.Action('notify', self.task_hold_app(self.action_notify_cb)))
         self.add_action(resource.Action('quit', self.quit))
         self.add_action(resource.Action('component-start', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
-        # self.add_action(resource.Action('component-start-new-window', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
+        self.add_action(resource.Action('component-start-new-window', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
         self.add_action(resource.Action('component-stop', self.component_stop_cb))
 
         self.unit_server.ampd_connect()
@@ -251,8 +250,7 @@ class App(Gtk.Application):
 
     def component_start_cb(self, action, parameter):
         component = self.unit_component.get_component(parameter.unpack(), True if get_modifier_state() & Gdk.ModifierType.CONTROL_MASK else False)
-        # self.display_component(component, action.get_name().endswith('new-window'))
-        self.display_component(component, False)
+        self.display_component(component, action.get_name().endswith('new-window'))
 
     def display_component(self, component, new_window):
         if new_window:
