@@ -66,11 +66,11 @@ class UnitMixinCss:
     def __init__(self, name, manager):
         super().__init__(name, manager)
         self.css_provider = Gtk.CssProvider()
-        self.css_provider.load_from_data(self.CSS)
-        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self.css_provider.load_from_data(self.CSS, -1)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def shutdown(self):
-        Gtk.StyleContext.remove_provider_for_screen(Gdk.Screen.get_default(), self.css_provider)
+        Gtk.StyleContext.remove_provider_for_display(Gdk.Display.get_default(), self.css_provider)
         super().shutdown()
 
 
