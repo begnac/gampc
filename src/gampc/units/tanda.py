@@ -772,7 +772,7 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.UnitMixinCss, unit.Unit):
     key = '6'
 
     COMPONENT_CLASS = Tanda
-    CSS = b'#tanda-treeview.view { outline-width: 4px; outline-style: solid; }'
+    CSS = '#tanda-treeview.view { outline-width: 4px; outline-style: solid; }'
 
     def __init__(self, name, manager):
         super().__init__(name, manager)

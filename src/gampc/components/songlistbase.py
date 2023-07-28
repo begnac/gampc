@@ -83,6 +83,7 @@ class SongListBase(component.Component):
         super().shutdown()
 
     def set_editable(self, editable):
+        return
         dndtargets = [Gtk.TargetEntry.new(self.DND_TARGET, Gtk.TargetFlags(0), 0)]
 
         if self.record_new_cb != NotImplemented:
@@ -102,7 +103,7 @@ class SongListBase(component.Component):
                 action_.set_enabled(editable)
 
     def set_color(self, *args):
-        self.color = self.widget.get_style_context().get_color(Gtk.StateFlags.NORMAL)
+        self.color = self.widget.get_style_context().get_color()
 
     def action_copy_delete_cb(self, action, parameter):
         records, refs = self.treeview.get_selection_rows()
