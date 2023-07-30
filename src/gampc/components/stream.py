@@ -55,7 +55,7 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
 
     def load_streams(self):
         streams = self.unit.db.get_streams()
-        self.widget.store.set(streams)
+        self.store.set(streams)
 
     def action_save_cb(self, action, parameter):
         streams = [stream.get_data() for i, p, stream in self.store if stream._status != self.RECORD_DELETED]

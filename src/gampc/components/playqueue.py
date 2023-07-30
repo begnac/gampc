@@ -132,4 +132,4 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
     @ampd.task
     async def view_activate_cb(self, view, position):
         if not self.unit.unit_persistent.protect_active:
-            await self.ampd.playid(self.widget.store.get_item(position).Id)
+            await self.ampd.playid(self.store[position].Id)

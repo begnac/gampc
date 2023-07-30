@@ -44,7 +44,6 @@ class Node(GObject.Object):
         # self.expanded = 0
 
 
-# class TreeStore(data.StoreIterMixin, Gtk.TreeStore):
 class TreeStore(Gtk.TreeStore):
     def __init__(self, fill_node, root):
         self.node_class = type(root)
@@ -63,7 +62,6 @@ class TreeStore(Gtk.TreeStore):
         return self.root if i is None else self.get_value(i, 0)
 
     async def update(self):
-        return
         await self.update_node(None)
 
     async def update_node(self, i):
@@ -92,6 +90,15 @@ class TreeStore(Gtk.TreeStore):
     async def update_below_node(self, i):
         for j in self.children_iter(i):
             await self.update_node(j)
+
+    def children_iter(self, i, *columns):
+        j = self.iter_children(i)
+        while j is not None:
+            if columns:
+                yield j, *(self.get_value(j, column) for column in columns)
+            else:
+                yield j
+            j = self.iter_next(j)
 
 
 class TreeListIconColumn(Gtk.TreeViewColumn):

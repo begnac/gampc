@@ -51,6 +51,7 @@ class SongListBase(component.Component):
         super().__init__(unit, *args, **kwargs)
 
         self.widget = view.View(self.fields, self.sortable)
+        self.store = self.widget.store
         self.widget.column_view.add_css_class('songlistbase')
 
         self.songlistbase_actions = self.add_actions_provider('songlistbase')
@@ -153,7 +154,7 @@ class SongListBase(component.Component):
             self.records_set_fields(records)
         if self.duplicate_test_columns:
             self.find_duplicates(records, self.duplicate_test_columns)
-        self.widget.store.set(records)
+        self.store.set(records)
 
     def records_set_fields(self, records):
         self.fields.records_set_fields(records)
