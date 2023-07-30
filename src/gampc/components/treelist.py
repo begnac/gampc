@@ -23,7 +23,7 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import data
+# from ..util import data
 from . import component
 from . import songlist
 
@@ -44,7 +44,8 @@ class Node(GObject.Object):
         # self.expanded = 0
 
 
-class TreeStore(data.StoreIterMixin, Gtk.TreeStore):
+# class TreeStore(data.StoreIterMixin, Gtk.TreeStore):
+class TreeStore(Gtk.TreeStore):
     def __init__(self, fill_node, root):
         self.node_class = type(root)
 
@@ -62,6 +63,7 @@ class TreeStore(data.StoreIterMixin, Gtk.TreeStore):
         return self.root if i is None else self.get_value(i, 0)
 
     async def update(self):
+        return
         await self.update_node(None)
 
     async def update_node(self, i):

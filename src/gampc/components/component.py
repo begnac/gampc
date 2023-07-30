@@ -25,7 +25,6 @@ from gi.repository import Gtk
 
 import types
 
-from ..util import data
 from ..util import resource
 from ..util import unit
 from ..util.logger import logger

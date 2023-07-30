@@ -49,11 +49,23 @@ async def action_playqueue_add_high_priority_cb(songlist_, action, parameter):
     await songlist_.ampd.prioid(255, *Ids)
 
 
-class __unit__(songlist.UnitMixinSongList, unit.Unit):
+class __unit__(songlist.UnitMixinSongList, unit.UnitMixinCss, unit.Unit):
     title = _("Play Queue")
     key = '1'
 
+    ##############################    TODO : merge playing CSS with stream
+
     COMPONENT_CLASS = playqueue.PlayQueue
+    CSS = '''
+    columnview.playqueue > listview > row > cell.playing {
+      background: rgba(128,128,128,0.1);
+      font-style: italic;
+      font-weight: bold;
+    }
+    columnview.playqueue > listview > row > cell.high-priority {
+      background: rgba(0,255,0,0.5);
+    }
+    '''
 
     def __init__(self, name, manager):
         super().__init__(name, manager)

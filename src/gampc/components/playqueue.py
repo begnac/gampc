@@ -19,10 +19,12 @@
 
 
 from gi.repository import GLib
+from gi.repository import Pango
 from gi.repository import Gtk
 
 import ampd
 
+from ..util import misc
 from ..util import ssde
 from ..util import resource
 from . import songlist
@@ -33,44 +35,59 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
 
     def __init__(self, unit):
         super().__init__(unit)
+        self.widget.column_view.add_css_class('playqueue')
+        print(self.widget.column_view.get_css_classes())
         self.actions.add_action(resource.Action('priority', self.action_priority_cb, parameter_type=GLib.VariantType.new('i')))
         self.actions.add_action(resource.Action('shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
-        self.actions.add_action(resource.Action('go-to-current', self.action_go_to_current_cb))
+        # self.actions.add_action(resource.Action('go-to-current', self.action_go_to_current_cb))
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         for name in self.songlistbase_actions.list_actions():
             if name.startswith('playqueue-ext-'):
                 self.songlistbase_actions.remove(name)
-        self.treeview.connect('cursor-changed', self.cursor_changed_cb)
+        # self.widget.column_view.connect('cursor-changed', self.cursor_changed_cb)
         self.cursor_by_profile = {}
         self.set_cursor = False
 
-    def cursor_changed_cb(self, treeview):
+        self.widget.bind_hooks.append(self.current_song_bind_hook)
+
+    def cursor_changed_cb(self, view):
         if not self.set_cursor:
-            self.cursor_by_profile[self.unit.unit_server.server_profile] = self.treeview.get_cursor().path
+            self.cursor_by_profile[self.unit.unit_server.server_profile] = self.widget.column_view.get_cursor().path
+
+    @ampd.task
+    async def TEST(self):
+        while True:
+            await self.ampd.idle(0, timeout=1)
+            self.widget.column_view.queue_draw()
+            # for col in self.widget.cols.values():
+            #     print()
+            #     print(col.name)
+            #     for x in col.factory.bound:
+            #         y = x.get_child().get_parent().get_parent()
+            #         print(y, y.get_parent(), y.has_focus())
 
     @ampd.task
     async def client_connected_cb(self, client):
         self.set_cursor = True
+        self.TEST()
         while True:
             self.set_records(await self.ampd.playlistinfo())
+            self.widget.rebind_columns()
             if self.set_cursor:
-                self.treeview.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
+                # self.widget.column_view.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
                 self.set_cursor = False
             await self.ampd.idle(ampd.PLAYLIST)
 
-    def data_func(self, column, renderer, store, i, j):
-        super().data_func(column, renderer, store, i, j)
-        if self.unit.unit_server.ampd_server_properties.state != 'stop' and store.get_record(i).Id == self.unit.unit_server.ampd_server_properties.current_song.get('Id'):
-            renderer.set_property('font', 'italic bold')
-            bg = self._mix_colors(1, 1, 1)
-            renderer.set_property('background-rgba', bg)
-        elif column.field.name == 'FormattedTime' and store.get_record(i).Prio is not None:
-            bg = self._mix_colors(0, int(store.get_record(i).Prio) / 255.0, 0)
-            renderer.set_property('background-rgba', bg)
+    def current_song_bind_hook(self, label, item, name):
+        if self.unit.unit_server.ampd_server_properties.state != 'stop' and item.Id == self.unit.unit_server.ampd_server_properties.current_song.get('Id'):
+            label.get_parent().add_css_class('playing')
+            print(label.get_parent().get_css_classes(), label.get_parent().get_css_name())
+        if name == 'FormattedTime' and item.Prio is not None:
+            label.get_parent().add_css_class('high-priority')
 
     @ampd.task
     async def action_priority_cb(self, action, parameter):
-        songs, refs = self.treeview.get_selection_rows()
+        songs, refs = self.widget.column_view.get_selection_rows()
         if not songs:
             return
 
@@ -88,14 +105,14 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
     async def action_shuffle_cb(self, action, parameter):
         await self.ampd.shuffle()
 
-    def action_go_to_current_cb(self, action, parameter):
-        if self.unit.unit_server.ampd_server_properties.current_song:
-            p = Gtk.TreePath.new_from_string(self.unit.unit_server.ampd_server_properties.current_song['Pos'])
-            self.treeview.set_cursor(p)
-            self.treeview.scroll_to_cell(p, None, True, 0.5, 0.0)
+    # def action_go_to_current_cb(self, action, parameter):
+    #     if self.unit.unit_server.ampd_server_properties.current_song:
+    #         position = int(self.unit.unit_server.ampd_server_properties.current_song['Pos'])
+    #         print(position, self.widget.store_selection)
+    #         self.widget.store_selection.select_item(position, True)
 
     def notify_current_song_cb(self, *args):
-        self.treeview.queue_draw()
+        self.widget.rebind_columns()
 
     def record_new_cb(self, store, i):
         ampd.task(self.ampd.addid)(store.get_record(i).file, store.get_path(i).get_indices()[0])
@@ -113,6 +130,6 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
             store.remove(i)
 
     @ampd.task
-    async def treeview_row_activated_cb(self, treeview, p, column):
+    async def view_activate_cb(self, view, position):
         if not self.unit.unit_persistent.protect_active:
-            await self.ampd.playid(self.store.get_record(self.store.get_iter(p)).Id)
+            await self.ampd.playid(self.widget.store.get_item(position).Id)

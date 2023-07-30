@@ -47,12 +47,8 @@ class Window(Gtk.ApplicationWindow):
         self.unit.unit_server.ampd_server_properties.connect('notify::state', self.update_title)
         self.unit.unit_server.connect('notify::server-label', self.update_subtitle)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        box.append(self.main)
-        box.append(self.info_box)
-        self.set_child(box)
+        self.set_child(self.main)
 
         self.headerbar = headerbar.HeaderBar()
         self.set_titlebar(self.headerbar)
@@ -74,8 +70,10 @@ class Window(Gtk.ApplicationWindow):
         self.add_action(resource.Action('toggle-fullscreen', self.action_toggle_fullscreen_cb))
         self.add_action(resource.Action('volume-popup', self.action_volume_popup_cb))
 
-        self.logging_handler = logging.Handeler(self.info_box, self.unit.config.message_timeout._get() * 1000)
+        self.logging_handler = logging.Handeler(self.unit.config.message_timeout._get() * 1000)
         logger.addHandler(self.logging_handler)
+        self.main.append(self.logging_handler.box)
+
         self.update_title()
         self.update_subtitle()
 

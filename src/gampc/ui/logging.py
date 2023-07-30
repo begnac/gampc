@@ -27,9 +27,9 @@ import logging
 class Handeler(logging.Handler):
     MAX_MESSAGES = 5
 
-    def __init__(self, box, timeout):
+    def __init__(self, timeout):
         super().__init__(logging.INFO)
-        self.box = box
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, can_focus=False)
         self.timeout = timeout
         self.messages = []
 

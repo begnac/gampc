@@ -18,11 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from ..util import data
 from ..util import db
 from ..util import resource
 from ..util import unit
 from ..util.logger import logger
+
+from ..ui import column
+
 from ..components import songlistbase
 from ..components import stream
 
@@ -47,11 +49,18 @@ class StreamDatabase(db.Database):
                                                                                                        ':' + ',:'.join(self.fields.basic_names)), stream_)
 
 
-class __unit__(songlistbase.UnitMixinSongListBase, unit.Unit):
+class __unit__(songlistbase.UnitMixinSongListBase, unit.UnitMixinCss, unit.Unit):
     title = _("Internet Streams")
     key = '4'
 
     COMPONENT_CLASS = stream.Stream
+    CSS = '''
+    columnview.stream > listview > row > cell.playing {
+      background: rgba(128,128,128,0.1);
+      font-style: italic;
+      font-weight: bold;
+    }
+    '''
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
@@ -71,10 +80,10 @@ class __unit__(songlistbase.UnitMixinSongListBase, unit.Unit):
             resource.MenuAction('edit/component/stream', 'stream.modify', _("Modify stream"), ['F2']),
         )
 
-        self.fields = data.FieldFamily(self.config.fields)
-        self.fields.register_field(data.Field('Name', _("Name")))
-        self.fields.register_field(data.Field('file', _("URL")))
-        self.fields.register_field(data.Field('Comment', _("Comment")))
+        self.fields = column.FieldFamily(self.config.fields)
+        self.fields.register_field(column.Field('Name', _("Name")))
+        self.fields.register_field(column.Field('file', _("URL")))
+        self.fields.register_field(column.Field('Comment', _("Comment")))
 
         self.db = StreamDatabase(self.name, self.fields)
 

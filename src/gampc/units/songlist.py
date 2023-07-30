@@ -23,10 +23,10 @@ from gi.repository import GLib
 import urllib.parse
 import os.path
 
-from ..util import data
 from ..util import resource
 from ..util import unit
 from ..util.misc import format_time
+from ..ui import column
 
 
 class __unit__(unit.UnitMixinConfig, unit.Unit):
@@ -47,23 +47,23 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
 
         self.config.music_dir._get(default=GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC))
 
-        self.fields = data.FieldFamily(self.config.fields)
-        self.fields.register_field(data.Field('Album', _("Album")))
-        self.fields.register_field(data.Field('AlbumArtist', _("Album artist")))
-        self.fields.register_field(data.Field('Artist', _("Artist")))
-        self.fields.register_field(data.Field('Composer', _("Composer")))
-        self.fields.register_field(data.Field('Date', _("Date")))
-        self.fields.register_field(data.Field('Disc', _("Disc")))
-        self.fields.register_field(data.Field('file', _("File")))
-        self.fields.register_field(data.Field('Genre', _("Genre")))
-        self.fields.register_field(data.Field('Last_Modified', _("Last modified")))
-        self.fields.register_field(data.Field('Performer', _("Performer")))
-        self.fields.register_field(data.Field('Time', _("Seconds"), visible=False))
-        self.fields.register_field(data.Field('FormattedTime', _("Duration"), get_value=lambda song: format_time(song['Time']) if 'Time' in song else ''))
-        self.fields.register_field(data.Field('Title', _("Title (partial)")))
-        self.fields.register_field(data.Field('FullTitle', _("Title"), get_value=self.song_title))
-        self.fields.register_field(data.Field('Track', _("Track")))
-        self.fields.register_field(data.FieldWithTable(
+        self.fields = column.FieldFamily(self.config.fields)
+        self.fields.register_field(column.Field('Album', _("Album")))
+        self.fields.register_field(column.Field('AlbumArtist', _("Album artist")))
+        self.fields.register_field(column.Field('Artist', _("Artist")))
+        self.fields.register_field(column.Field('Composer', _("Composer")))
+        self.fields.register_field(column.Field('Date', _("Date")))
+        self.fields.register_field(column.Field('Disc', _("Disc")))
+        self.fields.register_field(column.Field('file', _("File")))
+        self.fields.register_field(column.Field('Genre', _("Genre")))
+        self.fields.register_field(column.Field('Last_Modified', _("Last modified")))
+        self.fields.register_field(column.Field('Performer', _("Performer")))
+        self.fields.register_field(column.Field('Time', _("Seconds"), visible=False))
+        self.fields.register_field(column.Field('FormattedTime', _("Duration"), get_value=lambda song: format_time(song['Time']) if 'Time' in song else ''))
+        self.fields.register_field(column.Field('Title', _("Title (partial)")))
+        self.fields.register_field(column.Field('FullTitle', _("Title"), get_value=self.song_title))
+        self.fields.register_field(column.Field('Track', _("Track")))
+        self.fields.register_field(column.FieldWithTable(
             'Extension', _("Extension"),
             table=[
                 [
@@ -77,7 +77,7 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
                     '\\1'
                 ]
             ]))
-        self.fields.register_field(data.FieldWithTable(
+        self.fields.register_field(column.FieldWithTable(
             'agenre', visible=False,
             table=[
                 [
@@ -121,7 +121,7 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
                     'z'
                 ]
             ]))
-        self.fields.register_field(data.FieldWithTable(
+        self.fields.register_field(column.FieldWithTable(
             'ArtistSortName', visible=False,
             table=[
                 [
@@ -160,7 +160,7 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
                     '\\1'
                 ]
             ]))
-        performer_last_name = data.FieldWithTable(
+        performer_last_name = column.FieldWithTable(
             'PerformerLastName', visible=False,
             table=[
                 [
@@ -179,7 +179,7 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
                     '\\1'
                 ]
             ])
-        self.fields.register_field(data.Field(
+        self.fields.register_field(column.Field(
             'PerformersLastNames', visible=False,
             get_value=lambda song: ', '.join(performer_last_name.get_value({'Performer': name}) for name in song.get('Performer').split(', ')) if song.get('Performer') else None))
 

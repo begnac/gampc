@@ -24,8 +24,8 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import data
 from ..util import resource
+from ..ui import view
 from . import component
 
 
@@ -50,33 +50,34 @@ class SongListBase(component.Component):
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.treeview = data.RecordTreeView(self.fields, self.data_func, self.sortable)
-        self.store = self.treeview.get_model()
+        self.widget = view.View(self.fields, self.sortable)
+        self.widget.column_view.add_css_class('songlistbase')
 
         self.songlistbase_actions = self.add_actions_provider('songlistbase')
         self.songlistbase_actions.add_action(resource.Action('reset', self.action_reset_cb))
         self.songlistbase_actions.add_action(resource.Action('copy', self.action_copy_delete_cb))
 
-        if self.record_new_cb != NotImplemented:
-            self.songlistbase_actions.add_action(resource.Action('paste', self.action_paste_cb))
-            self.songlistbase_actions.add_action(resource.Action('paste-before', self.action_paste_cb))
-            self.signal_handler_connect(self.store, 'record-new', self.record_new_cb)
+        # if self.record_new_cb != NotImplemented:
+        #     self.songlistbase_actions.add_action(resource.Action('paste', self.action_paste_cb))
+        #     self.songlistbase_actions.add_action(resource.Action('paste-before', self.action_paste_cb))
+        #     self.signal_handler_connect(self.widget.store, 'record-new', self.record_new_cb)
 
-        if self.record_delete_cb != NotImplemented:
-            self.songlistbase_actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
-            self.songlistbase_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
-            self.signal_handler_connect(self.store, 'record-delete', self.record_delete_cb)
+        # if self.record_delete_cb != NotImplemented:
+        #     self.songlistbase_actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
+        #     self.songlistbase_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
+        #     self.signal_handler_connect(self.widget.store, 'record-delete', self.record_delete_cb)
 
         self.set_editable(True)
 
-        self.widget = self.treeview_filter = data.TreeViewFilter(self.unit.unit_misc, self.treeview)
-        self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.treeview_filter, property_name='active'))
+        # self.widget = self.view_filter = view.ViewFilter(self.unit.unit_misc, self.view)
+        # self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.view_filter, property_name='active'))
 
-        self.setup_context_menu(f'{self.name}.context', self.treeview)
-        self.treeview.connect('row-activated', self.treeview_row_activated_cb)
+        # self.setup_context_menu(f'{self.name}.context', self.view)
+        self.widget.column_view.connect('activate', self.view_activate_cb)
 
         self.widget.connect('map', self.set_color)
         self.signal_handler_connect(self.unit.unit_persistent, 'notify::dark', self.set_color)
+        self.widget.bind_hooks.append(self.duplicate_bind_hook)
 
     def shutdown(self):
         del self.songlistbase_actions
@@ -88,14 +89,14 @@ class SongListBase(component.Component):
 
         if self.record_new_cb != NotImplemented:
             if editable:
-                self.treeview.drag_dest_set(Gtk.DestDefaults.DROP, dndtargets, Gdk.DragAction.MOVE | Gdk.DragAction.COPY)
+                self.view.drag_dest_set(Gtk.DestDefaults.DROP, dndtargets, Gdk.DragAction.MOVE | Gdk.DragAction.COPY)
             else:
-                self.treeview.drag_dest_unset()
+                self.view.drag_dest_unset()
 
         if self.record_delete_cb != NotImplemented and editable:
-            self.treeview.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, dndtargets, Gdk.DragAction.MOVE | Gdk.DragAction.COPY)
+            self.view.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, dndtargets, Gdk.DragAction.MOVE | Gdk.DragAction.COPY)
         else:
-            self.treeview.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, dndtargets, Gdk.DragAction.COPY)
+            self.view.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, dndtargets, Gdk.DragAction.COPY)
 
         for name in ['paste', 'paste-before', 'delete', 'cut']:
             action_ = self.songlistbase_actions.lookup(name)
@@ -106,20 +107,20 @@ class SongListBase(component.Component):
         self.color = self.widget.get_style_context().get_color()
 
     def action_copy_delete_cb(self, action, parameter):
-        records, refs = self.treeview.get_selection_rows()
+        records, refs = self.view.get_selection_rows()
         if action.get_name() in ['copy', 'cut']:
             Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(repr(records), -1)
         if action.get_name() in ['delete', 'cut']:
-            self.store.delete_refs(refs)
+            self.widget.store.delete_refs(refs)
 
     def action_paste_cb(self, action, parameter):
-        Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).request_text(self.treeview.clipboard_paste_cb, action.get_name().endswith('before'))
+        Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).request_text(self.view.clipboard_paste_cb, action.get_name().endswith('before'))
 
     @ampd.task
-    async def treeview_row_activated_cb(self, treeview, p, column):
+    async def view_activate_cb(self, view, position):
         if self.unit.unit_persistent.protect_active:
             return
-        filename = self.store.get_record(self.store.get_iter(p)).file
+        filename = self.widget.store.get_item(position).file
         records = await self.ampd.playlistfind('file', filename)
         if records:
             record_id = sorted(records, key=lambda record: record['Pos'])[0]['Id']
@@ -129,45 +130,30 @@ class SongListBase(component.Component):
 
     def get_filenames(self, selection=True):
         if selection:
-            store, paths = self.treeview.get_selection().get_selected_rows()
+            store, paths = self.view.get_selection().get_selected_rows()
             rows = (store.get_record(store.get_iter(p)) for p in paths)
         else:
-            rows = (self.store.get_record(self.store.iter_nth_child(None, i)) for i in range(self.store.iter_n_children()))
+            rows = (self.widget.store.get_record(self.widget.store.iter_nth_child(None, i)) for i in range(self.widget.store.iter_n_children()))
         return (row.file for row in rows if row)
 
-    def _mix_colors(self, r, g, b):
-        return Gdk.RGBA((1 - self.color.red) * r + 0.5 * (1 - r),
-                        (1 - self.color.green) * g + 0.5 * (1 - g),
-                        (1 - self.color.blue) * b + 0.5 * (1 - b),
-                        1.0)
+    def duplicate_bind_hook(self, label, item, name):
+        label.get_parent().set_css_classes([])
+        duplicate = item[self.duplicate_field]
+        if duplicate is not None:
+            label.get_parent().add_css_class(f'duplicate{duplicate % 64}')
 
-    def _mix_colors_rgba(self, rgba):
-        return self._mix_colors(rgba.red, rgba.green, rgba.blue)
-
-    def data_func(self, column, renderer, store, i, j):
-        for p in self.STATUS_PROPERTIES:
-            renderer.set_property(p, None)
-
-        _duplicate = store.get_record(i)._data.get(self.duplicate_field, None)
-        if _duplicate is not None:
-            N = 4
-            m = _duplicate % (N ** 3 - 1)
-            renderer.set_property('background-rgba',
-                                  self._mix_colors(*(float((m // (N ** k)) % N) / (N - 1)
-                                                     for k in (2, 1, 0))))
-
-        status = store.get_record(i)._status
-        if status is not None:
-            for k, p in enumerate(self.STATUS_PROPERTIES):
-                if self.STATUS_PROPERTY_TABLE[status][k] is not None:
-                    renderer.set_property(p, self.STATUS_PROPERTY_TABLE[status][k])
+        # status = store.get_record(i)._status
+        # if status is not None:
+        #     for k, p in enumerate(self.STATUS_PROPERTIES):
+        #         if self.STATUS_PROPERTY_TABLE[status][k] is not None:
+        #             renderer.set_property(p, self.STATUS_PROPERTY_TABLE[status][k])
 
     def set_records(self, records, set_fields=True):
         if set_fields:
             self.records_set_fields(records)
         if self.duplicate_test_columns:
             self.find_duplicates(records, self.duplicate_test_columns)
-        self.store.set_rows(records)
+        self.widget.store.set(records)
 
     def records_set_fields(self, records):
         self.fields.records_set_fields(records)
@@ -191,10 +177,10 @@ class SongListBase(component.Component):
                 record.pop(self.duplicate_field, None)
 
     def action_reset_cb(self, action, parameter):
-        self.treeview_filter.filter_.set_data({})
-        self.treeview_filter.active = False
+        self.view_filter.filter_.set_data({})
+        self.view_filter.active = False
         if self.sortable:
-            self.store.set_sort_column_id(-1, Gtk.SortType.ASCENDING)
+            self.widget.store.set_sort_column_id(-1, Gtk.SortType.ASCENDING)
 
     record_delete_cb = record_new_cb = NotImplemented
 
@@ -206,26 +192,26 @@ class SongListBaseWithEditDel(SongListBase):
         self.songlistbase_actions.add_action(resource.Action('undelete', self.action_undelete_cb))
 
     def action_undelete_cb(self, action, parameter):
-        store, paths = self.treeview.get_selection().get_selected_rows()
+        store, paths = self.view.get_selection().get_selected_rows()
         for p in paths:
-            i = self.store.get_iter(p)
-            if self.store.get_record(i)._status == self.RECORD_DELETED:
-                del self.store.get_record(i)._status
-        self.treeview.queue_draw()
+            i = self.widget.store.get_iter(p)
+            if self.widget.store.get_record(i)._status == self.RECORD_DELETED:
+                del self.widget.store.get_record(i)._status
+        self.view.queue_draw()
 
     def record_delete_cb(self, store, i):
-        if self.store.get_record(i)._status == self.RECORD_UNDEFINED:
+        if self.widget.store.get_record(i)._status == self.RECORD_UNDEFINED:
             return
         self.set_modified()
-        if self.store.get_record(i)._status == self.RECORD_NEW:
-            self.store.remove(i)
+        if self.widget.store.get_record(i)._status == self.RECORD_NEW:
+            self.widget.store.remove(i)
         else:
-            self.store.get_record(i)._status = self.RECORD_DELETED
+            self.widget.store.get_record(i)._status = self.RECORD_DELETED
             self.merge_new_del(i)
-        self.treeview.queue_draw()
+        self.view.queue_draw()
 
     def modify_record(self, i, record):
-        _record = self.store.get_record(i)
+        _record = self.widget.store.get_record(i)
         status = _record._status
         if status == self.RECORD_UNDEFINED:
             return
@@ -233,24 +219,24 @@ class SongListBaseWithEditDel(SongListBase):
         self.set_modified()
         if status is None:
             _record._status = self.RECORD_MODIFIED
-        self.treeview.queue_draw()
+        self.view.queue_draw()
 
     def merge_new_del(self, i):
-        _status = self.store.get_record(i)._status
-        for f in [self.store.iter_previous, self.store.iter_next]:
+        _status = self.widget.store.get_record(i)._status
+        for f in [self.widget.store.iter_previous, self.widget.store.iter_next]:
             j = f(i)
-            if j and self.store.get_record(j).file == self.store.get_record(i).file and {_status, self.store.get_record(j)._status} == {self.RECORD_DELETED, self.RECORD_NEW}:
-                del self.store.get_record(i)._status
-                self.store.remove(j)
+            if j and self.widget.store.get_record(j).file == self.widget.store.get_record(i).file and {_status, self.widget.store.get_record(j)._status} == {self.RECORD_DELETED, self.RECORD_NEW}:
+                del self.widget.store.get_record(i)._status
+                self.widget.store.remove(j)
                 return
 
 
 class SongListBaseWithAdd(SongListBase):
     def add_record(self, record):
-        # dest = self.treeview.get_path_at_pos(int(self.treeview.context_menu_x), int(self.treeview.context_menu_y))
+        # dest = self.view.get_path_at_pos(int(self.view.context_menu_x), int(self.view.context_menu_y))
         # path = None if dest is None else dest[0]
-        path, column = self.treeview.get_cursor()
-        self.treeview.paste_at([record], path, False)
+        path, column = self.view.get_cursor()
+        self.view.paste_at([record], path, False)
 
 
 class SongListBaseWithEditDelNew(SongListBaseWithEditDel, SongListBaseWithAdd):

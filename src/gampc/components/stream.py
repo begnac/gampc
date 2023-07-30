@@ -31,6 +31,7 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
         self.fields = unit.fields
 
         super().__init__(unit)
+        self.widget.column_view.add_css_class('stream')
 
         self.actions.add_action(resource.Action('add', self.action_add_cb))
         self.actions.add_action(resource.Action('modify', self.action_modify_cb))
@@ -44,12 +45,17 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
             ])
 
         self.signal_handler_connect(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
+        self.widget.bind_hooks.append(self.current_song_bind_hook)
 
         self.load_streams()
 
+    def current_song_bind_hook(self, label, item, name):
+        if self.unit.unit_server.ampd_server_properties.state != 'stop' and item.file == self.unit.unit_server.ampd_server_properties.current_song.get('file'):
+            label.get_parent().add_css_class('playing')
+
     def load_streams(self):
         streams = self.unit.db.get_streams()
-        self.store.set_rows(streams)
+        self.widget.store.set(streams)
 
     def action_save_cb(self, action, parameter):
         streams = [stream.get_data() for i, p, stream in self.store if stream._status != self.RECORD_DELETED]
@@ -75,16 +81,7 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
             self.modify_record(i, value)
 
     def notify_current_song_cb(self, *args):
-        self.treeview.queue_draw()
+        self.widget.rebind_columns()
 
     def set_modified(self):
         pass
-
-    def data_func(self, column, renderer, store, i, j):
-        super().data_func(column, renderer, store, i, j)
-        if self.unit.unit_server.ampd_server_properties.state != 'stop' and store.get_record(i).file == self.unit.unit_server.current_song.get('file'):
-            renderer.set_property('font', 'italic bold')
-            bg = self._mix_colors(1, 1, 1)
-            renderer.set_property('background-rgba', bg)
-        else:
-            renderer.set_property('font', None)
