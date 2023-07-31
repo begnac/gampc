@@ -119,11 +119,9 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         if Id is None:
             return
         view_height = self.view.record_view_rows.get_allocation().height
-        row_height = self.view.record_view_rows.observe_children()[0].get_allocation().height
         for position, record in enumerate(self.view.store_filter):
             if record.Id == Id:
-                print(position, self.view.store_filter.find(record))
-                self.view.scrolled_record_view.get_vadjustment().set_value(row_height * (position + 0.5) - view_height / 2)
+                self.view.scrolled_record_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
                 record._row.grab_focus()
                 return
 
