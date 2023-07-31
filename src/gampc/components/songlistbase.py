@@ -52,7 +52,7 @@ class SongListBase(component.Component):
 
         self.widget = view.View(self.fields, self.sortable)
         self.store = self.widget.store
-        self.widget.column_view.add_css_class('songlistbase')
+        self.widget.record_view.add_css_class('songlistbase')
 
         self.songlistbase_actions = self.add_actions_provider('songlistbase')
         self.songlistbase_actions.add_action(resource.Action('reset', self.action_reset_cb))
@@ -74,7 +74,7 @@ class SongListBase(component.Component):
         # self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.view_filter, property_name='active'))
 
         # self.setup_context_menu(f'{self.name}.context', self.view)
-        self.widget.column_view.connect('activate', self.view_activate_cb)
+        self.widget.record_view.connect('activate', self.view_activate_cb)
 
         self.widget.connect('map', self.set_color)
         self.signal_handler_connect(self.unit.unit_persistent, 'notify::dark', self.set_color)

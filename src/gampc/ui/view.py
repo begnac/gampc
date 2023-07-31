@@ -34,39 +34,6 @@ from ..util.misc import get_modifier_state
 from . import column
 
 
-# class StoreIterMixin:
-#     def children_iter(self, i, *columns):
-#         j = self.iter_children(i)
-#         while j is not None:
-#             if columns:
-#                 yield j, *(self.get_value(j, column) for column in columns)
-#             else:
-#                 yield j
-#             j = self.iter_next(j)
-
-
-# class StoreBase(object):
-#     def __iter__(self):
-#         i = self.iter_children(None)
-#         while i:
-#             yield i, self.get_path(i), self.get_record(i)
-#             i = self.iter_next(i)
-
-#     def delete_refs(self, refs):
-#         for ref in refs:
-#             i = self.get_iter(ref.get_path())
-#             self.emit('record-delete', i)
-
-#     def get_record(self, i):
-#         return self.get_value(i, 0)
-
-#     def set_row(self, i, row):
-#         self.set_value(i, 0, Record(row))
-
-#     def __getattr__(self, name):
-#         return getattr(self.store, name)
-
-
 class Store(Gio.ListStore):
     def __init__(self):
         super().__init__(item_type=Record)
@@ -112,42 +79,29 @@ class StoreFilter(Gtk.FilterListModel):
 #         self.bind_property('filter-active', self.store, 'filter-active')
 
 
-class View(Gtk.Box):
-    def __init__(self, fields, sortable):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL)
-
-        self.sortable = sortable
-
-        self.filter_box = Gtk.Box(visible=False)
-        self.store = Store()
-        self.store_filter = StoreFilter(model=self.store)
-        self.store_selection = Gtk.MultiSelection(model=self.store_filter)
-        self.column_view = Gtk.ColumnView(model=self.store_selection, vexpand=True, enable_rubberband=True, receives_default=True, show_column_separators=True, show_row_separators=True)
-        # print(list(self.column_view.observe_children()))
-        # self.list_item_widget = self.column_view.observe_children()[0]
-        # self.column_list_view = self.column_view.observe_children()[1]
-        # help(self.list_item_widget)
-
+class RecordView(Gtk.ColumnView):
+    def __init__(self, fields, item_widget, item_bind_hooks, **kwargs):
+        super().__init__(**kwargs)
         self.fields = fields
-        self.cols = {}
-        for name in self.fields.order:
-            self.cols[name] = column.FieldColumn(name, self.fields.fields[name], self.bind_hook)
-            self.column_view.append_column(self.cols[name])
-
-        self.scrolled_view = Gtk.ScrolledWindow(child=self.column_view, focusable=False)
-        self.append(self.filter_box)
-        self.append(self.scrolled_view)
+        self.item_widget = item_widget
+        self.item_bind_hook = item_bind_hooks
+        self.columns = self.get_columns()
+        self.columns_by_name = {}
+        for name in fields.order:
+            name = name.string
+            self.columns_by_name[name] = column.FieldColumn(name, self.fields.fields[name], item_widget, item_bind_hooks)
+            self.append_column(self.columns_by_name[name])
 
         # self.connect('destroy', self.destroy_cb)
-        # self.connect('columns-changed', self.columns_changed_cb)
-        # self.fields.connect('notify::order', self.fields_notify_order_cb)
+        self.columns.connect('items-changed', self.columns_changed_cb)
+        self.fields.order.connect('items-changed', self.fields_order_changed_cb)
 
         # self.set_search_equal_func(lambda store, col, key, i: not any(isinstance(value, str) and key.lower() in value.lower() for value in store.get_record(i).get_data().values()))
 
         # if self.sortable:
         #     store = self.get_model()
         #     for i, name in enumerate(self.fields.order):
-        #         self.cols[name].set_sort_column_id(i)
+        #         self.columns_by_name[name].set_sort_column_id(i)
         #         store.set_sort_func(i, self.sort_func, name)
 
         # self.connect('drag-data-get', self.drag_data_get_cb)
@@ -155,33 +109,80 @@ class View(Gtk.Box):
         self.bind_hooks = []
 
     def rebind_columns(self):
-        for col in self.cols.values():
+        for col in self.columns_by_name.values():
             col.rebind_all()
-
-    def bind_hook(self, *args):
-        for hook in self.bind_hooks:
-            hook(*args)
 
     # @staticmethod
     # def destroy_cb(self):
     #     self.fields.disconnect_by_func(self.fields_notify_order_cb)
     #     self.disconnect_by_func(self.columns_changed_cb)
-    #     del self.cols
+    #     del self.columns_by_name
+
+    def columns_changed_cb(self, columns, position, removed, added):
+        self.fields.order.handler_block_by_func(self.fields_order_changed_cb)
+        self.fields.order[position:position + removed] = [column.StringObject(col.name) for col in columns[position:position + added]]
+        self.fields.order.handler_unblock_by_func(self.fields_order_changed_cb)
+
+    def fields_order_changed_cb(self, order, position, removed, added):
+        self.columns.handler_block_by_func(self.columns_changed_cb)
+        for col in list(self.columns[position:position + removed]):
+            self.remove_column(col)
+        for i in range(position, position + added):
+            self.insert_column(i, self.columns_by_name[order[i].string])
+        self.columns.handler_unblock_by_func(self.columns_changed_cb)
+
+
+class View(Gtk.Box):
+    def __init__(self, fields, sortable):
+        self.bind_hooks = []
+        self.sortable = sortable
+
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+
+        self.filter_box = Gtk.Box(visible=False)
+        self.store = Store()
+        self.store_filter = StoreFilter(model=self.store)
+        self.store_selection = Gtk.MultiSelection(model=self.store_filter)
+        self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START, hexpand=True, vexpand=True), self.bind_hooks, model=self.store_selection, vexpand=True, enable_rubberband=True, receives_default=True, show_column_separators=True, show_row_separators=True)
+        # print(list(self.record_view.observe_children()))
+        # self.list_item_widget = self.record_view.observe_children()[0]
+        # self.column_list_view = self.record_view.observe_children()[1]
+        # help(self.list_item_widget)
+
+        self.scrolled_view = Gtk.ScrolledWindow(child=self.record_view, focusable=False)
+        self.append(self.filter_box)
+        self.append(self.scrolled_view)
+
+        # self.connect('destroy', self.destroy_cb)
+
+        # self.set_search_equal_func(lambda store, col, key, i: not any(isinstance(value, str) and key.lower() in value.lower() for value in store.get_record(i).get_data().values()))
+
+        # if self.sortable:
+        #     store = self.get_model()
+        #     for i, name in enumerate(self.fields.order):
+        #         self.columns_by_name[name].set_sort_column_id(i)
+        #         store.set_sort_func(i, self.sort_func, name)
+
+        # self.connect('drag-data-get', self.drag_data_get_cb)
 
     # @staticmethod
-    # def columns_changed_cb(self):
-    #     self.fields.handler_block_by_func(self.fields_notify_order_cb)
-    #     self.fields.order = [self.get_column(i).field.name for i in range(self.get_n_columns())]
-    #     self.fields.handler_unblock_by_func(self.fields_notify_order_cb)
+    # def destroy_cb(self):
+    #     self.fields.disconnect_by_func(self.fields_notify_order_cb)
+    #     self.disconnect_by_func(self.columns_changed_cb)
+    #     del self.columns_by_name
 
-    # def fields_notify_order_cb(self, *args):
-    #     self.handler_block_by_func(self.columns_changed_cb)
-    #     last_col = None
-    #     for name in self.fields.order:
-    #         col = self.cols[name]
-    #         self.move_column_after(col, last_col)
-    #         last_col = col
-    #     self.handler_unblock_by_func(self.columns_changed_cb)
+    def columns_changed_cb(self, columns, position, removed, added):
+        self.fields.order.handler_block_by_func(self.fields_order_changed_cb)
+        self.fields.order[position:position + removed] = [column.StringObject(col.name) for col in columns[position:position + added]]
+        self.fields.order.handler_unblock_by_func(self.fields_order_changed_cb)
+
+    def fields_order_changed_cb(self, order, position, removed, added):
+        self.columns.handler_block_by_func(self.columns_changed_cb)
+        for col in list(self.columns[position:position + removed]):
+            self.record_view.remove_column(col)
+        for i in range(position, position + added):
+            self.record_view.insert_column(i, self.columns_by_name[order[i].string])
+        self.columns.handler_unblock_by_func(self.columns_changed_cb)
 
     # @staticmethod
     # def sort_func(store, i, j, name):
@@ -286,7 +287,7 @@ class View(Gtk.Box):
 #         self.filter_ = filter_
 #         store.set_value(store.append(), 0, filter_)
 #         self.get_selection().set_mode(Gtk.SelectionMode.NONE)
-#         for name, col in self.cols.items():
+#         for name, col in self.columns_by_name.items():
 #             col.renderer.set_property('editable', True)
 #             col.renderer.connect('editing-started', self.renderer_editing_started_cb, name)
 #         # self.connect('button-press-event', self.button_press_event_cb)

@@ -35,8 +35,8 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
 
     def __init__(self, unit):
         super().__init__(unit)
-        self.widget.column_view.add_css_class('playqueue')
-        print(self.widget.column_view.get_css_classes())
+        self.widget.record_view.add_css_class('playqueue')
+
         self.actions.add_action(resource.Action('priority', self.action_priority_cb, parameter_type=GLib.VariantType.new('i')))
         self.actions.add_action(resource.Action('shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
         # self.actions.add_action(resource.Action('go-to-current', self.action_go_to_current_cb))
@@ -44,50 +44,49 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         for name in self.songlistbase_actions.list_actions():
             if name.startswith('playqueue-ext-'):
                 self.songlistbase_actions.remove(name)
-        # self.widget.column_view.connect('cursor-changed', self.cursor_changed_cb)
+        # self.widget.record_view.connect('cursor-changed', self.cursor_changed_cb)
         self.cursor_by_profile = {}
         self.set_cursor = False
 
         self.widget.bind_hooks.append(self.current_song_bind_hook)
 
-    def cursor_changed_cb(self, view):
-        if not self.set_cursor:
-            self.cursor_by_profile[self.unit.unit_server.server_profile] = self.widget.column_view.get_cursor().path
+    # def cursor_changed_cb(self, view):
+    #     if not self.set_cursor:
+    #         self.cursor_by_profile[self.unit.unit_server.server_profile] = self.widget.column_view.get_cursor().path
 
-    @ampd.task
-    async def TEST(self):
-        while True:
-            await self.ampd.idle(0, timeout=1)
-            self.widget.column_view.queue_draw()
-            # for col in self.widget.cols.values():
-            #     print()
-            #     print(col.name)
-            #     for x in col.factory.bound:
-            #         y = x.get_child().get_parent().get_parent()
-            #         print(y, y.get_parent(), y.has_focus())
+    # @ampd.task
+    # async def TEST(self):
+    #     while True:
+    #         await self.ampd.idle(0, timeout=1)
+    #         self.widget.column_view.queue_draw()
+    #         # for col in self.widget.cols.values():
+    #         #     print()
+    #         #     print(col.name)
+    #         #     for x in col.factory.bound:
+    #         #         y = x.get_child().get_parent().get_parent()
+    #         #         print(y, y.get_parent(), y.has_focus())
 
     @ampd.task
     async def client_connected_cb(self, client):
         self.set_cursor = True
-        self.TEST()
+        # self.TEST()
         while True:
             self.set_records(await self.ampd.playlistinfo())
-            self.widget.rebind_columns()
+            self.widget.record_view.rebind_columns()
             if self.set_cursor:
-                # self.widget.column_view.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
+                # self.widget.record_view.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
                 self.set_cursor = False
             await self.ampd.idle(ampd.PLAYLIST)
 
     def current_song_bind_hook(self, label, item, name):
         if self.unit.unit_server.ampd_server_properties.state != 'stop' and item.Id == self.unit.unit_server.ampd_server_properties.current_song.get('Id'):
             label.get_parent().add_css_class('playing')
-            print(label.get_parent().get_css_classes(), label.get_parent().get_css_name())
         if name == 'FormattedTime' and item.Prio is not None:
             label.get_parent().add_css_class('high-priority')
 
     @ampd.task
     async def action_priority_cb(self, action, parameter):
-        songs, refs = self.widget.column_view.get_selection_rows()
+        songs, refs = self.widget.record_view.get_selection_rows()
         if not songs:
             return
 
@@ -112,7 +111,7 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
     #         self.widget.store_selection.select_item(position, True)
 
     def notify_current_song_cb(self, *args):
-        self.widget.rebind_columns()
+        self.widget.record_view.rebind_columns()
 
     def record_new_cb(self, store, i):
         ampd.task(self.ampd.addid)(store.get_record(i).file, store.get_path(i).get_indices()[0])

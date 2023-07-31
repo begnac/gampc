@@ -31,7 +31,7 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
         self.fields = unit.fields
 
         super().__init__(unit)
-        self.widget.column_view.add_css_class('stream')
+        self.widget.record_view.add_css_class('stream')
 
         self.actions.add_action(resource.Action('add', self.action_add_cb))
         self.actions.add_action(resource.Action('modify', self.action_modify_cb))
@@ -81,7 +81,7 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
             self.modify_record(i, value)
 
     def notify_current_song_cb(self, *args):
-        self.widget.rebind_columns()
+        self.widget.record_view.rebind_columns()
 
     def set_modified(self):
         pass
