@@ -95,7 +95,6 @@ class Person(Gtk.Box):
         self.condition = condition
 
         self.label = Gtk.Label(vexpand=True, ellipsize=Pango.EllipsizeMode.MIDDLE, wrap=True, lines=3)
-        self.label.connect('notify::label', self.notify_label_cb)
 
         self.image = Gtk.Image(vexpand=True)
         self.image_label = Gtk.Label()
@@ -104,17 +103,12 @@ class Person(Gtk.Box):
         self.append(self.image)
         self.append(self.image_label)
 
-    def clear(self):
-        self.image.clear()
-
-    def notify_label_cb(self, label, param):
-        self.clear()
-
-        name = self.label.props.label
+    def set_name(self, name):
         if not name or (self.condition and not self.condition(name)):
             self.set_visible(False)
             return
 
+        self.image.clear()
         self.set_visible(True)
 
         self.pixbuf = self.image_cache[name]
@@ -125,6 +119,7 @@ class Person(Gtk.Box):
             self.image_label.set_label(name)
             self.image.set_from_pixbuf(self.pixbuf)
         else:
+            self.label.set_label(name)
             self.label.set_visible(True)
             self.image.set_visible(False)
             self.image_label.set_visible(False)
@@ -167,10 +162,6 @@ class Info(Gtk.Box):
         self.append(artist_performer_box)
         self.append(info_box)
 
-    def clear(self):
-        self.artist.clear()
-        self.performer.clear()
-
 
 class MyBoxLayout(Gtk.BoxLayout):
     size = GObject.Property(type=int)
@@ -190,8 +181,6 @@ class Current(component.Component):
         self.info = Info()
 
         self.labels = (
-            ('Artist', self.info.artist.label),
-            ('Performer', self.info.performer.label),
             ('Title', self.info.title_label),
             ('Genre', self.info.genre_label),
             ('Date', self.info.date_label),
@@ -207,20 +196,22 @@ class Current(component.Component):
         self.unit.unit_server.bind_property('current-song', welcome, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: not y)
         self.unit.unit_server.bind_property('current-song', self.info, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: bool(y))
         self.signal_handler_connect(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
-        self.fading = None
+        # self.fading = None
 
         self.css_provider = Gtk.CssProvider()
         self.widget.get_style_context().add_provider(self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        # self.widget.connect('size-allocate', self.size_allocate_cb)
         self.bind_property('size', welcome, 'size')
 
     def shutdown(self):
-        if self.fading:
-            self.fading.cancel()
-            self.fading = None
+        # if self.fading:
+        #     self.fading.cancel()
+        #     self.fading = None
+        self.layout.disconnect_by_func(self.notify_size_cb)
         super().shutdown()
 
     def notify_current_song_cb(self, server, param):
+        self.info.artist.set_name(server.current_song.get('Artist', ''))
+        self.info.performer.set_name(server.current_song.get('Performer', ''))
         for field, label in self.labels:
             label.set_label(server.current_song.get(field, ''))
         self.set_size()

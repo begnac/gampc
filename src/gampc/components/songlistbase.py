@@ -76,6 +76,8 @@ class SongListBase(component.Component):
 
     def shutdown(self):
         del self.songlistbase_actions
+        self.view.record_view.disconnect_by_func(self.view_activate_cb)
+        self.view.cleanup()
         super().shutdown()
 
     def set_editable(self, editable):
@@ -150,7 +152,7 @@ class SongListBase(component.Component):
             self.records_set_fields(records)
         if self.duplicate_test_columns:
             self.find_duplicates(records, self.duplicate_test_columns)
-        self.widget.store.set_records(records)
+        self.view.store.set_records(records)
 
     def records_set_fields(self, records):
         self.fields.records_set_fields(records)

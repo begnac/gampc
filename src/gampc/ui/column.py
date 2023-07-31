@@ -173,33 +173,14 @@ class FieldColumnFactory(Gtk.SignalListItemFactory):
 
 
 class FieldColumn(Gtk.ColumnViewColumn):
-    def __init__(self, name, field, widget, bind_hooks):
+    def __init__(self, name, field, widget):
         self.name = name
         self.field = field
-        self.bind_hooks = bind_hooks
-        self.factory = FieldColumnFactory(widget)
-        self.factory.bound.connect('items-changed', self.bound_items_changed_cb)
 
-        super().__init__(factory=self.factory)
+        super().__init__(factory=FieldColumnFactory(widget))
 
         field.bind_property('title', self, 'title', GObject.BindingFlags.SYNC_CREATE)
         field.bind_property('visible', self, 'visible', GObject.BindingFlags.SYNC_CREATE)
-
-        self.set_resizable(True)
         field.bind_property('width', self, 'fixed-width', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL)
 
-    def rebind_listitem(self, listitem):
-        item = listitem.get_item()
-        child = listitem.child
-        cell = child.cell
-        cell.set_css_classes(cell.orig_css_classes)
-        for hook in self.bind_hooks:
-            hook(child, item, self.name)
-
-    def rebind_all(self):
-        for listitem in self.factory.bound:
-            self.rebind_listitem(listitem)
-
-    def bound_items_changed_cb(self, bound, position, removed, added):
-        for listitem in bound[position:position + added]:
-            self.rebind_listitem(listitem)
+        self.set_resizable(True)

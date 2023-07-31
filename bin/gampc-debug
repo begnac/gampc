@@ -128,7 +128,7 @@ T = NaiveReferenceTreeTop()
 
 def test(o):
     for prefix in ('gampc', 'ampd', 'gasyncio'):
-        if type(o).__module__.startswith(prefix) and type(o).__name__ not in ['Event', 'DictNamespace', 'Item', 'Menu', 'ClientState', 'NaiveReferenceTree'] and 'Property' not in type(o).__name__:
+        if type(o).__module__.startswith(prefix) and type(o).__name__ not in ['Event', 'DictNamespace', 'Item', 'Menu', 'ClientState', 'NaiveReferenceTree', 'Record'] and 'Property' not in type(o).__name__:
             return True
     return False
 

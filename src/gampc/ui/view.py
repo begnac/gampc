@@ -92,12 +92,13 @@ class RecordView(Gtk.ColumnView):
         super().__init__(**kwargs)
         self.fields = fields
         self.item_widget = item_widget
-        self.item_bind_hook = item_bind_hooks
+        self.item_bind_hooks = item_bind_hooks
         self.columns = self.get_columns()
         self.columns_by_name = {}
         for name in fields.order:
             name = name.string
-            col = column.FieldColumn(name, self.fields.fields[name], item_widget, item_bind_hooks)
+            col = column.FieldColumn(name, self.fields.fields[name], item_widget)
+            col.get_factory().bound.connect('items-changed', self.bound_items_changed_cb, name)
             self.columns_by_name[name] = col
             self.append_column(col)
 
@@ -113,11 +114,30 @@ class RecordView(Gtk.ColumnView):
         #         self.columns_by_name[name].set_sort_column_id(i)
         #         store.set_sort_func(i, self.sort_func, name)
 
-        self.bind_hooks = []
+    def cleanup(self):
+        del self.item_widget
+        self.fields.order.disconnect_by_func(self.fields_order_changed_cb)
+        self.columns.disconnect_by_func(self.columns_changed_cb)
+        del self.item_bind_hooks
+        for col in self.columns:
+            col.set_factory(None)
+
+    def rebind_listitem(self, listitem, name):
+        item = listitem.get_item()
+        child = listitem.child
+        cell = child.cell
+        cell.set_css_classes(cell.orig_css_classes)
+        for hook in self.item_bind_hooks:
+            hook(child, item, name)
 
     def rebind_columns(self):
         for col in self.columns_by_name.values():
-            col.rebind_all()
+            for listitem in col.get_factory().bound:
+                self.rebind_listitem(listitem, col.name)
+
+    def bound_items_changed_cb(self, bound, position, removed, added, name):
+        for listitem in bound[position:position + added]:
+            self.rebind_listitem(listitem, name)
 
     # @staticmethod
     # def destroy_cb(self):
@@ -195,6 +215,12 @@ class View(Gtk.Box):
         #         store.set_sort_func(i, self.sort_func, name)
 
         # self.connect('drag-data-get', self.drag_data_get_cb)
+
+    def cleanup(self):
+        self.filter_filter.set_filter_func(None)
+        self.filter_view.cleanup()
+        self.record_view.cleanup()
+        del self.bind_hooks
 
     @staticmethod
     def bind_hook(label, item, name):

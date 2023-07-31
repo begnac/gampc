@@ -158,11 +158,11 @@ class ComponentMixinEntry:
         super().__init__(unit)
 
         self.entry_focus = Gtk.EventControllerFocus()
-        self.entry_focus.connect('enter', self.entry_focus_cb, True)
-        self.entry_focus.connect('leave', self.entry_focus_cb, False)
+        self.entry_focus.connect('enter', self.entry_focus_cb, self.unit.unit_misc, True)
+        self.entry_focus.connect('leave', self.entry_focus_cb, self.unit.unit_misc, False)
 
         self.entry = Gtk.Entry()
-        self.entry.connect('activate', self.entry_activate_cb)
+        self.signal_handler_connect(self.entry, 'activate', self.entry_activate_cb)
         self.entry.add_controller(self.entry_focus)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -170,14 +170,15 @@ class ComponentMixinEntry:
         box.append(self.entry)
         self.widget = box
 
-        self.widget.connect('map', lambda widget: self.entry.grab_focus())
+        self.widget.connect('map', self.widget_map_cb, self.entry)
 
-    def entry_focus_cb(self, controller, block):
-        self.unit.unit_misc.block_fragile_accels = block
+    @staticmethod
+    def widget_map_cb(widget, entry):
+        entry.grab_focus()
 
-
-def component_with_entry(component):
-    return type(component.__name__, (ComponentMixinEntry, component), {})
+    @staticmethod
+    def entry_focus_cb(controller, unit_misc, block):
+        unit_misc.block_fragile_accels = block
 
 
 class UnitMixinComponent(unit.UnitMixinConfig, unit.UnitMixinServer):
