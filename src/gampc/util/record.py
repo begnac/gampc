@@ -44,5 +44,9 @@ class Record(GObject.Object):
     def __delattr__(self, name):
         self._data.pop(name, None)
 
-    def __getitem__(self, name):
-        return self._data.get(name)
+    __getitem__ = __getattr__
+    __setitem__ = __setattr__
+    __delitem__ = __delattr__
+
+    def items(self):
+        return self._data.items()

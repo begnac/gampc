@@ -21,12 +21,8 @@
 from ..util import resource
 from ..util import unit
 
+
 CSS = ''
-CSS = '''
-columnview.songlistbase > header > button {
-color: green;
-}
-'''
 
 N = 4
 for d in range(N ** 3):
@@ -36,6 +32,12 @@ for d in range(N ** 3):
       background: rgba({colors[0]},{colors[1]},{colors[2]},0.5);
     }}
     '''
+
+CSS += '''
+columnview.filter > listview > row > cell {
+  background: yellow;
+}
+'''
 
 
 class __unit__(unit.UnitMixinConfig, unit.UnitMixinCss, unit.Unit):

@@ -22,13 +22,11 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import misc
 from ..util import unit
 from ..components import component
 
 
-@misc.preprend_mixin(component.ComponentMixinEntry)
-class Command(component.Component):
+class _Command(component.Component):
     def __init__(self, unit):
         super().__init__(unit)
         self.label = Gtk.Label(max_width_chars=50, wrap=True, selectable=True)
@@ -39,6 +37,10 @@ class Command(component.Component):
     async def entry_activate_cb(self, entry):
         reply = await self.ampd._raw(entry.get_text())
         self.label.set_label('\n'.join(str(x) for x in reply) if reply else _("Empty reply"))
+
+
+class Command(component.ComponentMixinEntry, _Command):
+    pass
 
 
 class __unit__(component.UnitMixinComponent, unit.Unit):

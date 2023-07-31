@@ -35,22 +35,30 @@ from . import column
 
 
 class Store(Gio.ListStore):
+    __gsignals__ = {
+        'items-removed': (GObject.SIGNAL_ACTION, None, (int, int)),
+        'items-added': (GObject.SIGNAL_ACTION, None, (int, int)),
+    }
+
     def __init__(self):
         super().__init__(item_type=Record)
 
-    def set(self, records):
-        self.remove_all()
-        for record in records:
-            self.append(Record(record))
+    def splice(self, position, n_removals, additions):
+        self.emit('items-removed', position, n_removals)
+        super().splice(position, n_removals, additions)
+        self.emit('items-added', position, len(additions))
+
+    def set_records(self, records):
+        self[:] = map(Record, records)
 
 
 class StoreFilter(Gtk.FilterListModel):
     filter_active = GObject.Property(type=bool, default=False)
 
-    # __gsignals__ = {
-    #     'record-new': (GObject.SIGNAL_ACTION, None, (Gtk.TreeIter,)),
-    #     'record-delete': (GObject.SIGNAL_ACTION, None, (Gtk.TreeIter,)),
-    # }
+    __gsignals__ = {
+        'record-new': (GObject.SIGNAL_ACTION, None, (int,)),
+        'record-delete': (GObject.SIGNAL_ACTION, None, (int,)),
+    }
 
     # def __init__(self):
     #     self.store = Store()
@@ -89,8 +97,9 @@ class RecordView(Gtk.ColumnView):
         self.columns_by_name = {}
         for name in fields.order:
             name = name.string
-            self.columns_by_name[name] = column.FieldColumn(name, self.fields.fields[name], item_widget, item_bind_hooks)
-            self.append_column(self.columns_by_name[name])
+            col = column.FieldColumn(name, self.fields.fields[name], item_widget, item_bind_hooks)
+            self.columns_by_name[name] = col
+            self.append_column(col)
 
         # self.connect('destroy', self.destroy_cb)
         self.columns.connect('items-changed', self.columns_changed_cb)
@@ -103,8 +112,6 @@ class RecordView(Gtk.ColumnView):
         #     for i, name in enumerate(self.fields.order):
         #         self.columns_by_name[name].set_sort_column_id(i)
         #         store.set_sort_func(i, self.sort_func, name)
-
-        # self.connect('drag-data-get', self.drag_data_get_cb)
 
         self.bind_hooks = []
 
@@ -132,27 +139,51 @@ class RecordView(Gtk.ColumnView):
         self.columns.handler_unblock_by_func(self.columns_changed_cb)
 
 
+class Entry(Gtk.Entry):
+    def __init__(self, changed_cb):
+        super().__init__()
+        self.connect('changed', changed_cb)
+
+    @staticmethod
+    def bind(self, record, name):
+        self.name = name
+        self.get_buffer().set_text(record[name] or '', -1)
+
+
 class View(Gtk.Box):
+    filtering = GObject.Property(type=bool, default=False)
+
     def __init__(self, fields, sortable):
-        self.bind_hooks = []
+        self.bind_hooks = [self.bind_hook]
         self.sortable = sortable
 
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
-        self.filter_box = Gtk.Box(visible=False)
+        self.filter_record = Record()
+        self.filter_store = Gio.ListStore(item_type=Record)
+        self.filter_selection = Gtk.NoSelection(model=self.filter_store)
+        self.filter_view = RecordView(fields, lambda: Entry(self.filter_entry_changed_cb), [Entry.bind], model=self.filter_selection)
+        self.filter_view.add_css_class('filter')
+        self.filter_view.add_css_class('data-table')
+        self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
+        self.scrolled_filter_view.get_hscrollbar().set_visible(False)
+        self.append(self.scrolled_filter_view)
+
+        self.filter_filter = Gtk.CustomFilter()
+        self.filter_filter.set_filter_func(self.filter_func)
         self.store = Store()
-        self.store_filter = StoreFilter(model=self.store)
+        self.store_filter = StoreFilter(model=self.store, filter=self.filter_filter)
         self.store_selection = Gtk.MultiSelection(model=self.store_filter)
-        self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START, hexpand=True, vexpand=True), self.bind_hooks, model=self.store_selection, vexpand=True, enable_rubberband=True, receives_default=True, show_column_separators=True, show_row_separators=True)
-        # print(list(self.record_view.observe_children()))
-        # self.list_item_widget = self.record_view.observe_children()[0]
-        # self.column_list_view = self.record_view.observe_children()[1]
-        # help(self.list_item_widget)
+        self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START), self.bind_hooks, model=self.store_selection, vexpand=True, enable_rubberband=True, show_row_separators=True, show_column_separators=True)
+        self.record_view.add_css_class('data-table')
+        self.record_view_titles, self.record_view_rows = self.record_view.observe_children()
+        self.record_view_titles.set_visible(False)
+        self.scrolled_record_view = Gtk.ScrolledWindow(child=self.record_view, focusable=False)
+        self.append(self.scrolled_record_view)
 
-        self.scrolled_view = Gtk.ScrolledWindow(child=self.record_view, focusable=False)
-        self.append(self.filter_box)
-        self.append(self.scrolled_view)
+        self.scrolled_record_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
 
+        self.connect('notify::filtering', self.notify_filtering_cb)
         # self.connect('destroy', self.destroy_cb)
 
         # self.set_search_equal_func(lambda store, col, key, i: not any(isinstance(value, str) and key.lower() in value.lower() for value in store.get_record(i).get_data().values()))
@@ -165,24 +196,42 @@ class View(Gtk.Box):
 
         # self.connect('drag-data-get', self.drag_data_get_cb)
 
+    @staticmethod
+    def bind_hook(label, item, name):
+        label.set_label(item[name] or '')
+        setattr(label.cell.get_parent(), name, item[name] or '')
+
+    @staticmethod
+    def notify_filtering_cb(self, param):
+        if self.filtering and len(self.filter_store) == 0:
+            self.filter_store.append(self.filter_record)
+            self.filter_filter.changed(Gtk.FilterChange.MORE_STRICT)
+        if not self.filtering and len(self.filter_store) == 1:
+            self.filter_store.remove(0)
+            self.filter_filter.changed(Gtk.FilterChange.LESS_STRICT)
+
+    def filter_entry_changed_cb(self, entry):
+        new = entry.get_buffer().get_text()
+        if not new:
+            del self.filter_record[entry.name]
+            self.filter_filter.changed(Gtk.FilterChange.LESS_STRICT)
+        else:
+            self.filter_record[entry.name] = new
+            self.filter_filter.changed(Gtk.FilterChange.DIFFERENT)
+
+    def filter_func(self, record):
+        if not self.filtering:
+            return True
+        for name, value in self.filter_record.items():
+            if re.search(value, record[name] or '', re.IGNORECASE) is None:
+                return False
+        return True
+
     # @staticmethod
     # def destroy_cb(self):
     #     self.fields.disconnect_by_func(self.fields_notify_order_cb)
     #     self.disconnect_by_func(self.columns_changed_cb)
     #     del self.columns_by_name
-
-    def columns_changed_cb(self, columns, position, removed, added):
-        self.fields.order.handler_block_by_func(self.fields_order_changed_cb)
-        self.fields.order[position:position + removed] = [column.StringObject(col.name) for col in columns[position:position + added]]
-        self.fields.order.handler_unblock_by_func(self.fields_order_changed_cb)
-
-    def fields_order_changed_cb(self, order, position, removed, added):
-        self.columns.handler_block_by_func(self.columns_changed_cb)
-        for col in list(self.columns[position:position + removed]):
-            self.record_view.remove_column(col)
-        for i in range(position, position + added):
-            self.record_view.insert_column(i, self.columns_by_name[order[i].string])
-        self.columns.handler_unblock_by_func(self.columns_changed_cb)
 
     # @staticmethod
     # def sort_func(store, i, j, name):
@@ -193,19 +242,20 @@ class View(Gtk.Box):
     #     except AttributeError:
     #         return 0
 
-    # def get_selection_rows(self):
-    #     store, paths = self.get_selection().get_selected_rows()
-    #     return [store.get_record(store.get_iter(p)).get_data_clean() for p in paths], [Gtk.TreeRowReference.new(store, p) for p in paths]
+    def get_selection(self):
+        positions = list(filter(lambda i: self.store_selection.is_selected(i), range(len(self.store_selection))))
+        records = list(map(lambda i: self.store_selection[i].get_data_clean(), positions))
+        return records, positions
 
-    # def clipboard_paste_cb(self, clipboard, raw, before):
-    #     path, column = self.get_cursor()
-    #     try:
-    #         records = ast.literal_eval(raw)
-    #     except Exception:
-    #         return
-    #     if not (isinstance(records, list) and all(isinstance(record, dict) for record in records)):
-    #         return
-    #     self.paste_at(records, path, before)
+    def clipboard_paste(self, raw, before):
+        path, column = self.get_cursor()
+        try:
+            records = ast.literal_eval(raw)
+        except Exception:
+            return
+        if not (isinstance(records, list) and all(isinstance(record, dict) for record in records)):
+            return
+        self.paste_at(records, path, before)
 
     # def paste_at(self, records, path, before):
     #     selection = self.get_selection()
@@ -273,99 +323,3 @@ class View(Gtk.Box):
     #         action = Gdk.DragAction.COPY
     #     Gdk.drag_status(context, action, time)
     #     return True
-
-
-# class RecordTreeViewFilter(RecordTreeViewBase):
-#     __gsignals__ = {
-#         'changed': (GObject.SIGNAL_RUN_LAST, None, ()),
-#     }
-
-#     def __init__(self, unit_misc, filter_, fields, **kwargs):
-#         super().__init__(Store, fields, self.data_func, can_focus=True, headers_visible=False, **kwargs)
-#         self.unit_misc = unit_misc
-#         store = self.get_model()
-#         self.filter_ = filter_
-#         store.set_value(store.append(), 0, filter_)
-#         self.get_selection().set_mode(Gtk.SelectionMode.NONE)
-#         for name, col in self.columns_by_name.items():
-#             col.renderer.set_property('editable', True)
-#             col.renderer.connect('editing-started', self.renderer_editing_started_cb, name)
-#         # self.connect('button-press-event', self.button_press_event_cb)
-
-#     @staticmethod
-#     def button_press_event_cb(self, event):
-#         pos = self.get_path_at_pos(event.x, event.y)
-#         if not pos:
-#             return False
-#         path, col, cx, xy = pos
-#         self.set_cursor_on_cell(path, col, col.renderer, True)
-#         return True
-
-#     def renderer_editing_started_cb(self, renderer, editable, path, name):
-#         editable.connect('editing-done', self.editing_done_cb, name)
-#         self.unit_misc.block_fragile_accels = True
-#         self.handler_block_by_func(self.button_press_event_cb)
-
-#     def editing_done_cb(self, editable, name):
-#         self.handler_unblock_by_func(self.button_press_event_cb)
-#         self.unit_misc.block_fragile_accels = False
-#         if editable.get_property('editing-canceled'):
-#             return
-#         value = editable.get_text() or None
-#         if value != getattr(self.filter_, name):
-#             if value:
-#                 setattr(self.filter_, name, value)
-#             else:
-#                 delattr(self.filter_, name)
-#             self.emit('changed')
-
-#     green = Gdk.RGBA()
-#     green.parse('pale green')
-#     yellow = Gdk.RGBA()
-#     yellow.parse('yellow')
-
-#     @staticmethod
-#     def data_func(column, renderer, store, i, arg):
-#         renderer.set_property('background-rgba', RecordTreeViewFilter.green if renderer.get_property('text') is None else RecordTreeViewFilter.yellow)
-
-
-# class ColumnViewWithFilter(Gtk.Box):
-#     active = GObject.Property(type=bool, default=False)
-
-#     def __init__(self, unit_misc, treeview):
-#         super().__init__(orientation=Gtk.Orientation.VERTICAL)
-
-#         self.filter_ = Record()
-#         self.filter_treeview = RecordTreeViewFilter(unit_misc, self.filter_, treeview.fields)
-
-#         filter_scroller = Gtk.ScrolledWindow(can_focus=False)
-#         filter_scroller.set_child(self.filter_treeview)
-#         filter_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
-#         self.append(filter_scroller)
-
-#         self.scroller = Gtk.ScrolledWindow(can_focus=False)
-#         self.scroller.set_child(treeview)
-#         self.append(self.scroller)
-#         self.treeview = treeview
-#         treeview.bind_property('hadjustment', self.filter_treeview, 'hadjustment', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL)
-#         self.bind_property('active', self.filter_treeview, 'visible')
-#         self.bind_property('active', treeview.get_model(), 'filter-active')
-#         self.connect('notify::active', self.notify_active_cb)
-#         self.filter_treeview.connect('changed', lambda _: self.treeview.get_model().refilter())
-#         self.treeview.get_model().set_visible_func(self.visible_func)
-#         self.active = False
-
-#     @staticmethod
-#     def notify_active_cb(self, param):
-#         self.treeview.get_model().refilter()
-
-#     def visible_func(self, store, i, _):
-#         if not self.active:
-#             return True
-#         record = store.get_record(i)
-#         if record is None:
-#             return False
-#         for key, value in self.filter_.get_data().items():
-#             if re.search(value, getattr(record, key) or '', re.IGNORECASE) is None:
-#                 return False
-#         return True

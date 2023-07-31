@@ -30,6 +30,7 @@ from . import component
 
 
 class SongListBase(component.Component):
+    editable = False
     sortable = False
     duplicate_test_columns = []
     duplicate_field = '_duplicate'
@@ -50,34 +51,27 @@ class SongListBase(component.Component):
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.widget = view.View(self.fields, self.sortable)
-        self.store = self.widget.store
+        self.widget = self.view = view.View(self.fields, self.sortable)
         self.widget.record_view.add_css_class('songlistbase')
 
         self.songlistbase_actions = self.add_actions_provider('songlistbase')
         self.songlistbase_actions.add_action(resource.Action('reset', self.action_reset_cb))
         self.songlistbase_actions.add_action(resource.Action('copy', self.action_copy_delete_cb))
 
-        # if self.record_new_cb != NotImplemented:
-        #     self.songlistbase_actions.add_action(resource.Action('paste', self.action_paste_cb))
-        #     self.songlistbase_actions.add_action(resource.Action('paste-before', self.action_paste_cb))
-        #     self.signal_handler_connect(self.widget.store, 'record-new', self.record_new_cb)
-
-        # if self.record_delete_cb != NotImplemented:
-        #     self.songlistbase_actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
-        #     self.songlistbase_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
-        #     self.signal_handler_connect(self.widget.store, 'record-delete', self.record_delete_cb)
+        if self.editable:
+            self.songlistbase_actions.add_action(resource.Action('paste', self.action_paste_cb))
+            self.songlistbase_actions.add_action(resource.Action('paste-before', self.action_paste_cb))
+            self.songlistbase_actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
+            self.songlistbase_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
+            self.signal_handler_connect(self.widget.store, 'items-changed', self.records_changed_cb)
 
         self.set_editable(True)
 
-        # self.widget = self.view_filter = view.ViewFilter(self.unit.unit_misc, self.view)
-        # self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.view_filter, property_name='active'))
+        self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.widget, property_name='filtering'))
 
         # self.setup_context_menu(f'{self.name}.context', self.view)
         self.widget.record_view.connect('activate', self.view_activate_cb)
 
-        self.widget.connect('map', self.set_color)
-        self.signal_handler_connect(self.unit.unit_persistent, 'notify::dark', self.set_color)
         self.widget.bind_hooks.append(self.duplicate_bind_hook)
 
     def shutdown(self):
@@ -104,18 +98,20 @@ class SongListBase(component.Component):
             if action_ is not None:
                 action_.set_enabled(editable)
 
-    def set_color(self, *args):
-        self.color = self.widget.get_style_context().get_color()
-
     def action_copy_delete_cb(self, action, parameter):
-        records, refs = self.view.get_selection_rows()
+        data, positions = self.view.get_selection()
         if action.get_name() in ['copy', 'cut']:
-            Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(repr(records), -1)
+            self.widget.get_clipboard().set_content(Gdk.ContentProvider.new_for_value(repr(data)))
         if action.get_name() in ['delete', 'cut']:
-            self.widget.store.delete_refs(refs)
+            for i in positions.reversed():
+                self.delete_record(i)
 
     def action_paste_cb(self, action, parameter):
-        Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).request_text(self.view.clipboard_paste_cb, action.get_name().endswith('before'))
+        self.widget.get_clipboard().read_text_async(None, self.action_paste_finish_cb)
+
+    def action_paste_finish_cb(self, clipboard, result):
+        result = clipboard.read_text_finish(result)
+        # Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).request_text(self.view.clipboard_paste_cb, action.get_name().endswith('before'))
 
     @ampd.task
     async def view_activate_cb(self, view, position):
@@ -154,7 +150,7 @@ class SongListBase(component.Component):
             self.records_set_fields(records)
         if self.duplicate_test_columns:
             self.find_duplicates(records, self.duplicate_test_columns)
-        self.store.set(records)
+        self.widget.store.set_records(records)
 
     def records_set_fields(self, records):
         self.fields.records_set_fields(records)
@@ -183,7 +179,7 @@ class SongListBase(component.Component):
         if self.sortable:
             self.widget.store.set_sort_column_id(-1, Gtk.SortType.ASCENDING)
 
-    record_delete_cb = record_new_cb = NotImplemented
+    records_added_cb = records_removed_cb = NotImplemented
 
 
 class SongListBaseWithEditDel(SongListBase):

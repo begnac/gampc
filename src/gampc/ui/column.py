@@ -152,14 +152,14 @@ class FieldColumnFactory(Gtk.SignalListItemFactory):
 
     @staticmethod
     def setup_cb(self, listitem):
-        # label = Gtk.Label(halign=Gtk.Align.START, hexpand=True, vexpand=True)
+        print
         listitem.child = self.widget()
         listitem.set_child(listitem.child)
 
     @staticmethod
     def bind_cb(self, listitem):
-        listitem.cell = listitem.child.get_parent()
-        listitem.cell_css_classes = listitem.cell.get_css_classes()
+        cell = listitem.child.cell = listitem.child.get_parent()
+        cell.orig_css_classes = cell.get_css_classes()
         self.bound.append(listitem)
 
     @staticmethod
@@ -180,7 +180,7 @@ class FieldColumn(Gtk.ColumnViewColumn):
         self.factory = FieldColumnFactory(widget)
         self.factory.bound.connect('items-changed', self.bound_items_changed_cb)
 
-        super().__init__(id=field.name, factory=self.factory)
+        super().__init__(factory=self.factory)
 
         field.bind_property('title', self, 'title', GObject.BindingFlags.SYNC_CREATE)
         field.bind_property('visible', self, 'visible', GObject.BindingFlags.SYNC_CREATE)
@@ -190,10 +190,11 @@ class FieldColumn(Gtk.ColumnViewColumn):
 
     def rebind_listitem(self, listitem):
         item = listitem.get_item()
-        listitem.child.set_label(item[self.name] or '')
-        listitem.cell.set_css_classes(listitem.cell_css_classes)
+        child = listitem.child
+        cell = child.cell
+        cell.set_css_classes(cell.orig_css_classes)
         for hook in self.bind_hooks:
-            hook(listitem.child, item, self.name)
+            hook(child, item, self.name)
 
     def rebind_all(self):
         for listitem in self.factory.bound:

@@ -29,9 +29,13 @@ def format_time(time):
     return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes:02}:{seconds:02}"
 
 
+def get_display():
+    return Gdk.Display.get_default()
+
+
 def get_modifier_state():
-    return Gdk.Display.get_default().get_default_seat().get_keyboard().get_modifier_state()
+    return get_display().get_default_seat().get_keyboard().get_modifier_state()
 
 
-def preprend_mixin(mixin):
-    return lambda class_: type(class_.__name__, (mixin, class_), {})
+def get_clipboard():
+    return get_display().get_clipboard()

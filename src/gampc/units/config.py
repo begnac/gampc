@@ -54,10 +54,7 @@ class ConfigNode(object):
         self._value = value
 
     def __getattr__(self, name):
-        if name.startswith('_'):
-            return super().__getattr__(name)
-        subnode = self._subnode(name)
-        return subnode
+        return self._subnode(name)
 
     __getitem__ = __getattr__
 

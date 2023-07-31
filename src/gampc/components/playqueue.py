@@ -27,10 +27,14 @@ import ampd
 from ..util import misc
 from ..util import ssde
 from ..util import resource
+
+from ..ui import column
+
 from . import songlist
 
 
 class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
+    editable = True
     duplicate_test_columns = ['Title']
 
     def __init__(self, unit):
@@ -39,7 +43,7 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
 
         self.actions.add_action(resource.Action('priority', self.action_priority_cb, parameter_type=GLib.VariantType.new('i')))
         self.actions.add_action(resource.Action('shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
-        # self.actions.add_action(resource.Action('go-to-current', self.action_go_to_current_cb))
+        self.actions.add_action(resource.Action('go-to-current', self.action_go_to_current_cb))
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         for name in self.songlistbase_actions.list_actions():
             if name.startswith('playqueue-ext-'):
@@ -48,16 +52,19 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         self.cursor_by_profile = {}
         self.set_cursor = False
 
-        self.widget.bind_hooks.append(self.current_song_bind_hook)
+        self.view.bind_hooks.append(self.current_song_bind_hook)
 
     # def cursor_changed_cb(self, view):
     #     if not self.set_cursor:
     #         self.cursor_by_profile[self.unit.unit_server.server_profile] = self.widget.column_view.get_cursor().path
 
-    # @ampd.task
-    # async def TEST(self):
-    #     while True:
-    #         await self.ampd.idle(0, timeout=1)
+    @ampd.task
+    async def TEST(self):
+        while True:
+            await self.ampd.idle(0, timeout=1)
+            a = self.view.get_root().get_focus()
+            if a is not None:
+                print(a, a.get_css_name(), a.get_parent().get_parent())
     #         self.widget.column_view.queue_draw()
     #         # for col in self.widget.cols.values():
     #         #     print()
@@ -71,7 +78,9 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         self.set_cursor = True
         # self.TEST()
         while True:
+            self.view.store.handler_block_by_func(self.records_changed_cb)
             self.set_records(await self.ampd.playlistinfo())
+            self.view.store.handler_unblock_by_func(self.records_changed_cb)
             self.widget.record_view.rebind_columns()
             if self.set_cursor:
                 # self.widget.record_view.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
@@ -80,9 +89,10 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
 
     def current_song_bind_hook(self, label, item, name):
         if self.unit.unit_server.ampd_server_properties.state != 'stop' and item.Id == self.unit.unit_server.ampd_server_properties.current_song.get('Id'):
-            label.get_parent().add_css_class('playing')
+            label.cell.add_css_class('playing')
         if name == 'FormattedTime' and item.Prio is not None:
-            label.get_parent().add_css_class('high-priority')
+            label.cell.add_css_class('high-priority')
+        item._row = label.cell.get_parent()
 
     @ampd.task
     async def action_priority_cb(self, action, parameter):
@@ -104,31 +114,47 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
     async def action_shuffle_cb(self, action, parameter):
         await self.ampd.shuffle()
 
-    # def action_go_to_current_cb(self, action, parameter):
-    #     if self.unit.unit_server.ampd_server_properties.current_song:
-    #         position = int(self.unit.unit_server.ampd_server_properties.current_song['Pos'])
-    #         print(position, self.widget.store_selection)
-    #         self.widget.store_selection.select_item(position, True)
+    def action_go_to_current_cb(self, action, parameter):
+        Id = self.unit.unit_server.ampd_server_properties.current_song.get('Id')
+        if Id is None:
+            return
+        view_height = self.view.record_view_rows.get_allocation().height
+        row_height = self.view.record_view_rows.observe_children()[0].get_allocation().height
+        for position, record in enumerate(self.view.store_filter):
+            if record.Id == Id:
+                self.view.scrolled_record_view.get_vadjustment().set_value(row_height * (position + 0.5) - view_height / 2)
+                record._row.grab_focus()
+                return
 
     def notify_current_song_cb(self, *args):
         self.widget.record_view.rebind_columns()
 
-    def record_new_cb(self, store, i):
-        ampd.task(self.ampd.addid)(store.get_record(i).file, store.get_path(i).get_indices()[0])
+    @ampd.task
+    async def records_changed_cb(self, store, position, removed, added):
+        return
+        await self.delete(f'{position}:{position + removed}')
+        for i in range(position, position + added):
+            await self.ampd.add(store[i].file, i)
 
-    def record_delete_cb(self, store, i):
-        song_id = store.get_record(i).Id
-        m = int(store.get_string_from_iter(i))
-        for n in range(store.iter_n_children()):
-            if n != m and store.get_record(store.iter_nth_child(None, n)).Id == song_id:
-                ampd.task(self.ampd.command_list)((self.ampd.swap(n, m), self.ampd.delete(m)))
-                store.remove(i)
-                return
-        if not (self.unit.unit_persistent.protect_active and self.unit.unit_server.ampd_server_properties.current_song.get('pos') == song_id):
-            ampd.task(self.ampd.deleteid)(song_id)
-            store.remove(i)
+    # @ampd.task
+    # async def records_added_cb(self, store, position, added):
+    #     for i in range(position, position + added):
+    #         await self.ampd.addid(store[i].file, i)
+
+    # @ampd.task
+    # async def records_removed_cb(self, store, position, removed):
+    #     for i in range(position, position + removed):
+    #         song_id = store[i].Id
+    #         for j in range(len(store)):
+    #             if i != j and store[j].Id == song_id:
+    #                 ampd.task(self.ampd.command_list)((self.ampd.swap(i, j), self.ampd.delete(j)))
+    #                 store.remove(i)
+    #                 return
+    #         if not (self.unit.unit_persistent.protect_active and self.unit.unit_server.ampd_server_properties.current_song.get('pos') == song_id):
+    #             ampd.task(self.ampd.deleteid)(song_id)
+    #             store.remove(i)
 
     @ampd.task
     async def view_activate_cb(self, view, position):
         if not self.unit.unit_persistent.protect_active:
-            await self.ampd.playid(self.store[position].Id)
+            await self.ampd.playid(self.view.store_filter[position].Id)
