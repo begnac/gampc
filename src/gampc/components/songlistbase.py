@@ -252,6 +252,7 @@ class SongListBase(component.Component):
     def setup_drag(self, editable):
         self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
         self.drag_source.connect('prepare', self.drag_prepare_cb)
+        # self.drag_source.connect('drag-begin', self.drag_begin_cb)
         self.drag_source.connect('drag-end', self.drag_end_cb)
         self.view.record_view.add_controller(self.drag_source)
 
@@ -262,6 +263,9 @@ class SongListBase(component.Component):
     def drag_prepare_cb(self, source, x, y):
         source.records = self.view.get_selection_records()
         return self.content_from_records(source.records)
+
+    # def drag_begin_cb(self, source, drag):
+    #     pass
 
     def drag_end_cb(self, source, drag, delete):
         if delete:
@@ -282,7 +286,7 @@ class SongListBase(component.Component):
         del self.drop_target
 
     def drop_action_cb(self, target, x, y):
-        if target.get_actions() & Gdk.DragAction.MOVE and not misc.get_modifier_state() & Gdk.ModifierType.CONTROL_MASK:
+        if target.get_actions() & Gdk.DragAction.MOVE and misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
             return Gdk.DragAction.MOVE
         else:
             return Gdk.DragAction.COPY
