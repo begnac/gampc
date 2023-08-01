@@ -36,6 +36,8 @@ from .util import resource
 from .util.logger import logger
 from .util.misc import get_modifier_state
 
+from . import __program_name__
+
 
 class App(Gtk.Application):
     def __init__(self):

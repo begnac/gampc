@@ -93,7 +93,7 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
             'app.menu',
             resource.MenuAction('help', 'app.BAD', _("BAD"), ['<Control><Shift>b']),
             resource.MenuAction('help', 'app.help', _("Help"), ['<Control>h', 'F1']),
-            resource.MenuAction('help', 'app.about', _("About")),
+            resource.MenuAction('help', 'app.about', _("About"), ['<Control><Shift>h']),
         )
 
     def BAD_cb(self, *args):
