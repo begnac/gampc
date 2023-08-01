@@ -116,6 +116,18 @@ class NaiveReferenceTreeTop(NaiveReferenceTree):
 
     def add_objects(self, test, show=False):
         for o in gc.get_objects():
+            # if 'FieldColumn' in type(o).__name__:
+            #     print(o)
+            #     for x in gc.get_referrers(o):
+            #         if isinstance(x, list):
+            #             for y in x:
+            #                 try:
+            #                     print('xxxxxxxxxx', y)
+            #                 except:
+            #                     pass
+            #         else:
+            #             print('===========', x)
+            #         print()
             if test(o):
                 self.new_object(o)
                 if show:
@@ -128,7 +140,7 @@ T = NaiveReferenceTreeTop()
 
 def test(o):
     for prefix in ('gampc', 'ampd', 'gasyncio'):
-        if type(o).__module__.startswith(prefix) and type(o).__name__ not in ['Event', 'DictNamespace', 'Item', 'Menu', 'ClientState', 'NaiveReferenceTree', 'Record'] and 'Property' not in type(o).__name__:
+        if type(o).__module__.startswith(prefix) and type(o).__name__ not in ['Event', 'DictNamespace', 'Item', 'Menu', 'ClientState', 'NaiveReferenceTree', 'Record', 'FieldColumn', 'FieldColumnFactory'] and 'Property' not in type(o).__name__:
             return True
     return False
 

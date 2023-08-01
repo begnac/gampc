@@ -160,6 +160,7 @@ class FieldColumnFactory(Gtk.SignalListItemFactory):
     def bind_cb(self, listitem):
         cell = listitem.child.cell = listitem.child.get_parent()
         cell.orig_css_classes = cell.get_css_classes()
+        cell.get_parent().record = listitem.get_item()
         self.bound.append(listitem)
 
     @staticmethod
@@ -173,9 +174,10 @@ class FieldColumnFactory(Gtk.SignalListItemFactory):
 
 
 class FieldColumn(Gtk.ColumnViewColumn):
-    def __init__(self, name, field, widget):
+    def __init__(self, name, field, widget, sortable):
         self.name = name
         self.field = field
+        self.sortable = sortable
 
         super().__init__(factory=FieldColumnFactory(widget))
 
@@ -184,3 +186,13 @@ class FieldColumn(Gtk.ColumnViewColumn):
         field.bind_property('width', self, 'fixed-width', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL)
 
         self.set_resizable(True)
+
+        if sortable:
+            sorter = Gtk.CustomSorter.new(self.sort_func, name)
+            self.set_sorter(sorter)
+
+    @staticmethod
+    def sort_func(record1, record2, name):
+        s1 = record1[name] or ''
+        s2 = record2[name] or ''
+        return 1 if s1 > s2 else -1 if s1 < s2 else 0

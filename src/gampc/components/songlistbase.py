@@ -18,14 +18,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GObject
 from gi.repository import Gio
 from gi.repository import Gdk
 from gi.repository import Gtk
 
-import ast
-
 import ampd
 
+from ..util import misc
 from ..util import resource
 from ..ui import view
 from . import component
@@ -33,7 +33,6 @@ from . import component
 
 class SongListBase(component.Component):
     editable = False
-    sortable = False
     duplicate_test_columns = []
     duplicate_field = '_duplicate'
 
@@ -53,8 +52,7 @@ class SongListBase(component.Component):
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.widget = self.view = view.View(self.fields, self.sortable)
-        print(list(self.view.record_view.observe_controllers()))
+        self.widget = self.view = view.View(self.fields, not self.editable)
         self.view.record_view.add_css_class('songlistbase')
         self.focus_widget = self.view.record_view
 
@@ -62,14 +60,15 @@ class SongListBase(component.Component):
         self.songlistbase_actions.add_action(resource.Action('reset', self.action_reset_cb))
         self.songlistbase_actions.add_action(resource.Action('copy', self.action_copy_delete_cb))
 
+        self.setup_drag(self.editable)
+
         if self.editable:
             self.songlistbase_actions.add_action(resource.Action('paste', self.action_paste_cb))
             self.songlistbase_actions.add_action(resource.Action('paste-before', self.action_paste_cb))
             self.songlistbase_actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
             self.songlistbase_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
-            self.signal_handler_connect(self.widget.store, 'items-changed', self.records_changed_cb)
-
-        self.set_editable(True)
+            # self.signal_handler_connect(self.widget.store, 'items-changed', self.records_changed_cb)
+            self.setup_drop()
 
         self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.widget, property_name='filtering'))
 
@@ -79,6 +78,9 @@ class SongListBase(component.Component):
         self.widget.bind_hooks.append(self.duplicate_bind_hook)
 
     def shutdown(self):
+        self.cleanup_drag()
+        if self.editable:
+            self.cleanup_drop()
         del self.songlistbase_actions
         self.view.record_view.disconnect_by_func(self.view_activate_cb)
         self.view.cleanup()
@@ -103,37 +105,6 @@ class SongListBase(component.Component):
             action_ = self.songlistbase_actions.lookup(name)
             if action_ is not None:
                 action_.set_enabled(editable)
-
-    def action_copy_delete_cb(self, action, parameter):
-        positions = self.view.get_selection()
-        if action.get_name() in ['copy', 'cut']:
-            self.widget.get_clipboard().set_content(Gdk.ContentProvider.new_for_value(repr([self.view.store_selection[i].file for i in positions])))
-        if action.get_name() in ['delete', 'cut']:
-            self.delete_records(positions)
-
-    def action_paste_cb(self, action, parameter):
-        self.widget.get_clipboard().read_text_async(None, self.action_paste_finish_cb)
-
-    def action_paste_finish_cb(self, clipboard, result):
-        result = clipboard.read_text_finish(result)
-        try:
-            filenames = ast.literal_eval(raw)
-        except Exception:
-            return
-        if not (isinstance(filenames, list) and all(isinstance(filename, str) for filename in filenames)):
-            return
-        # Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).request_text(self.view.clipboard_paste_cb, action.get_name().endswith('before'))
-
-    def clipboard_paste(self, raw, before):
-        path, column = self.get_cursor()
-        try:
-            records = ast.literal_eval(raw)
-        except Exception:
-            return
-        if not (isinstance(records, list) and all(isinstance(record, dict) for record in records)):
-            return
-        self.paste_at(records, path, before)
-
 
     @ampd.task
     async def view_activate_cb(self, view, position):
@@ -198,10 +169,138 @@ class SongListBase(component.Component):
     def action_reset_cb(self, action, parameter):
         self.view_filter.filter_.set_data({})
         self.view_filter.active = False
-        if self.sortable:
+        if self.sortable: ### !!!!!
             self.widget.store.set_sort_column_id(-1, Gtk.SortType.ASCENDING)
 
     records_added_cb = records_removed_cb = NotImplemented
+
+    # @staticmethod
+    # def drag_data_get_cb(self, context, data, info, time):
+    #     data.set(data.get_target(), 8, context.data)
+
+    # def do_drag_data_delete(self, context):
+    #     self.get_model().delete_refs(context.drag_refs)
+    #     context.drag_refs = []
+
+    # def do_drag_data_received(self, context, x, y, data, info, time):
+    #     path, pos = self.get_dest_row_at_pos(x, y)
+    #     records = ast.literal_eval(data.get_data().decode())
+    #     self.paste_at(records, path, pos in [Gtk.TreeViewDropPosition.BEFORE, Gtk.TreeViewDropPosition.INTO_OR_BEFORE])
+
+    # def do_drag_end(self, context):
+    #     del context.drag_refs
+
+    # def do_drag_motion(self, context, x, y, time):
+    #     dest = self.get_dest_row_at_pos(x, y)
+    #     if dest is None:
+    #         return False
+    #     self.set_drag_dest_row(*dest)
+    #     if context.get_actions() & Gdk.DragAction.MOVE and not get_modifier_state() & Gdk.ModifierType.CONTROL_MASK:
+    #         action = Gdk.DragAction.MOVE
+    #     else:
+    #         action = Gdk.DragAction.COPY
+    #     Gdk.drag_status(context, action, time)
+    #     return True
+
+    # def drag_begin_cb(self, source, drag):
+    #     positions = self.get_selection()
+    #     if not positions:
+    #         return
+    #     icons = [self.create_row_drag_icon(ref.get_path()) for ref in context.drag_refs]
+    #     xscale, yscale = icons[0].get_device_scale()
+    #     width, height = icons[0].get_width(), icons[0].get_height() - yscale
+    #     target = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(width / xscale), int(height * len(context.drag_refs) / yscale) + 1)
+    #     cr = cairo.Context(target)
+    #     cr.set_source_rgba(0, 0, 0, 1)
+    #     cr.paint()
+    #     y = 2
+    #     for icon in icons:
+    #         cr.set_source_surface(icon, 2 / xscale, y / yscale)
+    #         cr.paint()
+    #         y += height
+    #     icon.flush()
+    #     Gtk.drag_set_icon_surface(context, target)
+
+    def paste_at_row(self, value, row, before):
+        if row is None:
+            return
+        filenames = misc.ast_eval_strings(value)
+        if filenames is None:
+            return
+        position = self.view.store.find(row.record)[1]
+        if not before:
+            position += 1
+        self.add_records(position, filenames)
+
+    @staticmethod
+    def content_from_records(records):
+        return Gdk.ContentProvider.new_for_value(repr([record.file for record in records]))
+
+    def action_copy_delete_cb(self, action, parameter):
+        records = self.view.get_selection_records()
+        if action.get_name() in ['copy', 'cut']:
+            self.widget.get_clipboard().set_content(self.content_from_records(records))
+        if action.get_name() in ['delete', 'cut']:
+            self.remove_records(records)
+
+    def action_paste_cb(self, action, parameter):
+        self.widget.get_clipboard().read_text_async(None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
+
+    def action_paste_finish_cb(self, clipboard, result, before):
+        self.paste_at_row(clipboard.read_text_finish(result), self.view.record_view_rows.get_focus_child(), before)
+
+    def setup_drag(self, editable):
+        self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
+        self.drag_source.connect('prepare', self.drag_prepare_cb)
+        self.drag_source.connect('drag-end', self.drag_end_cb)
+        self.view.record_view.add_controller(self.drag_source)
+
+    def cleanup_drag(self):
+        self.view.record_view.remove_controller(self.drag_source)
+        del self.drag_source
+
+    def drag_prepare_cb(self, source, x, y):
+        source.records = self.view.get_selection_records()
+        return self.content_from_records(source.records)
+
+    def drag_end_cb(self, source, drag, delete):
+        if delete:
+            self.remove_records(source.records)
+        del source.records
+
+    def setup_drop(self):
+        self.drop_target = Gtk.DropTarget.new(type=GObject.GType(str), actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
+        self.drop_target.connect('enter', self.drop_action_cb)
+        self.drop_target.connect('motion', self.drop_action_cb)
+        self.drop_target.connect('drop', self.drop_cb)
+        # self.drop_target.set_preload(True)
+        # self.drop_target.connect('notify::value', self.drop_notify_value_cb)
+        self.view.record_view.add_controller(self.drop_target)
+
+    def cleanup_drop(self):
+        self.view.record_view.remove_controller(self.drop_target)
+        del self.drop_target
+
+    def drop_action_cb(self, target, x, y):
+        if target.get_actions() & Gdk.DragAction.MOVE and not misc.get_modifier_state() & Gdk.ModifierType.CONTROL_MASK:
+            return Gdk.DragAction.MOVE
+        else:
+            return Gdk.DragAction.COPY
+
+    def drop_cb(self, target, value, x, y):
+        row, x, y = misc.find_descendant_at_xy(self.view.record_view, x, y, 2)
+        if row is not None:
+            if y < row.get_allocation().height / 2:
+                before = True
+            else:
+                before = False
+            self.paste_at_row(value, row, before)
+
+    # def drop_notify_value_cb(self, target, param):
+    #     drop = target.get_current_drop()
+    #     if drop is None:
+    #         return
+
 
 
 class SongListBaseWithEditDel(SongListBase):

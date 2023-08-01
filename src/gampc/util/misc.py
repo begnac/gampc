@@ -20,6 +20,8 @@
 
 from gi.repository import Gdk
 
+import ast
+
 
 def format_time(time):
     time = int(time)
@@ -27,6 +29,15 @@ def format_time(time):
     minutes = (time // 60) % 60
     seconds = time % 60
     return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes:02}:{seconds:02}"
+
+
+def ast_eval_strings(value):
+    try:
+        strings = ast.literal_eval(value)
+        if isinstance(strings, list) and all(isinstance(string, str) for string in strings):
+            return strings
+    except Exception:
+        pass
 
 
 def get_display():
@@ -39,3 +50,16 @@ def get_modifier_state():
 
 def get_clipboard():
     return get_display().get_clipboard()
+
+
+def find_descendant_at_xy(widget, x, y, levels):
+    for i in range(levels):
+        for child in widget.observe_children():
+            allocation = child.get_allocation()
+            if allocation.contains_point(x, y):
+                x, y = widget.translate_coordinates(child, x, y)
+                widget = child
+                break
+        else:
+            return None, x, y
+    return widget, x, y
