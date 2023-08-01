@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,7 +31,6 @@ import asyncio
 import gasyncio
 import ampd
 
-from . import __program_name__, __version__, __program_description__, __copyright__, __license__
 from .util import unit
 from .util import resource
 from .util.logger import logger
@@ -71,7 +70,7 @@ class App(Gtk.Application):
         # self.unit_config = self.unit_manager.get_unit('config')
 
         default_units = [
-            'menubar', 'misc', 'profiles', 'server',
+            'menubar', 'help', 'misc', 'profiles', 'server',
             'output', 'persistent',
             'playback', 'window',
             'current', 'playqueue', 'browser', 'search', 'stream', 'playlist', 'tanda',
@@ -110,9 +109,6 @@ class App(Gtk.Application):
 
         self.add_action(resource.Action('new-window', self.new_window_cb))
         self.add_action(resource.Action('close-window', self.close_window_cb))
-        self.add_action(resource.Action('BAD', self.BAD_cb))
-        self.add_action(resource.Action('help', self.help_cb))
-        self.add_action(resource.Action('about', self.about_cb))
         self.add_action(resource.Action('notify', self.task_hold_app(self.action_notify_cb)))
         self.add_action(resource.Action('quit', self.quit))
         self.add_action(resource.Action('component-start', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
@@ -274,47 +270,6 @@ class App(Gtk.Application):
             win.destroy()
         super().quit()
         return True
-
-    def about_cb(self, *args):
-        dialog = Gtk.AboutDialog(parent=self.get_active_window(), program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=Gtk.License.GPL_3_0, logo_icon_name='face-cool-gampc', website='http://math.univ-lyon1.fr/~begnac', website_label=_("Author's website"))
-        dialog.run()
-        dialog.destroy()
-
-    def BAD_cb(self, *args):
-        print(self.get_active_window().get_focus())
-
-    def help_cb(self, *args):
-        window = Gtk.ShortcutsWindow(title="Window", transient_for=self.get_active_window(), modal=True)
-        # window.set_application(self)
-
-        section_labels = {}
-        section_order = []
-        items_by_section = {}
-        for menu_item in self.menu_aggregator.get_resources():
-            if '/' not in menu_item.path:
-                section_labels[menu_item.path] = menu_item.label.replace('_', '')
-                section_order.append(menu_item.path)
-            elif isinstance(menu_item, resource.MenuAction) and menu_item.accels:
-                name = menu_item.path[:menu_item.path.find('/')]
-                if name not in items_by_section:
-                    items_by_section[name] = []
-                items_by_section[name].append(menu_item)
-
-        section = Gtk.ShortcutsSection(title=None, section_name='section')
-        window.add(section)
-
-        for name in section_order:
-            if name not in items_by_section:
-                continue
-            group = Gtk.ShortcutsGroup(title=section_labels[name], name=name)
-            section.add(group)
-
-            for menu_item in items_by_section[name]:
-                shortcut = Gtk.ShortcutsShortcut(accelerator=' '.join(menu_item.accels),
-                                                 title=menu_item.label.replace('_', ''))
-                group.add(shortcut)
-
-        window.show()
 
     @ampd.task
     async def action_notify_cb(self, *args):

@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ class Component(GObject.Object):
 
     def __init__(self, unit, *, name=None):
         super().__init__(full_title=unit.title)
+        self.focus_widget = None
         self.unit = unit
         self.name = name or unit.name
         self.manager = unit.manager
@@ -138,14 +139,6 @@ class ComponentMixinPaned:
 
         self.setup_context_menu(f'{self.name}.left-context', self.left_treeview)
 
-        self.starting = True
-        self.paned.connect('map', self.__map_cb)
-
-    def __map_cb(self, widget):
-        if self.starting:
-            self.left_treeview.grab_focus()
-            self.starting = False
-
     def paned_notify_position_cb(self, *args):
         self.config.pane_separator._set(self.paned.get_position())
 
@@ -169,12 +162,7 @@ class ComponentMixinEntry:
         box.append(self.widget)
         box.append(self.entry)
         self.widget = box
-
-        self.widget.connect('map', self.widget_map_cb, self.entry)
-
-    @staticmethod
-    def widget_map_cb(widget, entry):
-        entry.grab_focus()
+        self.focus_widget = self.entry
 
     @staticmethod
     def entry_focus_cb(controller, unit_misc, block):

@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -62,9 +62,12 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
     async def TEST(self):
         while True:
             await self.ampd.idle(0, timeout=1)
+            if self.view.get_root() is None:
+                continue
             a = self.view.get_root().get_focus()
+            print(a)
             if a is not None:
-                print(a, a.get_css_name(), a.get_parent().get_parent())
+                print(a, a.get_css_name(), a.get_parent())
     #         self.widget.column_view.queue_draw()
     #         # for col in self.widget.cols.values():
     #         #     print()
@@ -134,6 +137,10 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         await self.delete(f'{position}:{position + removed}')
         for i in range(position, position + added):
             await self.ampd.add(store[i].file, i)
+
+    @ampd.task
+    async def delete_records(self, positions):
+        await self.ampd.command_list(self.ampd.deleteid(self.view.store[i].Id) for i in positions)
 
     # @ampd.task
     # async def records_added_cb(self, store, position, added):

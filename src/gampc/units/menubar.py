@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -50,8 +50,4 @@ class __unit__(unit.Unit):
             resource.MenuAction('gampc/window', 'win.toggle-fullscreen', _("Fullscreen window"), ['<Alt>f']),
             resource.MenuAction('gampc/window', 'win.volume-popup', _("Adjust volume"), ['<Alt>v']),
             resource.MenuAction('gampc/app', 'app.quit', _("Quit"), ['<Control>q']),
-
-            resource.MenuAction('help', 'app.BAD', _("BAD"), ['<Control><Shift>b']),
-            resource.MenuAction('help', 'app.help', _("Help"), ['<Control>h', 'F1']),
-            resource.MenuAction('help', 'app.about', _("About")),
         )

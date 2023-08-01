@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -112,7 +112,10 @@ class Window(Gtk.ApplicationWindow):
                 self.connect(name, cb)
             self.component.insert_action_groups(self)
             self.main.prepend(self.component.widget)
-            self.component.widget.grab_focus()
+            if self.component.focus_widget is not None:
+                self.component.focus_widget.grab_focus()
+            else:
+                self.component.widget.grab_focus()
             self.component.connect('notify::title-extra', self.update_title)
             self.component.connect('notify::full-title', self.update_subtitle)
         self.update_subtitle()

@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,6 +21,8 @@
 from gi.repository import Gio
 from gi.repository import Gdk
 from gi.repository import Gtk
+
+import ast
 
 import ampd
 
@@ -52,7 +54,9 @@ class SongListBase(component.Component):
         super().__init__(unit, *args, **kwargs)
 
         self.widget = self.view = view.View(self.fields, self.sortable)
-        self.widget.record_view.add_css_class('songlistbase')
+        print(list(self.view.record_view.observe_controllers()))
+        self.view.record_view.add_css_class('songlistbase')
+        self.focus_widget = self.view.record_view
 
         self.songlistbase_actions = self.add_actions_provider('songlistbase')
         self.songlistbase_actions.add_action(resource.Action('reset', self.action_reset_cb))
@@ -101,19 +105,35 @@ class SongListBase(component.Component):
                 action_.set_enabled(editable)
 
     def action_copy_delete_cb(self, action, parameter):
-        data, positions = self.view.get_selection()
+        positions = self.view.get_selection()
         if action.get_name() in ['copy', 'cut']:
-            self.widget.get_clipboard().set_content(Gdk.ContentProvider.new_for_value(repr(data)))
+            self.widget.get_clipboard().set_content(Gdk.ContentProvider.new_for_value(repr([self.view.store_selection[i].file for i in positions])))
         if action.get_name() in ['delete', 'cut']:
-            for i in positions.reversed():
-                self.delete_record(i)
+            self.delete_records(positions)
 
     def action_paste_cb(self, action, parameter):
         self.widget.get_clipboard().read_text_async(None, self.action_paste_finish_cb)
 
     def action_paste_finish_cb(self, clipboard, result):
         result = clipboard.read_text_finish(result)
+        try:
+            filenames = ast.literal_eval(raw)
+        except Exception:
+            return
+        if not (isinstance(filenames, list) and all(isinstance(filename, str) for filename in filenames)):
+            return
         # Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).request_text(self.view.clipboard_paste_cb, action.get_name().endswith('before'))
+
+    def clipboard_paste(self, raw, before):
+        path, column = self.get_cursor()
+        try:
+            records = ast.literal_eval(raw)
+        except Exception:
+            return
+        if not (isinstance(records, list) and all(isinstance(record, dict) for record in records)):
+            return
+        self.paste_at(records, path, before)
+
 
     @ampd.task
     async def view_activate_cb(self, view, position):

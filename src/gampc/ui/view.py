@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gio
+from gi.repository import Gdk
 from gi.repository import Gtk
 from gi.repository import Pango
 
@@ -119,8 +120,9 @@ class RecordView(Gtk.ColumnView):
         self.fields.order.disconnect_by_func(self.fields_order_changed_cb)
         self.columns.disconnect_by_func(self.columns_changed_cb)
         del self.item_bind_hooks
-        for col in self.columns:
-            col.set_factory(None)
+        for col in self.columns_by_name.values():
+            self.remove_column(col)
+        del self.columns_by_name
 
     def rebind_listitem(self, listitem, name):
         item = listitem.get_item()
@@ -177,7 +179,7 @@ class View(Gtk.Box):
         self.bind_hooks = [self.bind_hook]
         self.sortable = sortable
 
-        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, focusable=True)
 
         self.filter_record = Record()
         self.filter_store = Gio.ListStore(item_type=Record)
@@ -194,7 +196,7 @@ class View(Gtk.Box):
         self.store = Store()
         self.store_filter = StoreFilter(model=self.store, filter=self.filter_filter)
         self.store_selection = Gtk.MultiSelection(model=self.store_filter)
-        self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START), self.bind_hooks, model=self.store_selection, vexpand=True, enable_rubberband=True, show_row_separators=True, show_column_separators=True)
+        self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START), self.bind_hooks, model=self.store_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)
         self.record_view.add_css_class('data-table')
         self.record_view_titles, self.record_view_rows = self.record_view.observe_children()
         self.record_view_titles.set_visible(False)
@@ -202,6 +204,16 @@ class View(Gtk.Box):
         self.append(self.scrolled_record_view)
 
         self.scrolled_record_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
+
+        # self.shortcut_controller = Gtk.Shortcut
+
+        self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY)
+        self.drag_source.connect('drag-begin', lambda *args: print('b', args))
+        self.drag_source.connect('drag-cancel', lambda *args: print('c', args))
+        self.drag_source.connect('drag-end', lambda *args: print('e', args))
+        self.drag_source.connect('prepare', lambda *args: print('p', args))
+        self.record_view.add_controller(self.drag_source)
+        # self.drop_target = Gtk.DropTarget(actions=Gdk.DragAction.COPY)
 
         self.connect('notify::filtering', self.notify_filtering_cb)
         # self.connect('destroy', self.destroy_cb)
@@ -225,7 +237,7 @@ class View(Gtk.Box):
     @staticmethod
     def bind_hook(label, item, name):
         label.set_label(item[name] or '')
-        setattr(label.cell.get_parent(), name, item[name] or '')
+        # setattr(label.cell.get_parent(), name, item[name] or '')
 
     @staticmethod
     def notify_filtering_cb(self, param):
@@ -269,9 +281,7 @@ class View(Gtk.Box):
     #         return 0
 
     def get_selection(self):
-        positions = list(filter(lambda i: self.store_selection.is_selected(i), range(len(self.store_selection))))
-        records = list(map(lambda i: self.store_selection[i].get_data_clean(), positions))
-        return records, positions
+        return list(filter(lambda i: self.store_selection.is_selected(i), range(len(self.store_selection))))
 
     def clipboard_paste(self, raw, before):
         path, column = self.get_cursor()

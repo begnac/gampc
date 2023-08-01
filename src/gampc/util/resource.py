@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -164,6 +164,9 @@ class ResourceProvider(GObject.Object):
 
     def get_resources(self, target):
         return self._resources.get(target, [])
+
+    def get_all_resources(self):
+        return sum(self._resources.values(), [])
 
     def add_resource(self, target, resource):
         self._resources.setdefault(target, []).append(resource)
