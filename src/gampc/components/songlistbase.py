@@ -70,12 +70,12 @@ class SongListBase(component.Component):
             # self.signal_handler_connect(self.widget.store, 'items-changed', self.records_changed_cb)
             self.setup_drop()
 
-        self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.widget, property_name='filtering'))
+        self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
 
         # self.setup_context_menu(f'{self.name}.context', self.view)
-        self.widget.record_view.connect('activate', self.view_activate_cb)
+        self.view.record_view.connect('activate', self.view_activate_cb)
 
-        self.widget.bind_hooks.append(self.duplicate_bind_hook)
+        self.view.bind_hooks.append(self.duplicate_bind_hook)
 
     def shutdown(self):
         self.cleanup_drag()
@@ -86,31 +86,17 @@ class SongListBase(component.Component):
         self.view.cleanup()
         super().shutdown()
 
-    def set_editable(self, editable):
-        return
-        dndtargets = [Gtk.TargetEntry.new(self.DND_TARGET, Gtk.TargetFlags(0), 0)]
-
-        if self.record_new_cb != NotImplemented:
-            if editable:
-                self.view.drag_dest_set(Gtk.DestDefaults.DROP, dndtargets, Gdk.DragAction.MOVE | Gdk.DragAction.COPY)
-            else:
-                self.view.drag_dest_unset()
-
-        if self.record_delete_cb != NotImplemented and editable:
-            self.view.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, dndtargets, Gdk.DragAction.MOVE | Gdk.DragAction.COPY)
-        else:
-            self.view.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, dndtargets, Gdk.DragAction.COPY)
-
-        for name in ['paste', 'paste-before', 'delete', 'cut']:
-            action_ = self.songlistbase_actions.lookup(name)
-            if action_ is not None:
-                action_.set_enabled(editable)
+    # def set_editable(self, editable):
+    #     for name in ['paste', 'paste-before', 'delete', 'cut']:
+    #         action_ = self.songlistbase_actions.lookup(name)
+    #         if action_ is not None:
+    #             action_.set_enabled(editable)
 
     @ampd.task
     async def view_activate_cb(self, view, position):
         if self.unit.unit_persistent.protect_active:
             return
-        filename = self.widget.store.get_item(position).file
+        filename = self.view.store_selection[position].file
         records = await self.ampd.playlistfind('file', filename)
         if records:
             record_id = sorted(records, key=lambda record: record['Pos'])[0]['Id']
@@ -221,17 +207,6 @@ class SongListBase(component.Component):
     #     icon.flush()
     #     Gtk.drag_set_icon_surface(context, target)
 
-    def paste_at_row(self, value, row, before):
-        if row is None:
-            return
-        filenames = misc.ast_eval_strings(value)
-        if filenames is None:
-            return
-        position = self.view.store.find(row.record)[1]
-        if not before:
-            position += 1
-        self.add_records(position, filenames)
-
     @staticmethod
     def content_from_records(records):
         return Gdk.ContentProvider.new_for_value(repr([record.file for record in records]))
@@ -243,6 +218,17 @@ class SongListBase(component.Component):
         if action.get_name() in ['delete', 'cut']:
             self.remove_records(records)
 
+    def paste_at_row(self, value, row, before):
+        if row is None:
+            return
+        filenames = misc.ast_eval_strings(value)
+        if filenames is None:
+            return
+        position = self.view.store.find(row.record)[1]
+        if not before:
+            position += 1
+        self.add_records(position, filenames)
+
     def action_paste_cb(self, action, parameter):
         self.widget.get_clipboard().read_text_async(None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
 
@@ -251,17 +237,24 @@ class SongListBase(component.Component):
 
     def setup_drag(self, editable):
         self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
+        self.drag_source.set_icon(Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('face-cool', None, 48, 1, Gtk.TextDirection.NONE, 0), 5, 5)
         self.drag_source.connect('prepare', self.drag_prepare_cb)
         # self.drag_source.connect('drag-begin', self.drag_begin_cb)
         self.drag_source.connect('drag-end', self.drag_end_cb)
-        self.view.record_view.add_controller(self.drag_source)
+        self.view.record_view_rows.add_controller(self.drag_source)
 
     def cleanup_drag(self):
-        self.view.record_view.remove_controller(self.drag_source)
+        self.view.record_view_rows.remove_controller(self.drag_source)
         del self.drag_source
 
     def drag_prepare_cb(self, source, x, y):
         source.records = self.view.get_selection_records()
+        if not source.records:
+            row, x, y = misc.find_descendant_at_xy(self.view.record_view_rows, x, y, 1)
+            if row is not None:
+                source.records = [row.record]
+            else:
+                return None
         return self.content_from_records(source.records)
 
     # def drag_begin_cb(self, source, drag):
@@ -279,20 +272,24 @@ class SongListBase(component.Component):
         self.drop_target.connect('drop', self.drop_cb)
         # self.drop_target.set_preload(True)
         # self.drop_target.connect('notify::value', self.drop_notify_value_cb)
-        self.view.record_view.add_controller(self.drop_target)
+        self.view.record_view_rows.add_controller(self.drop_target)
 
     def cleanup_drop(self):
-        self.view.record_view.remove_controller(self.drop_target)
+        self.view.record_view_rows.remove_controller(self.drop_target)
         del self.drop_target
 
-    def drop_action_cb(self, target, x, y):
+    @staticmethod
+    def drop_action_cb(target, x, y):
+        row, x, y = misc.find_descendant_at_xy(target.get_widget(), x, y, 1)
+        if row is None:
+            return 0
         if target.get_actions() & Gdk.DragAction.MOVE and misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
             return Gdk.DragAction.MOVE
         else:
             return Gdk.DragAction.COPY
 
     def drop_cb(self, target, value, x, y):
-        row, x, y = misc.find_descendant_at_xy(self.view.record_view, x, y, 2)
+        row, x, y = misc.find_descendant_at_xy(self.view.record_view_rows, x, y, 1)
         if row is not None:
             if y < row.get_allocation().height / 2:
                 before = True
@@ -304,7 +301,6 @@ class SongListBase(component.Component):
     #     drop = target.get_current_drop()
     #     if drop is None:
     #         return
-
 
 
 class SongListBaseWithEditDel(SongListBase):

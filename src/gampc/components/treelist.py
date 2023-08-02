@@ -41,7 +41,6 @@ class Node(GObject.Object):
         self.updated = False
         self.modified = False
         self.update_below = False
-        # self.expanded = 0
 
 
 class TreeStore(Gtk.TreeStore):

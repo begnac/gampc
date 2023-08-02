@@ -102,7 +102,9 @@ class Component(GObject.Object):
             widget.insert_action_group(prefix, None)
 
     def setup_context_menu(self, name, widget):
-        pass # widget.connect('button-press-event', self.context_menu_button_press_event_cb, name)
+        pass
+        # controller = Gtk.
+        # widget.connect('button-press-event', self.context_menu_button_press_event_cb, name)
 
     def context_menu_button_press_event_cb(self, widget, event, name):
         if event.type != Gdk.EventType.BUTTON_PRESS or event.button != 3 or name not in self.unit.menu_aggregators:
