@@ -64,18 +64,11 @@ class FieldWithTable(Field):
                     return match.expand(value)
 
 
-class StringObject(GObject.Object):
-    string = GObject.Property(type=str)
-
-    def __init__(self, string):
-        super().__init__(string=string)
-
-
 class FieldFamily(GObject.Object):
     order = GObject.Property(type=Gio.ListStore)
 
     def __init__(self, config):
-        super().__init__(order=Gio.ListStore(item_type=StringObject))
+        super().__init__(order=Gio.ListStore(item_type=Gtk.StringObject))
         self.config = config
         self.old_order = self.config.order._get(default=[])
         self.config.order._set([])
@@ -88,7 +81,7 @@ class FieldFamily(GObject.Object):
 
     @staticmethod
     def order_changed_cb(order, position, removed, added, config):
-        config.order._set([name.string for name in order])
+        config.order._set([name.get_string() for name in order])
 
     def register_field(self, field):
         if field.name in self.names:
@@ -107,15 +100,15 @@ class FieldFamily(GObject.Object):
         if field.name in list(self.order):
             return
         if field.name not in self.old_order:
-            self.order.append(StringObject(field.name))
+            self.order.append(Gtk.StringObject.new(field.name))
             return
         pos = self.old_order.index(field.name)
         for i, name in enumerate(self.order):
-            if name.string not in self.old_order or self.old_order.index(name.string) > pos:
-                self.order.insert(i, StringObject(field.name))
+            if name.get_string() not in self.old_order or self.old_order.index(name.get_string()) > pos:
+                self.order.insert(i, Gtk.StringObject.new(field.name))
                 return
         else:
-            self.order.append(StringObject(field.name))
+            self.order.append(Gtk.StringObject.new(field.name))
 
     def unregister_field(self, field):
         self.names.remove(field.name)

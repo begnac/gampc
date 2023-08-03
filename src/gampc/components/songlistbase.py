@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GObject
+from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import Gdk
 from gi.repository import Gtk
@@ -209,7 +209,7 @@ class SongListBase(component.Component):
 
     @staticmethod
     def content_from_records(records):
-        return Gdk.ContentProvider.new_for_value(repr([record.file for record in records]))
+        return Gdk.ContentProvider.new_for_value(GLib.Variant('as', [record.file for record in records]))
 
     def action_copy_delete_cb(self, action, parameter):
         records = self.view.get_selection_records()
@@ -218,22 +218,24 @@ class SongListBase(component.Component):
         if action.get_name() in ['delete', 'cut']:
             self.remove_records(records)
 
-    def paste_at_row(self, value, row, before):
-        if row is None:
-            return
-        filenames = misc.ast_eval_strings(value)
-        if filenames is None:
+    def paste_at_row(self, filenames, row, before):
+        if row is None or not filenames.is_of_type(GLib.VariantType('as')):
             return
         position = self.view.store.find(row.record)[1]
         if not before:
             position += 1
-        self.add_records(position, filenames)
+        self.add_records(position, filenames.unpack())
 
     def action_paste_cb(self, action, parameter):
-        self.widget.get_clipboard().read_text_async(None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
+        self.widget.get_clipboard().read_value_async(GLib.Variant, 0, None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
 
     def action_paste_finish_cb(self, clipboard, result, before):
-        self.paste_at_row(clipboard.read_text_finish(result), self.view.record_view_rows.get_focus_child(), before)
+        try:
+            result = clipboard.read_value_finish(result)
+        except GLib.GError as error:
+            print(error)
+            return
+        self.paste_at_row(result, self.view.record_view_rows.get_focus_child(), before)
 
     def setup_drag(self, editable):
         self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
@@ -266,11 +268,11 @@ class SongListBase(component.Component):
         del source.records
 
     def setup_drop(self):
-        self.drop_target = Gtk.DropTarget.new(type=GObject.GType(str), actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
+        self.drop_target = Gtk.DropTarget.new(GLib.Variant, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
         self.drop_target.connect('enter', self.drop_action_cb)
         self.drop_target.connect('motion', self.drop_action_cb)
         self.drop_target.connect('drop', self.drop_cb)
-        # self.drop_target.set_preload(True)
+        self.drop_target.set_preload(True)
         # self.drop_target.connect('notify::value', self.drop_notify_value_cb)
         self.view.record_view_rows.add_controller(self.drop_target)
 
@@ -278,10 +280,11 @@ class SongListBase(component.Component):
         self.view.record_view_rows.remove_controller(self.drop_target)
         del self.drop_target
 
-    @staticmethod
-    def drop_action_cb(target, x, y):
+    def drop_action_cb(self, target, x, y):
         row, x, y = misc.find_descendant_at_xy(target.get_widget(), x, y, 1)
         if row is None:
+            return 0
+        if target.get_value() is not None and not target.get_value().is_of_type(GLib.VariantType('as')):
             return 0
         if target.get_actions() & Gdk.DragAction.MOVE and misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
             return Gdk.DragAction.MOVE
@@ -301,6 +304,8 @@ class SongListBase(component.Component):
     #     drop = target.get_current_drop()
     #     if drop is None:
     #         return
+    #     if not target.get_value().is_of_type(GLib.VariantType('as')):
+    #         target.reject()
 
 
 class SongListBaseWithEditDel(SongListBase):

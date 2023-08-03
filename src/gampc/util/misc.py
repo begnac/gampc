@@ -20,8 +20,6 @@
 
 from gi.repository import Gdk
 
-import ast
-
 
 def format_time(time):
     time = int(time)
@@ -29,15 +27,6 @@ def format_time(time):
     minutes = (time // 60) % 60
     seconds = time % 60
     return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes:02}:{seconds:02}"
-
-
-def ast_eval_strings(value):
-    try:
-        strings = ast.literal_eval(value)
-        if isinstance(strings, list) and all(isinstance(string, str) for string in strings):
-            return strings
-    except Exception:
-        pass
 
 
 def get_display():

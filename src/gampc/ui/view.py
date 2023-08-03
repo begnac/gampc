@@ -60,14 +60,14 @@ class RecordView(Gtk.ColumnView):
         self.columns = self.get_columns()
         self.columns_by_name = {}
         for name in fields.order:
-            name = name.string
+            name = name.get_string()
             col = column.FieldColumn(name, self.fields.fields[name], item_widget, sortable)
             col.get_factory().bound.connect('items-changed', self.bound_items_changed_cb, name)
             self.columns_by_name[name] = col
             self.append_column(col)
 
         if hide_titles:
-            self.observe_children()[0].set_visible(False)
+            self.get_first_child().set_visible(False)
         self.columns.connect('items-changed', self.columns_changed_cb)
         self.fields.order.connect('items-changed', self.fields_order_changed_cb)
 
@@ -105,7 +105,7 @@ class RecordView(Gtk.ColumnView):
 
     def columns_changed_cb(self, columns, position, removed, added):
         self.fields.order.handler_block_by_func(self.fields_order_changed_cb)
-        self.fields.order[position:position + removed] = [column.StringObject(col.name) for col in columns[position:position + added]]
+        self.fields.order[position:position + removed] = [Gtk.StringObject.new(col.name) for col in columns[position:position + added]]
         self.fields.order.handler_unblock_by_func(self.fields_order_changed_cb)
 
     def fields_order_changed_cb(self, order, position, removed, added):
@@ -113,7 +113,7 @@ class RecordView(Gtk.ColumnView):
         for col in list(self.columns[position:position + removed]):
             self.remove_column(col)
         for i in range(position, position + added):
-            self.insert_column(i, self.columns_by_name[order[i].string])
+            self.insert_column(i, self.columns_by_name[order[i].get_string()])
         self.columns.handler_unblock_by_func(self.columns_changed_cb)
 
 
@@ -149,8 +149,9 @@ class View(Gtk.Box):
 
         self.store_selection = Gtk.MultiSelection()
         self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START), self.bind_hooks, sortable, model=self.store_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)
+        self.record_view.add_css_class('records')
         self.record_view.add_css_class('data-table')
-        self.record_view_rows = self.record_view.observe_children()[1]
+        self.record_view_rows = self.record_view.get_last_child()
         self.scrolled_record_view = Gtk.ScrolledWindow(child=self.record_view, focusable=False)
         self.scrolled_record_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_record_view)
@@ -167,7 +168,6 @@ class View(Gtk.Box):
         else:
             self.store_selection.set_model(self.store_filter)
             self.record_view.sort_by_column(None, 0)
-
 
         # self.shortcut_controller = Gtk.ShortcutController()
         # self.record_view.add_controller(self.shortcut_controller)

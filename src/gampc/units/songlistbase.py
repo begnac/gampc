@@ -24,6 +24,12 @@ from ..util import unit
 
 CSS = ''
 
+CSS += '''
+columnview.filter > listview > row {
+  background: yellow;
+}
+'''
+
 N = 4
 for d in range(N ** 3):
     colors = [((d // (N ** k)) % N) * 255 / (N - 1) for k in range(3)]
@@ -32,12 +38,6 @@ for d in range(N ** 3):
       background: rgba({colors[0]},{colors[1]},{colors[2]},0.5);
     }}
     '''
-
-CSS += '''
-columnview.filter > listview > row > cell {
-  background: yellow;
-}
-'''
 
 
 class __unit__(unit.UnitMixinConfig, unit.UnitMixinCss, unit.Unit):
