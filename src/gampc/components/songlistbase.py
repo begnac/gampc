@@ -241,9 +241,14 @@ class SongListBase(component.Component):
         self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
         self.drag_source.set_icon(Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('face-cool', None, 48, 1, Gtk.TextDirection.NONE, 0), 5, 5)
         self.drag_source.connect('prepare', self.drag_prepare_cb)
-        # self.drag_source.connect('drag-begin', self.drag_begin_cb)
+        self.drag_source.connect('drag-begin', self.drag_begin_cb)
+        self.drag_source.connect('drag-cancel', self.drag_cancel_cb)
         self.drag_source.connect('drag-end', self.drag_end_cb)
         self.view.record_view_rows.add_controller(self.drag_source)
+
+        self.drag_key_controller = Gtk.EventControllerKey()
+        self.drag_key_controller.connect('key-pressed', self.drag_key_pressed_cb, self.drag_source)
+        self.view.record_view_rows.add_controller(self.drag_key_controller)
 
     def cleanup_drag(self):
         self.view.record_view_rows.remove_controller(self.drag_source)
@@ -257,15 +262,29 @@ class SongListBase(component.Component):
                 source.records = [row.record]
             else:
                 return None
+        source.set_content(self.content_from_records(source.records))
         return self.content_from_records(source.records)
 
-    # def drag_begin_cb(self, source, drag):
-    #     pass
+    def drag_begin_cb(self, source, drag):
+        pass
+
+    def drag_cancel_cb(self, source, drag, reason):
+        print(2, source.get_content(), drag, reason)
+        source.set_content(None)
+        drag.drop_done(False)
+        return False
 
     def drag_end_cb(self, source, drag, delete):
+        print(1555)
         if delete:
             self.remove_records(source.records)
         del source.records
+
+    @staticmethod
+    def drag_key_pressed_cb(controller, keyval, keycode, modifiers, source):
+        if keyval == Gdk.KEY_Escape:
+            source.drag_cancel()
+        return False
 
     def setup_drop(self):
         self.drop_target = Gtk.DropTarget.new(GLib.Variant, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
@@ -275,6 +294,11 @@ class SongListBase(component.Component):
         self.drop_target.set_preload(True)
         # self.drop_target.connect('notify::value', self.drop_notify_value_cb)
         self.view.record_view_rows.add_controller(self.drop_target)
+
+        self.drop_key_controller = Gtk.EventControllerKey()
+        self.drop_key_controller.connect('key-pressed', self.drop_key_pressed_cb, self.drop_target)
+        self.drop_key_controller.connect('modifiers', self.drop_modifiers_cb, self.drop_target)
+        self.view.record_view_rows.add_controller(self.drop_key_controller)
 
     def cleanup_drop(self):
         self.view.record_view_rows.remove_controller(self.drop_target)
@@ -306,6 +330,18 @@ class SongListBase(component.Component):
     #         return
     #     if not target.get_value().is_of_type(GLib.VariantType('as')):
     #         target.reject()
+
+    @staticmethod
+    def drop_key_pressed_cb(controller, keyval, keycode, modifiers, target):
+        if keyval == Gdk.KEY_Escape:
+            target.get_drop().finish(0)
+            target.reject()
+        return False
+
+    @staticmethod
+    def drop_modifiers_cb(controller, modifiers, target):
+        if target.get_actions() & Gdk.DragAction.MOVE and misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
+            pass
 
 
 class SongListBaseWithEditDel(SongListBase):
