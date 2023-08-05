@@ -29,7 +29,10 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk
 
 
-gettext.install('gampc')
+__application__ = 'gampc-gtk4'
+
+
+gettext.install(__application__)
 
 
 __program_name__ = "Graphical Asyncronous Music Player Client"
@@ -38,5 +41,5 @@ __program_description__ = \
       " asynchronous communication")
 __author__ = "Itaï BEN YAACOV"
 __copyright__ = "© " + __author__
-__license_type__ = gi.repository.Gtk.License.GPL_3_0
+__license_type__ = Gtk.License.GPL_3_0
 __version__ = '0.3.2'

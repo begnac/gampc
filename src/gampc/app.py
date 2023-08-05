@@ -36,12 +36,12 @@ from .util import resource
 from .util.logger import logger
 from .util.misc import get_modifier_state
 
-from . import __program_name__
+from . import __program_name__, __application__
 
 
 class App(Gtk.Application):
     def __init__(self):
-        super().__init__(application_id='begnac.gampc', flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        super().__init__(application_id=f'begnac.{__application__}', flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
 
         self.add_main_option('list-actions', 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("List application actions"), None)
         self.add_main_option('version', 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("Display version"), None)
