@@ -31,7 +31,7 @@ import asyncio
 import gasyncio
 import ampd
 
-from . import __program_name__, __version__, __program_description__, __copyright__, __license__
+from . import __application__, __program_name__, __program_description__, __version__, __copyright__, __license_type__, __website__
 from .util import unit
 from .util import resource
 from .util.logger import logger
@@ -40,7 +40,7 @@ from .util.misc import get_modifier_state
 
 class App(Gtk.Application):
     def __init__(self):
-        super().__init__(application_id='begnac.gampc', flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        super().__init__(application_id=f'begnac.{__application__}', flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
 
         self.add_main_option('list-actions', 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("List application actions"), None)
         self.add_main_option('version', 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("Display version"), None)
@@ -50,7 +50,7 @@ class App(Gtk.Application):
         self.add_main_option(GLib.OPTION_REMAINING, 0, GLib.OptionFlags.NONE, GLib.OptionArg.STRING_ARRAY, '', _("[ACTION...]"))
 
     def __del__(self):
-        logger.debug('Deleting {}'.format(self))
+        logger.debug(f'Deleting {self}')
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
@@ -157,7 +157,7 @@ class App(Gtk.Application):
 
         if options.contains('copyright'):
             print(__copyright__)
-            print(__license__)
+            print(__license_type__)
             return 0
 
         if options.contains('list-actions'):
@@ -273,7 +273,7 @@ class App(Gtk.Application):
         return True
 
     def about_cb(self, *args):
-        dialog = Gtk.AboutDialog(parent=self.get_active_window(), program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=Gtk.License.GPL_3_0, logo_icon_name='face-cool-gampc', website='http://math.univ-lyon1.fr/~begnac', website_label=_("Author's website"))
+        dialog = Gtk.AboutDialog(parent=self.get_active_window(), program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=__license_type__, logo_icon_name='face-cool-gampc', website=__website__)
         dialog.run()
         dialog.destroy()
 

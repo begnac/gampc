@@ -22,6 +22,8 @@ import xdg.BaseDirectory
 import os
 import apsw
 
+from .. import __application__
+
 
 class Cursor(object):
     def __init__(self, cursor, connection):
@@ -74,7 +76,7 @@ class Database(object):
         self.setup_database()
 
     def get_connection(self):
-        base_path = xdg.BaseDirectory.save_cache_path('gampc') if self.cache else xdg.BaseDirectory.save_data_path('gampc')
+        base_path = xdg.BaseDirectory.save_cache_path(__application__) if self.cache else xdg.BaseDirectory.save_data_path(__application__)
         self.connection = Connection(os.path.join(base_path, self.name + '.sqlite'))
         self.connection.cursor().execute('PRAGMA foreign_keys=ON')
 

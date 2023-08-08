@@ -19,17 +19,17 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gdk
 from gi.repository import GdkPixbuf
 from gi.repository import Pango
 from gi.repository import Gtk
 
 import xdg
-import time
-import asyncio
-import ampd
+# import time
+# import asyncio
+# import ampd
 
 from . import component
+from .. import __application__
 
 
 class PixbufCache(dict):
@@ -41,7 +41,7 @@ class PixbufCache(dict):
 
     def find_image(self, key):
         for extension in ('.jpg', '.png', '.gif'):
-            for name in xdg.BaseDirectory.load_data_paths('gampc', 'photos', key + extension):
+            for name in xdg.BaseDirectory.load_data_paths(__application__, 'photos', key + extension):
                 return GdkPixbuf.Pixbuf.new_from_file(name)
 
         for sep in (', ', ' y '):
