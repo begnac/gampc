@@ -36,7 +36,7 @@ from .util import resource
 from .util.logger import logger
 from .util.misc import get_modifier_state
 
-from . import __program_name__, __application__
+from . import __program_name__, __application__, __version__, __copyright__, __license_type__
 
 
 class App(Gtk.Application):
@@ -51,7 +51,7 @@ class App(Gtk.Application):
         self.add_main_option(GLib.OPTION_REMAINING, 0, GLib.OptionFlags.NONE, GLib.OptionArg.STRING_ARRAY, '', _("[ACTION...]"))
 
     def __del__(self):
-        logger.debug('Deleting {}'.format(self))
+        logger.debug(f'Deleting {self}')
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
@@ -158,7 +158,7 @@ class App(Gtk.Application):
 
         if options.contains('copyright'):
             print(__copyright__)
-            print(__license__)
+            print(__license_type__)
             return 0
 
         if options.contains('list-actions'):
