@@ -30,7 +30,7 @@ from gi.repository import Gtk  # noqa: E402
 
 
 __application__ = __name__
-__author__ = "Itaï BEN YAACOV"
+__author__ = "Itaï BEN YAACOV <candeb@free.fr>"
 __copyright__ = "© " + __author__
 __website__ = f'https://github.com/begnac/{__application__}'
 
