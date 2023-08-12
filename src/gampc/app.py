@@ -57,8 +57,7 @@ class App(Gtk.Application):
 
         logger.debug("Starting")
 
-        self.event_loop = gasyncio.GAsyncIOEventLoop()
-        self.event_loop.start_slave_loop()
+        gasyncio.start_slave_loop()
 
         self.sigint_source = GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda: self.quit() or True)
         self.excepthook_orig, sys.excepthook = sys.excepthook, self.excepthook
@@ -143,8 +142,7 @@ class App(Gtk.Application):
         sys.excepthook = self.excepthook_orig
         del self.excepthook_orig
 
-        self.event_loop.stop_slave_loop()
-        self.event_loop.close()
+        gasyncio.stop_slave_loop()
 
         GLib.source_remove(self.sigint_source)
 

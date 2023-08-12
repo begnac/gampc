@@ -29,10 +29,11 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk  # noqa: E402
 
 
-__application__ = __name__
-__author__ = "Itaï BEN YAACOV <candeb@free.fr>"
-__copyright__ = "© " + __author__
-__website__ = f'https://github.com/begnac/{__application__}'
+__application__ = 'gampc'
+__author__ = "Itaï BEN YAACOV"
+__author_email__ = "candeb@free.fr"
+__copyright__ = f"Copyright (C) 2015-2023 {__author__} <{__author_email__}>"
+__website__ = 'https://github.com/begnac/gampc'
 
 __license_type__ = Gtk.License.GPL_3_0
 __program_name__ = "Graphical Asyncronous Music Player Client"
