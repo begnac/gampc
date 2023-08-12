@@ -55,10 +55,10 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
 
     def load_streams(self):
         streams = self.unit.db.get_streams()
-        self.store.set(streams)
+        self.view.store.set_records(streams)
 
     def action_save_cb(self, action, parameter):
-        streams = [stream.get_data() for i, p, stream in self.store if stream._status != self.RECORD_DELETED]
+        streams = [stream.get_data() for i, p, stream in self.view.store if stream._status != self.RECORD_DELETED]
         self.unit.db.save_streams(streams)
         self.load_streams()
 
@@ -74,8 +74,8 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
         path, column = self.treeview.get_cursor()
         if path is None:
             return
-        i = self.store.get_iter(path)
-        value = self.store.get_record(i).get_data()
+        i = self.view.store.get_iter(path)
+        value = self.view.store.get_record(i).get_data()
         value = self.ssde_struct.edit(self.get_window(), value, size=self.config.edit_dialog_size._get(), scrolled=True)
         if value is not None:
             self.modify_record(i, value)
