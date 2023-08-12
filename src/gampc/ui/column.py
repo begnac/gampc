@@ -145,7 +145,6 @@ class FieldColumnFactory(Gtk.SignalListItemFactory):
 
     @staticmethod
     def setup_cb(self, listitem):
-        print
         listitem.child = self.widget()
         listitem.set_child(listitem.child)
 
