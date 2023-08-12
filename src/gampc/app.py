@@ -36,16 +36,15 @@ from .util import resource
 from .util.logger import logger
 from .util.misc import get_modifier_state
 
-from . import __program_name__, __application__, __version__, __copyright__, __license_type__
+from . import __application__, __program_name__, __version__, __copyright__, __license_type__
 
 
 class App(Gtk.Application):
     def __init__(self):
-        super().__init__(application_id=f'begnac.{__application__}', flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        super().__init__(application_id=f'begnac.{__application__}', flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE | Gio.ApplicationFlags.ALLOW_REPLACEMENT)
 
         self.add_main_option('list-actions', 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("List application actions"), None)
-        self.add_main_option('version', 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("Display version"), None)
-        self.add_main_option('copyright', 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("Display copyright"), None)
+        self.add_main_option('version', ord('V'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("Display version"), None)
         self.add_main_option('non-unique', ord('u'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("Do not start a unique instance"), None)
         self.add_main_option('debug', ord('d'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("Debug messages"), None)
         self.add_main_option(GLib.OPTION_REMAINING, 0, GLib.OptionFlags.NONE, GLib.OptionArg.STRING_ARRAY, '', _("[ACTION...]"))
@@ -58,8 +57,7 @@ class App(Gtk.Application):
 
         logger.debug("Starting")
 
-        self.event_loop = gasyncio.GAsyncIOEventLoop()
-        self.event_loop.start_slave_loop()
+        gasyncio.start_slave_loop()
 
         self.sigint_source = GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda: self.quit() or True)
         self.excepthook_orig, sys.excepthook = sys.excepthook, self.excepthook
@@ -144,8 +142,7 @@ class App(Gtk.Application):
         sys.excepthook = self.excepthook_orig
         del self.excepthook_orig
 
-        self.event_loop.stop_slave_loop()
-        self.event_loop.close()
+        gasyncio.stop_slave_loop()
 
         GLib.source_remove(self.sigint_source)
 
@@ -154,9 +151,6 @@ class App(Gtk.Application):
     def do_handle_local_options(self, options):
         if options.contains('version'):
             print(_("{program} version {version}").format(program=__program_name__, version=__version__))
-            return 0
-
-        if options.contains('copyright'):
             print(__copyright__)
             print(__license_type__)
             return 0

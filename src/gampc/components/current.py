@@ -29,6 +29,7 @@ import xdg
 # import ampd
 
 from . import component
+from .. import __application__
 
 
 class PixbufCache(dict):
@@ -40,7 +41,7 @@ class PixbufCache(dict):
 
     def find_image(self, key):
         for extension in ('.jpg', '.png', '.gif'):
-            for name in xdg.BaseDirectory.load_data_paths('gampc', 'photos', key + extension):
+            for name in xdg.BaseDirectory.load_data_paths(__application__, 'photos', key + extension):
                 return GdkPixbuf.Pixbuf.new_from_file(name)
 
         for sep in (', ', ' y '):

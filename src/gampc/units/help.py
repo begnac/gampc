@@ -25,7 +25,7 @@ import xml.sax.saxutils
 from ..util import resource
 from ..util import unit
 
-from .. import __program_name__, __version__, __program_description__, __copyright__, __license_type__
+from .. import __program_name__, __version__, __program_description__, __copyright__, __license_type__, __website__
 
 
 def shortcuts_interface(resources):
@@ -100,7 +100,7 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
         print(self.get_active_window().get_focus())
 
     def about_cb(self, *args):
-        dialog = Gtk.AboutDialog(program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=__license_type__, logo_icon_name='face-cool-gampc', website='http://math.univ-lyon1.fr/~begnac', website_label=_("Author's website"))
+        dialog = Gtk.AboutDialog(program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=__license_type__, logo_icon_name='face-cool-gampc', website=__website__)
         dialog.present()
 
     def help_cb(self, *args):
