@@ -111,11 +111,11 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
         )
 
         self.playlists = []
-        self.left_store = treelist.TreeStore(self.fill_node, treelist.Node(kind=playlist.NODE_FOLDER))
+        #self.left_store = treelist.TreeStore(self.fill_node, treelist.Node(kind=playlist.NODE_FOLDER))
 
     def shutdown(self):
         super().shutdown()
-        del self.left_store
+        # del self.left_store
 
     @staticmethod
     def get_pseudo_folder_contents(path, pseudo_names):
@@ -154,7 +154,7 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
         try:
             while True:
                 self.playlists = sorted(map(lambda entry: entry['playlist'], await self.ampd.listplaylists()))
-                await self.left_store.update()
+                # await self.left_store.update()
                 await self.ampd.idle(ampd.STORED_PLAYLIST)
         finally:
             self.server_playlists = []

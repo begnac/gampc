@@ -29,7 +29,7 @@ class Browser(treelist.TreeList, songlist.SongList):
 
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
-        self.focus_widget = self.left_treeview
+        self.focus_widget = self.left_view
 
     def init_left_store(self):
         return self.unit.left_store
