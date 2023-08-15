@@ -23,7 +23,8 @@ from gi.repository import Gtk
 
 import ampd
 
-# from ..util import data
+from ..util import misc
+
 from . import component
 from . import songlist
 
@@ -135,9 +136,9 @@ class TreeList(component.ComponentMixinPaned, songlist.SongList):
 
         self.left_treeview.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
 
-        self.left_treeview.connect('row-activated', self.left_treeview_row_activated_cb)
-        self.left_treeview.connect('row-expanded', self.left_treeview_row_expanded_cb)
-        self.left_treeview.connect('row-collapsed', self.left_treeview_row_collapsed_cb)
+        self.left_treeview.connect('row-activated', misc.WeakMethodProxy(self.left_treeview_row_activated_cb))
+        self.left_treeview.connect('row-expanded', misc.WeakMethodProxy(self.left_treeview_row_expanded_cb))
+        self.left_treeview.connect('row-collapsed', misc.WeakMethodProxy(self.left_treeview_row_collapsed_cb))
 
         self.selected_nodes = []
         self.selected_node = None
@@ -149,8 +150,7 @@ class TreeList(component.ComponentMixinPaned, songlist.SongList):
         self.selected_node = self.selected_nodes[0] if len(self.selected_nodes) == 1 else None
         self.set_records(sum([(await self.get_node_songs(node)) for node in self.selected_nodes], []))
 
-    @staticmethod
-    def left_treeview_row_activated_cb(left_treeview, p, column):
+    def left_treeview_row_activated_cb(self, left_treeview, p, column):
         if left_treeview.row_expanded(p):
             left_treeview.collapse_row(p)
         else:

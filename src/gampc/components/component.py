@@ -27,6 +27,7 @@ import types
 
 from ..util import resource
 from ..util import unit
+from ..util import misc
 from ..util.logger import logger
 
 
@@ -130,11 +131,11 @@ class ComponentMixinPaned:
         self.left_treeview = Gtk.TreeView(model=self.left_store)
         self.scrolled_left_treeview = Gtk.ScrolledWindow()
         self.scrolled_left_treeview.set_child(self.left_treeview)
-        self.left_treeview.get_selection().connect('changed', self.left_treeview_selection_changed_cb)
+        self.left_treeview.get_selection().connect('changed', misc.WeakMethodProxy(self.left_treeview_selection_changed_cb))
         self.left_treeview.set_search_equal_func(lambda store, col, key, i: key.lower() not in store.get_value(i, col).lower())
 
         self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config.pane_separator._get())
-        self.paned.connect('notify::position', self.paned_notify_position_cb)
+        self.paned.connect('notify::position', misc.WeakMethodProxy(self.paned_notify_position_cb))
         self.paned.set_start_child(self.scrolled_left_treeview)
         self.paned.set_end_child(self.widget)
         self.widget = self.paned

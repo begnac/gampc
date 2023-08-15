@@ -25,6 +25,7 @@ from gi.repository import Gtk
 import re
 
 from ..util import record
+from ..util import misc
 
 from . import column
 
@@ -32,7 +33,6 @@ from . import column
 class RecordView(Gtk.ColumnView):
     def __init__(self, fields, item_widget, item_bind_hooks, sortable=False, *, hide_titles=False, **kwargs):
         self.fields = fields
-        self.item_widget = item_widget
         self.item_bind_hooks = item_bind_hooks
         self.sortable = sortable
 
@@ -43,59 +43,52 @@ class RecordView(Gtk.ColumnView):
         for name in fields.order:
             name = name.get_string()
             col = column.FieldColumn(name, self.fields.fields[name], item_widget, sortable)
-            col.get_factory().bound.connect('items-changed', self.bound_items_changed_cb, name)
+            col.get_factory().bound.connect('items-changed', misc.WeakMethodProxy(self.bound_items_changed_cb), name)
             self.columns_by_name[name] = col
             self.append_column(col)
 
         if hide_titles:
             self.get_first_child().set_visible(False)
-        self.columns.connect('items-changed', self.columns_changed_cb)
-        self.fields.order.connect('items-changed', self.fields_order_changed_cb)
+
+        self.columns_changed_proxy = misc.WeakMethodProxy(self.columns_changed_cb)
+        self.fields_order_changed_proxy = misc.WeakMethodProxy(self.fields_order_changed_cb)
+
+        self.columns.connect('items-changed', self.columns_changed_proxy)
+        self.fields.order.connect('items-changed', self.fields_order_changed_proxy)
 
         # self.set_search_equal_func(lambda store, col, key, i: not any(isinstance(value, str) and key.lower() in value.lower() for value in store.get_record(i).get_data().values()))
 
     def cleanup(self):
-        del self.item_widget
-        self.fields.order.disconnect_by_func(self.fields_order_changed_cb)
-        self.columns.disconnect_by_func(self.columns_changed_cb)
         del self.item_bind_hooks
-        for col in self.columns_by_name.values():
-            #############
-            col.get_factory().bound = None
-            col.field = None
-            #############
-            self.remove_column(col)
-        del self.columns_by_name
 
     def rebind_listitem(self, listitem, name):
         item = listitem.get_item()
-        child = listitem.child
-        cell = child.cell
-        cell.set_css_classes(cell.orig_css_classes)
+        widget = listitem.get_child()
+        widget.get_parent().set_css_classes([])
         for hook in self.item_bind_hooks:
-            hook(child, item, name)
+            hook(widget, item, name)
 
     def rebind_columns(self):
-        for col in self.columns_by_name.values():
+        for name, col in self.columns_by_name.items():
             for listitem in col.get_factory().bound:
-                self.rebind_listitem(listitem, col.name)
+                self.rebind_listitem(listitem, name)
 
     def bound_items_changed_cb(self, bound, position, removed, added, name):
         for listitem in bound[position:position + added]:
             self.rebind_listitem(listitem, name)
 
     def columns_changed_cb(self, columns, position, removed, added):
-        self.fields.order.handler_block_by_func(self.fields_order_changed_cb)
+        self.fields.order.handler_block_by_func(self.fields_order_changed_proxy)
         self.fields.order[position:position + removed] = [Gtk.StringObject.new(col.name) for col in columns[position:position + added]]
-        self.fields.order.handler_unblock_by_func(self.fields_order_changed_cb)
+        self.fields.order.handler_unblock_by_func(self.fields_order_changed_proxy)
 
     def fields_order_changed_cb(self, order, position, removed, added):
-        self.columns.handler_block_by_func(self.columns_changed_cb)
+        self.columns.handler_block_by_func(self.columns_changed_proxy)
         for col in list(self.columns[position:position + removed]):
             self.remove_column(col)
         for i in range(position, position + added):
             self.insert_column(i, self.columns_by_name[order[i].get_string()])
-        self.columns.handler_unblock_by_func(self.columns_changed_cb)
+        self.columns.handler_unblock_by_func(self.columns_changed_proxy)
 
 
 class FilterEntry(Gtk.Entry):
@@ -121,7 +114,7 @@ class View(Gtk.Box):
         self.filter_record = record.Record()
         self.filter_store = Gio.ListStore(item_type=record.Record)
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = RecordView(fields, lambda: FilterEntry(self.filter_entry_changed_cb), [FilterEntry.bind], hide_titles=True, model=self.filter_selection, show_column_separators=True)
+        self.filter_view = RecordView(fields, misc.WeakMethodProxy(self.filter_entry), [FilterEntry.bind], hide_titles=True, model=self.filter_selection, show_column_separators=True)
         self.filter_view.add_css_class('filter')
         self.filter_view.add_css_class('data-table')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
@@ -158,6 +151,9 @@ class View(Gtk.Box):
         # self.shortcut_controller.add_shortcut(shortcut)
 
         self.connect('notify::filtering', self.notify_filtering_cb)
+
+    def filter_entry(self):
+        return FilterEntry(self.filter_entry_changed_cb)
 
     def cleanup(self):
         self.filter_filter.set_filter_func(None)
