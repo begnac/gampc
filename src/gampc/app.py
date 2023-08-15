@@ -43,6 +43,7 @@ class App(Gtk.Application):
     def __init__(self):
         super().__init__(application_id=f'begnac.{__application__}', flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE | Gio.ApplicationFlags.ALLOW_REPLACEMENT)
 
+        self.add_main_option('component', ord('c'), GLib.OptionFlags.NONE, GLib.OptionArg.STRING, _("List application actions"), None)
         self.add_main_option('list-actions', 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("List application actions"), None)
         self.add_main_option('version', ord('V'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("Display version"), None)
         self.add_main_option('non-unique', ord('u'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("Do not start a unique instance"), None)
@@ -171,7 +172,9 @@ class App(Gtk.Application):
 
     def do_command_line(self, command_line):
         options = command_line.get_options_dict().end().unpack()
-        if GLib.OPTION_REMAINING in options:
+        if 'component' in options:
+            self.activate_action('component-start-new-window', GLib.Variant.new_string(options['component']))
+        elif GLib.OPTION_REMAINING in options:
             for option in options[GLib.OPTION_REMAINING]:
                 try:
                     success, name, target = Gio.Action.parse_detailed_name(option)
