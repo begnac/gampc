@@ -1,11 +1,12 @@
 [Desktop Entry]
-Name=Graphical Asynchronous Music Player Client
-Comment=A Python/Gtk3 client for MPD
-Comment[fr]=Un client Python/Gtk3 pour MPD
-Exec=/usr/bin/gampc
-Icon=face-cool-gampc
 Type=Application
+Name=Graphical Asynchronous Music Player Client
+Comment=A Python/Gtk4 client for MPD
+Comment[fr]=Un client Python/Gtk4 pour MPD
+Icon=face-cool-gampc
+DBusActivatable=true
+TryExec=/usr/bin/gampc
+Exec=/usr/bin/gampc
 Terminal=false
 Categories=AudioVideo;Audio;Network;Player;Music
 StartupWMClass=GAMPC
-DBusActivatable=true
