@@ -20,13 +20,6 @@
 
 from gi.repository import Gdk
 
-import weakref
-
-
-class AutoWeakMethod(weakref.WeakMethod):
-    def __call__(self, *args, **kwargs):
-        return super().__call__()(*args, **kwargs)
-
 
 def format_time(time):
     time = int(time)

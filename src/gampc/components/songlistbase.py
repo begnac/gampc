@@ -240,10 +240,10 @@ class SongListBase(component.Component):
     def setup_drag(self, editable):
         self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
         self.drag_source.set_icon(Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('face-cool', None, 48, 1, Gtk.TextDirection.NONE, 0), 5, 5)
-        self.drag_source.connect('prepare', misc.AutoWeakMethod(self.drag_prepare_cb))
-        self.drag_source.connect('drag-begin', misc.AutoWeakMethod(self.drag_begin_cb))
-        self.drag_source.connect('drag-cancel', misc.AutoWeakMethod(self.drag_cancel_cb))
-        self.drag_source.connect('drag-end', misc.AutoWeakMethod(self.drag_end_cb))
+        self.drag_source.connect('prepare', self.drag_prepare_cb)
+        self.drag_source.connect('drag-begin', self.drag_begin_cb)
+        self.drag_source.connect('drag-cancel', self.drag_cancel_cb)
+        self.drag_source.connect('drag-end', self.drag_end_cb)
         self.view.record_view_rows.add_controller(self.drag_source)
 
         self.drag_key_controller = Gtk.EventControllerKey()
@@ -253,6 +253,8 @@ class SongListBase(component.Component):
     def cleanup_drag(self):
         self.view.record_view_rows.remove_controller(self.drag_source)
         self.view.record_view_rows.remove_controller(self.drag_key_controller)
+        del self.drag_source
+        del self.drag_key_controller
 
     def drag_prepare_cb(self, source, x, y):
         source.records = self.view.get_selection_records()
@@ -287,9 +289,9 @@ class SongListBase(component.Component):
 
     def setup_drop(self):
         self.drop_target = Gtk.DropTarget.new(GLib.Variant, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
-        self.drop_target.connect('enter', misc.AutoWeakMethod(self.drop_action_cb))
-        self.drop_target.connect('motion', misc.AutoWeakMethod(self.drop_action_cb))
-        self.drop_target.connect('drop', misc.AutoWeakMethod(self.drop_cb))
+        self.drop_target.connect('enter', self.drop_action_cb)
+        self.drop_target.connect('motion', self.drop_action_cb)
+        self.drop_target.connect('drop', self.drop_cb)
         # self.drop_target.connect('notify::value', misc.AutoWeakMethod(self.drop_notify_value_cb))
         # self.drop_target.set_preload(True)
         self.view.record_view_rows.add_controller(self.drop_target)
@@ -302,6 +304,8 @@ class SongListBase(component.Component):
     def cleanup_drop(self):
         self.view.record_view_rows.remove_controller(self.drop_target)
         self.view.record_view_rows.remove_controller(self.drop_key_controller)
+        del self.drop_target
+        del self.drop_key_controller
 
     def drop_action_cb(self, target, x, y):
         row, x, y = misc.find_descendant_at_xy(target.get_widget(), x, y, 1)
