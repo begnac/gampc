@@ -43,8 +43,17 @@ class Store(Gio.ListStore):
         super().splice(position, n_removals, additions)
         self.emit('items-added', position, len(additions))
 
-    def set_records(self, records):
-        self[:] = map(Record, records)
+    def set_records(self, datalist):
+        i = 0
+        n = len(self)
+        for data in datalist:
+            if i < n:
+                self[i].set_data(data)
+                i += 1
+            else:
+                self.append(Record(data))
+        if i < n:
+            self[i:] = []
 
 
 class RecordView(Gtk.ColumnView):
@@ -127,32 +136,6 @@ class FilterEntry(Gtk.Entry):
         self.get_buffer().set_text(record[name] or '', -1)
 
 
-# class RowFactory(Gtk.SignalListItemFactory):
-#     def __init__(self):
-#         super().__init__()
-
-#         # self.connect('setup', self.setup_cb)
-#         self.connect('bind', self.bind_cb)
-#         # self.connect('unbind', self.unbind_cb)
-#         # self.connect('teardown', self.teardown_cb)
-
-#     # @staticmethod
-#     # def setup_cb(self, listitem):
-#     #     pass
-
-#     @staticmethod
-#     def bind_cb(self, listitem):
-#         listitem.get_item()._pos = listitem.get_position()
-
-#     # @staticmethod
-#     # def unbind_cb(self, listitem):
-#     #     pass
-
-#     # @staticmethod
-#     # def teardown_cb(self, listitem):
-#     #     pass
-
-
 class View(Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
@@ -173,7 +156,7 @@ class View(Gtk.Box):
         self.append(self.scrolled_filter_view)
 
         self.store_selection = Gtk.MultiSelection()
-        self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START), self.bind_hooks, sortable, model=self.store_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)  # , row_factory=RowFactory())
+        self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START), self.bind_hooks, sortable, model=self.store_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)
         self.record_view.add_css_class('records')
         self.record_view.add_css_class('data-table')
         self.record_view_rows = self.record_view.get_last_child()
@@ -202,17 +185,6 @@ class View(Gtk.Box):
         # self.shortcut_controller.add_shortcut(shortcut)
 
         self.connect('notify::filtering', self.notify_filtering_cb)
-        # self.connect('destroy', self.destroy_cb)
-
-        # self.set_search_equal_func(lambda store, col, key, i: not any(isinstance(value, str) and key.lower() in value.lower() for value in store.get_record(i).get_data().values()))
-
-        # if self.sortable:
-        #     store = self.get_model()
-        #     for i, name in enumerate(self.fields.order):
-        #         self.columns_by_name[name].set_sort_column_id(i)
-        #         store.set_sort_func(i, self.sort_func, name)
-
-        # self.connect('drag-data-get', self.drag_data_get_cb)
 
     def cleanup(self):
         self.filter_filter.set_filter_func(None)
@@ -250,15 +222,6 @@ class View(Gtk.Box):
                 return False
         return True
 
-    # @staticmethod
-    # def sort_func(store, i, j, name):
-    #     try:
-    #         v1 = getattr(store.get_record(i), name)
-    #         v2 = getattr(store.get_record(j), name)
-    #         return 0 if v1 == v2 else -1 if v1 is None or (v2 is not None and v1 < v2) else 1
-    #     except AttributeError:
-    #         return 0
-
     def _get_selection(self):
         return filter(lambda i: self.store_selection.is_selected(i), range(len(self.store_selection)))
 
@@ -267,32 +230,3 @@ class View(Gtk.Box):
 
     def get_selection_records(self):
         return list(map(lambda i: self.store_selection[i], self._get_selection()))
-
-    # def clipboard_paste(self, raw, before):
-    #     path, column = self.get_cursor()
-    #     try:
-    #         records = ast.literal_eval(raw)
-    #     except Exception:
-    #         return
-    #     if not (isinstance(records, list) and all(isinstance(record, dict) for record in records)):
-    #         return
-    #     self.paste_at(records, path, before)
-
-    # def paste_at(self, records, path, before):
-    #     selection = self.get_selection()
-    #     selection.unselect_all()
-    #     store = self.get_model()
-    #     i = store.get_iter(path) if path else None
-    #     if before:
-    #         i = store.iter_previous(i) if i else store.iter_nth_child(None, max(store.iter_n_children(None) - 1, 0))
-    #     cursor_set = False
-    #     for record in records:
-    #         j = store.insert_after(i)
-    #         store.set_row(j, record)
-    #         ref = Gtk.TreeRowReference.new(store, store.get_path(j))
-    #         store.emit('record-new', j)
-    #         i = store.get_iter(ref.get_path())
-    #         if not cursor_set:
-    #             cursor_set = True
-    #             self.set_cursor(store.get_path(i))
-    #         selection.select_iter(i)
