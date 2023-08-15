@@ -153,6 +153,7 @@ class FieldColumnFactory(Gtk.SignalListItemFactory):
         cell = listitem.child.cell = listitem.child.get_parent()
         cell.orig_css_classes = cell.get_css_classes()
         cell.record = listitem.get_item()
+        cell.record._pos = listitem.get_position()
         self.bound.append(listitem)
 
     @staticmethod
@@ -187,4 +188,4 @@ class FieldColumn(Gtk.ColumnViewColumn):
     def sort_func(record1, record2, name):
         s1 = record1[name] or ''
         s2 = record2[name] or ''
-        return 1 if s1 > s2 else -1 if s1 < s2 else 0
+        return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL

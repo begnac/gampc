@@ -116,7 +116,7 @@ class RecordView(Gtk.ColumnView):
         self.columns.handler_unblock_by_func(self.columns_changed_cb)
 
 
-class Entry(Gtk.Entry):
+class FilterEntry(Gtk.Entry):
     def __init__(self, changed_cb):
         super().__init__()
         self.connect('changed', changed_cb)
@@ -125,6 +125,32 @@ class Entry(Gtk.Entry):
     def bind(self, record, name):
         self.name = name
         self.get_buffer().set_text(record[name] or '', -1)
+
+
+# class RowFactory(Gtk.SignalListItemFactory):
+#     def __init__(self):
+#         super().__init__()
+
+#         # self.connect('setup', self.setup_cb)
+#         self.connect('bind', self.bind_cb)
+#         # self.connect('unbind', self.unbind_cb)
+#         # self.connect('teardown', self.teardown_cb)
+
+#     # @staticmethod
+#     # def setup_cb(self, listitem):
+#     #     pass
+
+#     @staticmethod
+#     def bind_cb(self, listitem):
+#         listitem.get_item()._pos = listitem.get_position()
+
+#     # @staticmethod
+#     # def unbind_cb(self, listitem):
+#     #     pass
+
+#     # @staticmethod
+#     # def teardown_cb(self, listitem):
+#     #     pass
 
 
 class View(Gtk.Box):
@@ -139,7 +165,7 @@ class View(Gtk.Box):
         self.filter_record = Record()
         self.filter_store = Gio.ListStore(item_type=Record)
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = RecordView(fields, lambda: Entry(self.filter_entry_changed_cb), [Entry.bind], hide_titles=True, model=self.filter_selection, show_column_separators=True)
+        self.filter_view = RecordView(fields, lambda: FilterEntry(self.filter_entry_changed_cb), [FilterEntry.bind], hide_titles=True, model=self.filter_selection, show_column_separators=True)
         self.filter_view.add_css_class('filter')
         self.filter_view.add_css_class('data-table')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
@@ -147,7 +173,7 @@ class View(Gtk.Box):
         self.append(self.scrolled_filter_view)
 
         self.store_selection = Gtk.MultiSelection()
-        self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START), self.bind_hooks, sortable, model=self.store_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)
+        self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START), self.bind_hooks, sortable, model=self.store_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)  # , row_factory=RowFactory())
         self.record_view.add_css_class('records')
         self.record_view.add_css_class('data-table')
         self.record_view_rows = self.record_view.get_last_child()

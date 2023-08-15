@@ -221,7 +221,7 @@ class SongListBase(component.Component):
     def paste_at_row(self, filenames, row, before):
         if row is None or not filenames.is_of_type(GLib.VariantType('as')):
             return
-        position = self.view.store.find(row.get_first_child().record)[1]
+        position = row.get_first_child().record._pos
         if not before:
             position += 1
         self.add_records(position, filenames.unpack())
