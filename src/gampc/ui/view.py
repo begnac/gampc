@@ -60,18 +60,12 @@ class RecordView(Gtk.ColumnView):
         self.columns.disconnect_by_func(self.columns_changed_cb)
         del self.item_bind_hooks
         for col in self.columns_by_name.values():
-            #############
-            col.get_factory().bound = None
-            col.field = None
-            #############
             self.remove_column(col)
         del self.columns_by_name
 
     def rebind_listitem(self, listitem, name):
         item = listitem.get_item()
         child = listitem.child
-        cell = child.cell
-        cell.set_css_classes(cell.orig_css_classes)
         for hook in self.item_bind_hooks:
             hook(child, item, name)
 

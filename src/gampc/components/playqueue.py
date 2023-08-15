@@ -88,10 +88,9 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
 
     def current_song_bind_hook(self, label, item, name):
         if self.unit.unit_server.ampd_server_properties.state != 'stop' and item.Id == self.unit.unit_server.ampd_server_properties.current_song.get('Id'):
-            label.cell.add_css_class('playing')
+            label.get_parent().add_css_class('playing')
         if name == 'FormattedTime' and item.Prio is not None:
-            label.cell.add_css_class('high-priority')
-        item._row = label.cell.get_parent()
+            label.get_parent().add_css_class('high-priority')
 
     @ampd.task
     async def action_priority_cb(self, action, parameter):
