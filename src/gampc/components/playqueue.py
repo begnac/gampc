@@ -91,6 +91,7 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
             label.cell.add_css_class('playing')
         if name == 'FormattedTime' and item.Prio is not None:
             label.cell.add_css_class('high-priority')
+        item._row = label.cell.get_parent()
 
     @ampd.task
     async def action_priority_cb(self, action, parameter):

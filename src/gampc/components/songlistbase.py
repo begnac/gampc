@@ -240,10 +240,10 @@ class SongListBase(component.Component):
     def setup_drag(self, editable):
         self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
         self.drag_source.set_icon(Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('face-cool', None, 48, 1, Gtk.TextDirection.NONE, 0), 5, 5)
-        self.drag_source.connect('prepare', misc.WeakMethodProxy(self.drag_prepare_cb))
-        self.drag_source.connect('drag-begin', misc.WeakMethodProxy(self.drag_begin_cb))
-        self.drag_source.connect('drag-cancel', misc.WeakMethodProxy(self.drag_cancel_cb))
-        self.drag_source.connect('drag-end', misc.WeakMethodProxy(self.drag_end_cb))
+        self.drag_source.connect('prepare', misc.AutoWeakMethod(self.drag_prepare_cb))
+        self.drag_source.connect('drag-begin', misc.AutoWeakMethod(self.drag_begin_cb))
+        self.drag_source.connect('drag-cancel', misc.AutoWeakMethod(self.drag_cancel_cb))
+        self.drag_source.connect('drag-end', misc.AutoWeakMethod(self.drag_end_cb))
         self.view.record_view_rows.add_controller(self.drag_source)
 
         self.drag_key_controller = Gtk.EventControllerKey()
@@ -287,10 +287,10 @@ class SongListBase(component.Component):
 
     def setup_drop(self):
         self.drop_target = Gtk.DropTarget.new(GLib.Variant, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
-        self.drop_target.connect('enter', misc.WeakMethodProxy(self.drop_action_cb))
-        self.drop_target.connect('motion', misc.WeakMethodProxy(self.drop_action_cb))
-        self.drop_target.connect('drop', misc.WeakMethodProxy(self.drop_cb))
-        # self.drop_target.connect('notify::value', misc.WeakMethodProxy(self.drop_notify_value_cb))
+        self.drop_target.connect('enter', misc.AutoWeakMethod(self.drop_action_cb))
+        self.drop_target.connect('motion', misc.AutoWeakMethod(self.drop_action_cb))
+        self.drop_target.connect('drop', misc.AutoWeakMethod(self.drop_cb))
+        # self.drop_target.connect('notify::value', misc.AutoWeakMethod(self.drop_notify_value_cb))
         # self.drop_target.set_preload(True)
         self.view.record_view_rows.add_controller(self.drop_target)
 

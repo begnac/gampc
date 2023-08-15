@@ -151,6 +151,7 @@ class FieldColumnFactory(Gtk.SignalListItemFactory):
     @staticmethod
     def bind_cb(self, listitem):
         cell = listitem.child.cell = listitem.child.get_parent()
+        cell.orig_css_classes = cell.get_css_classes()
         cell.record = listitem.get_item()
         cell.record._pos = listitem.get_position()
         self.bound.append(listitem)
@@ -168,6 +169,8 @@ class FieldColumnFactory(Gtk.SignalListItemFactory):
 class FieldColumn(Gtk.ColumnViewColumn):
     def __init__(self, name, field, widget, sortable):
         self.name = name
+        self.field = field
+        self.sortable = sortable
 
         super().__init__(factory=FieldColumnFactory(widget))
 

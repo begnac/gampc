@@ -23,11 +23,9 @@ from gi.repository import Gdk
 import weakref
 
 
-class WeakMethodProxy(weakref.WeakMethod):
+class AutoWeakMethod(weakref.WeakMethod):
     def __call__(self, *args, **kwargs):
-        method = super().__call__()
-        if method is not None:
-            return method(*args, **kwargs)
+        return super().__call__()(*args, **kwargs)
 
 
 def format_time(time):
