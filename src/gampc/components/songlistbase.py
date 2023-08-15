@@ -221,7 +221,7 @@ class SongListBase(component.Component):
     def paste_at_row(self, filenames, row, before):
         if row is None or not filenames.is_of_type(GLib.VariantType('as')):
             return
-        position = self.view.store.find(row.record)[1]
+        position = self.view.store.find(row.get_first_child().record)[1]
         if not before:
             position += 1
         self.add_records(position, filenames.unpack())
@@ -259,7 +259,7 @@ class SongListBase(component.Component):
         if not source.records:
             row, x, y = misc.find_descendant_at_xy(self.view.record_view_rows, x, y, 1)
             if row is not None:
-                source.records = [row.record]
+                source.records = [row.get_first_child().record]
             else:
                 return None
         source.set_content(self.content_from_records(source.records))
@@ -275,7 +275,6 @@ class SongListBase(component.Component):
         return False
 
     def drag_end_cb(self, source, drag, delete):
-        print(1555)
         if delete:
             self.remove_records(source.records)
         del source.records

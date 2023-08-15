@@ -19,6 +19,7 @@
 
 
 from gi.repository import GLib
+from gi.repository import Gtk
 
 import ampd
 
@@ -116,12 +117,13 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         Id = self.unit.unit_server.ampd_server_properties.current_song.get('Id')
         if Id is None:
             return
-        view_height = self.view.record_view_rows.get_allocation().height
         for position, record in enumerate(self.view.store_filter):
             if record.Id == Id:
-                self.view.scrolled_record_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
-                record._row.grab_focus()
+                self.view.record_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
                 return
+                # view_height = self.view.record_view_rows.get_allocation().height
+                # row_height = self.view.record_view_rows.get_allocation().height
+                # self.view.scrolled_record_view.get_vadjustment().set_value(how_height * (position + 0.5) - view_height / 2)
 
     def notify_current_song_cb(self, *args):
         self.widget.record_view.rebind_columns()

@@ -152,7 +152,7 @@ class FieldColumnFactory(Gtk.SignalListItemFactory):
     def bind_cb(self, listitem):
         cell = listitem.child.cell = listitem.child.get_parent()
         cell.orig_css_classes = cell.get_css_classes()
-        cell.get_parent().record = listitem.get_item()
+        cell.record = listitem.get_item()
         self.bound.append(listitem)
 
     @staticmethod
