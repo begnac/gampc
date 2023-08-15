@@ -24,36 +24,9 @@ from gi.repository import Gtk
 
 import re
 
-from ..util.record import Record
+from ..util import record
 
 from . import column
-
-
-class Store(Gio.ListStore):
-    __gsignals__ = {
-        'items-removed': (GObject.SIGNAL_ACTION, None, (int, int)),
-        'items-added': (GObject.SIGNAL_ACTION, None, (int, int)),
-    }
-
-    def __init__(self):
-        super().__init__(item_type=Record)
-
-    def splice(self, position, n_removals, additions):
-        self.emit('items-removed', position, n_removals)
-        super().splice(position, n_removals, additions)
-        self.emit('items-added', position, len(additions))
-
-    def set_records(self, datalist):
-        i = 0
-        n = len(self)
-        for data in datalist:
-            if i < n:
-                self[i].set_data(data)
-                i += 1
-            else:
-                self.append(Record(data))
-        if i < n:
-            self[i:] = []
 
 
 class RecordView(Gtk.ColumnView):
@@ -145,8 +118,8 @@ class View(Gtk.Box):
 
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
-        self.filter_record = Record()
-        self.filter_store = Gio.ListStore(item_type=Record)
+        self.filter_record = record.Record()
+        self.filter_store = Gio.ListStore(item_type=record.Record)
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
         self.filter_view = RecordView(fields, lambda: FilterEntry(self.filter_entry_changed_cb), [FilterEntry.bind], hide_titles=True, model=self.filter_selection, show_column_separators=True)
         self.filter_view.add_css_class('filter')
@@ -164,7 +137,7 @@ class View(Gtk.Box):
         self.scrolled_record_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_record_view)
 
-        self.store = Store()
+        self.store = record.RecordStore()
 
         self.filter_filter = Gtk.CustomFilter()
         self.filter_filter.set_filter_func(self.filter_func)
