@@ -242,7 +242,7 @@ class Current(component.Component):
     #             self.fading = None
 
     def set_size(self):
-        scale = 100.0
+        scale = 80.0
         song = self.unit.unit_server.current_song
         if song:
             scale += 3 * max(len(song.get('Artist', '')) - 20, len(song.get('Title', '')) - 20, 0)
