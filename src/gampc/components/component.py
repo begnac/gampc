@@ -134,15 +134,16 @@ class ComponentMixinPaned:
         self.left_treeview.set_search_equal_func(lambda store, col, key, i: key.lower() not in store.get_value(i, col).lower())
 
         self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config.pane_separator._get())
-        self.paned.connect('notify::position', self.paned_notify_position_cb)
+        self.paned.connect('notify::position', self.paned_notify_position_cb, self.config)
         self.paned.set_start_child(self.scrolled_left_treeview)
         self.paned.set_end_child(self.widget)
         self.widget = self.paned
 
         self.setup_context_menu(f'{self.name}.left-context', self.left_treeview)
 
-    def paned_notify_position_cb(self, *args):
-        self.config.pane_separator._set(self.paned.get_position())
+    @staticmethod
+    def paned_notify_position_cb(paned, param, config):
+        config.pane_separator._set(paned.get_position())
 
     def left_store_set_rows(self, rows):
         data.store_set_rows(self.left_store, rows, lambda i, name: self.left_store.set_value(i, 0, name))
