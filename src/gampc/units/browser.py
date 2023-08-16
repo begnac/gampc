@@ -67,6 +67,5 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
         else:
             contents = {DIRECTORY: [{DIRECTORY: _("Music")}]}
         folders = sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, []))
-        for folder in folders:
-            node.sub_nodes.append(treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic'))
+        node.sub_nodes = [treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic') for folder in folders]
         node.songs = contents.get('file', [])
