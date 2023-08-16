@@ -53,7 +53,7 @@ class SongListBase(component.Component):
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.widget = self.view = view.View(self.fields, not self.editable)
+        self.widget = self.view = view.View(self.fields, not self.editable, unit.unit_misc)
         self.view.record_view.add_css_class('songlistbase')
         self.focus_widget = self.view.record_view
 

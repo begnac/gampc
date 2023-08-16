@@ -27,6 +27,7 @@ import re
 from ..util import record
 
 from . import column
+from . import entry
 
 
 class RecordView(Gtk.ColumnView):
@@ -93,33 +94,13 @@ class RecordView(Gtk.ColumnView):
         self.columns.handler_unblock_by_func(self.columns_changed_cb)
 
 
-class FilterEntry(Gtk.Entry):
-    def __init__(self, record, filter_):
-        super().__init__()
-        self.connect('changed', self.changed_cb, record, filter_)
-
-    @staticmethod
-    def bind(self, record, name):
-        self.name = name
-        self.get_buffer().set_text(record[name] or '', -1)
-
-    @staticmethod
-    def changed_cb(self, record, filter_):
-        new = self.get_buffer().get_text()
-        if not new:
-            del record[self.name]
-            filter_.changed(Gtk.FilterChange.LESS_STRICT)
-        else:
-            record[self.name] = new
-            filter_.changed(Gtk.FilterChange.DIFFERENT)
-
-
 class View(Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, sortable):
+    def __init__(self, fields, sortable, unit_misc):
         self.bind_hooks = [self.bind_hook]
         self.sortable = sortable
+        self.unit_misc = unit_misc
 
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
@@ -129,7 +110,7 @@ class View(Gtk.Box):
         self.filter_record = record.Record()
         self.filter_store = Gio.ListStore(item_type=record.Record)
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = RecordView(fields, self.make_filter_entry, [FilterEntry.bind], hide_titles=True, model=self.filter_selection, show_column_separators=True)
+        self.filter_view = RecordView(fields, self.make_filter_entry, [self.filter_entry_bind], hide_titles=True, model=self.filter_selection, show_column_separators=True)
         self.filter_view.add_css_class('filter')
         self.filter_view.add_css_class('data-table')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
@@ -172,7 +153,24 @@ class View(Gtk.Box):
         del self.bind_hooks
 
     def make_filter_entry(self):
-        return FilterEntry(self.filter_record, self.filter_filter)
+        filter_entry = entry.Entry(unit_misc=self.unit_misc)
+        filter_entry.connect('changed', self.filter_entry_changed_cb, self.filter_record, self.filter_filter)
+        return filter_entry
+
+    @staticmethod
+    def filter_entry_bind(entry, record, name):
+        entry.name = name
+        entry.get_buffer().set_text(record[name] or '', -1)
+
+    @staticmethod
+    def filter_entry_changed_cb(entry, record, filter_):
+        new = entry.get_buffer().get_text()
+        if not new:
+            del record[entry.name]
+            filter_.changed(Gtk.FilterChange.LESS_STRICT)
+        else:
+            record[entry.name] = new
+            filter_.changed(Gtk.FilterChange.DIFFERENT)
 
     @staticmethod
     def make_record_label():
