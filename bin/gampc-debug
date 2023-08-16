@@ -114,7 +114,7 @@ class NaiveReferenceTreeTop(NaiveReferenceTree):
             if found:
                 self._referred.remove(o)
 
-    def add_objects(self, test, show=False):
+    def add_objects(self, test, showtest):
         for o in gc.get_objects():
             # if 'FieldColumn' in type(o).__name__:
             #     print(o)
@@ -128,11 +128,14 @@ class NaiveReferenceTreeTop(NaiveReferenceTree):
             #         else:
             #             print('===========', x)
             #         print()
+            if showtest(o):
+                print()
+                print('a', o)
+                for x in gc.get_referrers(o):
+                    print('b', x)
+                print()
             if test(o):
                 self.new_object(o)
-                if show:
-                    for x in gc.get_referrers(o):
-                        print(x)
 
 
 T = NaiveReferenceTreeTop()
@@ -140,13 +143,16 @@ T = NaiveReferenceTreeTop()
 
 def test(o):
     for prefix in ('gampc', 'ampd', 'gasyncio'):
-        if type(o).__module__.startswith(prefix) and type(o).__name__ not in ['Event', 'DictNamespace', 'Item', 'Menu', 'ClientState', 'NaiveReferenceTree', 'Record', 'FieldColumn', 'FieldColumnFactory'] and 'Property' not in type(o).__name__:
+        if type(o).__module__.startswith(prefix) and type(o).__name__ not in ['Event', 'DictNamespace', 'Item', 'Menu', 'ClientState', 'NaiveReferenceTree'] and 'StatusProperty' not in type(o).__name__:
             return True
     return False
 
 
+def showtest(o):
+    return False # 'View' == type(o).__name__
+
 # T.add_objects(lambda o: 'Window' == o.__class__.__name__)
-T.add_objects(test)
+T.add_objects(test, showtest)
 
 
 T.improve()
@@ -154,10 +160,10 @@ T.improve()
 T.improve()
 T.improve()
 T.improve()
-# T.improve()
-# T.improve()
-# T.improve()
-# T.improve()
+T.improve()
+T.improve()
+T.improve()
+T.improve()
 T.print()
 
 del T
