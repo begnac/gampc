@@ -26,7 +26,6 @@ import ampd
 from ..util import unit
 from ..util import dialog
 from ..util import resource
-from ..components import treelist
 from ..components import songlist
 from ..components import playlist
 

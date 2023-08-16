@@ -21,21 +21,19 @@
 from gi.repository import Gtk
 
 import os
-import asyncio
 
 import ampd
 
 from ..util import unit
-
-from ..components import treelist
+from ..ui import treelist
+from ..components import songlistbase
 from ..components import songlist
-from ..components import browser
 
 
 DIRECTORY = 'directory'
 
 
-class BrowserNode(treelist.Node):
+class BrowserNode(treelist.TreeNode):
     async def get_path_contents(self, path):
         if path:
             return await self.ampd.lsinfo('/'.join(path[1:]))
@@ -59,16 +57,20 @@ class BrowserNode(treelist.Node):
         self.updated = True
 
 
+class Browser(songlistbase.SongListBaseWithPane, songlist.SongList):
+    sortable = True
+
+
 class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
     title = _("Database Browser")
     key = '2'
 
-    COMPONENT_CLASS = browser.Browser
+    COMPONENT_CLASS = Browser
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.root = BrowserNode(ampd=self.ampd)
-        self.left_store = Gtk.TreeListModel.new(self.root.expand(), False, False, lambda node: node.expand())
+        self.left_store = Gtk.TreeListModel.new(self.root.expose(), False, False, lambda node: node.expose())
 
     def shutdown(self):
         super().shutdown()

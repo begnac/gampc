@@ -28,6 +28,7 @@ import ampd
 from ..util import misc
 from ..util import resource
 from ..ui import view
+from ..ui import treelist
 from . import component
 
 
@@ -125,11 +126,13 @@ class SongListBase(component.Component):
         #             renderer.set_property(p, self.STATUS_PROPERTY_TABLE[status][k])
 
     def set_records(self, records, set_fields=True):
+        records = list(records)
         if set_fields:
             self.records_set_fields(records)
         if self.duplicate_test_columns:
             self.find_duplicates(records, self.duplicate_test_columns)
         self.view.store.set_records(records)
+        self.view.record_view.rebind_columns()
 
     def records_set_fields(self, records):
         self.fields.records_set_fields(records)
@@ -406,6 +409,42 @@ class SongListBaseWithEditDelNew(SongListBaseWithEditDel, SongListBaseWithAdd):
         self.set_modified()
         store.get_record(i)._status = self.RECORD_NEW
         self.merge_new_del(i)
+
+
+class SongListBaseWithPane(component.ComponentMixinPaned, SongListBase):
+    def __init__(self, unit):
+        super().__init__(unit)
+        self.left_store = Gtk.MultiSelection(model=self.init_left_store())
+        self.left_view.set_model(self.left_store)
+
+        self.left_view.connect('activate', self.left_view_activate_cb)
+        self.left_store.connect('selection_changed', self.left_selection_changed_cb)
+        self.left_store.select_item(0, True)
+
+        self.focus_widget = self.left_view
+
+    def shutdown(self):
+        super().shutdown()
+        self.left_store.disconnect_by_func(self.left_selection_changed_cb)
+
+    def get_left_factory(self):
+        return treelist.TreeItemFactory()
+
+    def init_left_store(self):
+        return self.unit.left_store
+
+    def left_selection_changed_cb(self, selection, position, n_items):
+        songs = []
+        for i, row in enumerate(selection):
+            if selection.is_selected(i):
+                songs += row.get_item().songs
+        self.set_records(songs)
+
+    @staticmethod
+    def left_view_activate_cb(view, position):
+        row = view.get_model()[position]
+        if row.is_expandable():
+            row.set_expanded(not row.get_expanded())
 
 
 class UnitMixinSongListBase(component.UnitMixinComponent):

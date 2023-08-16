@@ -22,14 +22,8 @@ from gi.repository import GObject
 from gi.repository import Gio
 from gi.repository import Gtk
 
-import ampd
 
-# from ..util import data
-from . import component
-from . import songlist
-
-
-class Factory(Gtk.SignalListItemFactory):
+class TreeItemFactory(Gtk.SignalListItemFactory):
     def __init__(self):
         super().__init__()
 
@@ -66,9 +60,9 @@ class Factory(Gtk.SignalListItemFactory):
     #     self.labels.remove(listitem.label)
 
 
-class Node(GObject.Object):
-    STATE_UNEXPANDED = 0
-    STATE_EXPANDED = 1
+class TreeNode(GObject.Object):
+    STATE_UNEXPOSED = 0
+    STATE_EXPOSED = 1
     STATE_EMPTY = 2
 
     def __init__(self, name=None, path=None, **kwargs):
@@ -82,14 +76,14 @@ class Node(GObject.Object):
     def reset(self):
         self.modified = False
         self.updated = False
-        self.state = self.STATE_UNEXPANDED
+        self.state = self.STATE_UNEXPOSED
         self.sub_nodes = Gio.ListStore(item_type=type(self))
 
-    def expand(self):
+    def expose(self):
         if self.state == self.STATE_EMPTY:
             return None
-        elif self.state == self.STATE_UNEXPANDED:
-            self.state = self.STATE_EXPANDED
+        elif self.state == self.STATE_UNEXPOSED:
+            self.state = self.STATE_EXPOSED
             for node in self.sub_nodes:
                 node.update()
             self.sub_nodes.connect('items-changed', self.items_changed_cb)
@@ -125,34 +119,3 @@ class Node(GObject.Object):
 #         else:
 #             cell.set_property('text', node.name)
 #             cell.set_property('font', None)
-
-
-class TreeList(component.ComponentMixinPaned, songlist.SongList):
-    def __init__(self, unit):
-        super().__init__(unit)
-        self.left_store = Gtk.MultiSelection(model=self.init_left_store())
-        self.left_view.set_model(self.left_store)
-
-        self.left_view.connect('activate', self.left_view_activate_cb)
-        self.left_store.connect('selection_changed', self.left_selection_changed_cb)
-        self.left_store.select_item(0, True)
-
-    def shutdown(self):
-        super().shutdown()
-        self.left_store.disconnect_by_func(self.left_selection_changed_cb)
-
-    def get_left_factory(self):
-        return Factory()
-
-    def left_selection_changed_cb(self, selection, position, n_items):
-        songs = []
-        for i, row in enumerate(selection):
-            if selection.is_selected(i):
-                songs += row.get_item().songs
-        self.set_records(songs)
-
-    @staticmethod
-    def left_view_activate_cb(view, position):
-        row = view.get_model()[position]
-        if row.is_expandable():
-            row.set_expanded(not row.get_expanded())

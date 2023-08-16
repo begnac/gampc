@@ -21,8 +21,9 @@
 import ampd
 
 from ..util import resource
-from ..components import treelist
-from ..components import songlist
+
+from . import songlistbase
+from . import songlist
 
 
 NODE_FOLDER = 0
@@ -36,7 +37,7 @@ ICONS = {
 }
 
 
-class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, treelist.TreeList):
+class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, songlistbase.SongListBaseWithPane, songlist.SongList):
     duplicate_test_columns = ['file']
 
     left_title = _("Playlists")
