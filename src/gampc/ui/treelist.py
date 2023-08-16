@@ -38,7 +38,7 @@ class TreeItemFactory(Gtk.SignalListItemFactory):
     def setup_cb(self, listitem):
         listitem.icon = Gtk.Image()
         listitem.label = Gtk.Label()
-        box = Gtk.Box()
+        box = Gtk.Box(spacing=4)
         box.append(listitem.icon)
         box.append(listitem.label)
         listitem.expander = Gtk.TreeExpander(child=box)
@@ -50,7 +50,7 @@ class TreeItemFactory(Gtk.SignalListItemFactory):
         row = listitem.get_item()
         node = row.get_item()
         listitem.icon.set_from_icon_name(node.icon)
-        listitem.label.set_label(node.joined_path)
+        listitem.label.set_label(node.name)
         listitem.expander.set_list_row(row)
 
     # @staticmethod
