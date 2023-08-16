@@ -49,9 +49,6 @@ class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, son
         self.actions.add_action(resource.Action('delete', self.action_playlist_delete_cb))
         self.actions.add_action(resource.Action('update-from-queue', self.action_playlist_update_from_queue_cb))
 
-    def init_left_store(self):
-        return self.unit.left_store
-
     async def get_node_songs(self, node):
         if node.kind == NODE_FOLDER:
             return []

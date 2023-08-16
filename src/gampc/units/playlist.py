@@ -26,6 +26,7 @@ import ampd
 from ..util import unit
 from ..util import dialog
 from ..util import resource
+from ..ui import treelist
 from ..components import songlist
 from ..components import playlist
 
@@ -81,6 +82,10 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
+        self.root = treelist.TreeNode(kind=playlist.NODE_FOLDER)
+        self.left_store = Gtk.TreeListModel.new(self.root.model, False, False, lambda node: node.expose())
+        self.playlists = []
+
         self.add_resources(
             'app.menu',
             resource.MenuAction('edit/component', 'songlist.playlist-saveas(false)', _("Save as playlist")),
@@ -109,12 +114,19 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
             resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
         )
 
-        self.playlists = []
-        #self.left_store = treelist.TreeStore(self.fill_node, treelist.Node(kind=playlist.NODE_FOLDER))
-
     def shutdown(self):
         super().shutdown()
         # del self.left_store
+
+    @classmethod
+    async def fill_node(cls, node, executor, playlists):
+        if node.kind == playlist.NODE_PLAYLIST:
+            node.songs = await executor.listplaylistinfo(playlist.PSEUDO_SEPARATOR.join(node.path))
+        else:
+            folders, playlists = cls.get_pseudo_folder_contents(node.path, playlists)
+            node.sub_nodes = \
+                [treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER, songs=[]) for name in sorted(folders)] + \
+                [treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_PLAYLIST], kind=playlist.NODE_PLAYLIST, songs=[]) for name in sorted(playlists)]
 
     @staticmethod
     def get_pseudo_folder_contents(path, pseudo_names):
@@ -138,29 +150,22 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
 
         return folders, names
 
-    async def fill_node(self, node):
-        if node.kind == playlist.NODE_PLAYLIST:
-            return
-
-        folders, playlists = self.get_pseudo_folder_contents(node.path, self.playlists)
-        node.sub_nodes = \
-            [dict(name=name, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER) for name in sorted(folders)] + \
-            [dict(name=name, icon=playlist.ICONS[playlist.NODE_PLAYLIST], kind=playlist.NODE_PLAYLIST) for name in sorted(playlists)]
-        node.update_below = True
-
     @ampd.task
     async def client_connected_cb(self, client):
         try:
             while True:
                 self.playlists = sorted(map(lambda entry: entry['playlist'], await self.ampd.listplaylists()))
-                # await self.left_store.update()
+                self.root.update(self.fill_node, self.ampd, self.playlists)
+                self.root.expose()
                 await self.ampd.idle(ampd.STORED_PLAYLIST)
+                self.root.reset()
         finally:
-            self.server_playlists = []
+            self.playlists = []
 
-    def playlist_paths(self):
+    @staticmethod
+    def playlist_paths(playlists):
         last_path = []
-        for playlist_name in self.playlists:
+        for playlist_name in playlists:
             playlist_path = playlist_name.split(playlist.PSEUDO_SEPARATOR)
             common = min(len(last_path), len(playlist_path) - 1)
             for i in range(common):
