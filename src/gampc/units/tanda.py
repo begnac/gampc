@@ -609,7 +609,7 @@ class TandaDatabase(GObject.Object, db.Database):
                 self.update_song(song)
 
     def update_song(self, song):
-        self.connection.cursor().execute('UPDATE songs SET {} WHERE file=:file'.format(self._make_value_list(song.keys(), self.unit.unit_songlist.fields.basic_names, exclude='file')), song)
+        self.connection.cursor().execute('UPDATE songs SET {} WHERE file=:file'.format(self._make_value_list(self.unit.unit_songlist.fields.basic_names, list(song.keys()), exclude='file')), song)
 
     def replace_song(self, old_file, new_song):
         self.add_song(new_song)
@@ -657,8 +657,8 @@ class TandaDatabase(GObject.Object, db.Database):
 
     def update_tanda(self, tanda):
         with self.connection:
-            self.connection.cursor().execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(', '.join([name + '=:' + name for name in self.fields.basic_names if name != 'tandaid'])), tanda)
             tandaid = tanda['tandaid']
+            self.connection.cursor().execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(self._make_value_list(self.fields.basic_names, list(tanda.keys()), exclude='tandaid')), tanda)
             self.set_tanda_songs(tandaid, tanda['_songs'])
         self.emit('changed', tandaid)
 
@@ -693,8 +693,10 @@ class TandaDatabase(GObject.Object, db.Database):
         return tanda
 
     @staticmethod
-    def _make_value_list(names, *other_names, exclude=None, separator=', ', operator='='):
-        return separator.join(name + operator + ':' + name for name in names if name != exclude and all(name in other for other in other_names))
+    def _make_value_list(names, available_names, exclude=None):
+        operations = [f'{name}=:{name}' for name in names if name in available_names and name != exclude] \
+            + [f'{name}=NULL' for name in names if name not in available_names and name != exclude]
+        return ', '.join(operations)
 
     def action_tanda_define_cb(self, songlist, action, parameter):
         songs, rows = songlist.treeview.get_selection_rows()
@@ -702,7 +704,7 @@ class TandaDatabase(GObject.Object, db.Database):
         with self.connection:
             self.connection.cursor().execute('INSERT INTO tandas DEFAULT VALUES')
             tanda['tandaid'] = tandaid = self.connection.last_insert_rowid()
-            self.connection.cursor().execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(self._make_value_list(tanda.keys(), self.fields.basic_names)), tanda)
+            self.connection.cursor().execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(self._make_value_list(self.fields.basic_names, list(tanda.keys()), exclude='tandaid')), tanda)
             self.set_tanda_songs(tandaid, songs)
         self.emit('changed', tandaid)
 
