@@ -28,6 +28,7 @@ import types
 from ..util import resource
 from ..util import unit
 from ..util.logger import logger
+from ..ui import entry
 
 
 class Component(GObject.Object):
@@ -147,23 +148,13 @@ class ComponentMixinEntry:
     def __init__(self, unit):
         super().__init__(unit)
 
-        self.entry_focus = Gtk.EventControllerFocus()
-        self.entry_focus.connect('enter', self.entry_focus_cb, self.unit.unit_misc, True)
-        self.entry_focus.connect('leave', self.entry_focus_cb, self.unit.unit_misc, False)
-
-        self.entry = Gtk.Entry()
+        self.focus_widget = self.entry = entry.Entry(unit_misc=unit.unit_misc)
         self.signal_handler_connect(self.entry, 'activate', self.entry_activate_cb)
-        self.entry.add_controller(self.entry_focus)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.append(self.widget)
         box.append(self.entry)
         self.widget = box
-        self.focus_widget = self.entry
-
-    @staticmethod
-    def entry_focus_cb(controller, unit_misc, block):
-        unit_misc.block_fragile_accels = block
 
 
 class UnitMixinComponent(unit.UnitMixinConfig, unit.UnitMixinServer):

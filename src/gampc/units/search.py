@@ -36,10 +36,10 @@ class Search(component.ComponentMixinEntry, songlist.SongList):
     def __init__(self, unit):
         super().__init__(unit)
 
-        self.field_choice = Gtk.ComboBoxText()
-        self.field_choice.append_text(_("any field"))
-        for name in self.fields.names:
-            self.field_choice.append_text(name)
+        # self.field_choice = Gtk.ComboBoxText()
+        # self.field_choice.append_text(_("any field"))
+        # for name in self.fields.names:
+        #     self.field_choice.append_text(name)
 
         self.actions.add_action(resource.Action('search', self.action_search_cb))
 

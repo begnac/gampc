@@ -60,6 +60,7 @@ class RecordView(Gtk.ColumnView):
         self.columns.disconnect_by_func(self.columns_changed_cb)
         del self.item_bind_hooks
         for col in self.columns_by_name.values():
+            col.set_factory(None)  # ?????
             self.remove_column(col)
         del self.columns_by_name
 
@@ -93,14 +94,24 @@ class RecordView(Gtk.ColumnView):
 
 
 class FilterEntry(Gtk.Entry):
-    def __init__(self, changed_cb):
+    def __init__(self, record, filter_):
         super().__init__()
-        self.connect('changed', changed_cb)
+        self.connect('changed', self.changed_cb, record, filter_)
 
     @staticmethod
     def bind(self, record, name):
         self.name = name
         self.get_buffer().set_text(record[name] or '', -1)
+
+    @staticmethod
+    def changed_cb(self, record, filter_):
+        new = self.get_buffer().get_text()
+        if not new:
+            del record[self.name]
+            filter_.changed(Gtk.FilterChange.LESS_STRICT)
+        else:
+            record[self.name] = new
+            filter_.changed(Gtk.FilterChange.DIFFERENT)
 
 
 class View(Gtk.Box):
@@ -112,10 +123,13 @@ class View(Gtk.Box):
 
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
+        self.filter_filter = Gtk.CustomFilter()
+        self.filter_filter.set_filter_func(self.filter_func)
+
         self.filter_record = record.Record()
         self.filter_store = Gio.ListStore(item_type=record.Record)
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = RecordView(fields, lambda: FilterEntry(self.filter_entry_changed_cb), [FilterEntry.bind], hide_titles=True, model=self.filter_selection, show_column_separators=True)
+        self.filter_view = RecordView(fields, self.make_filter_entry, [FilterEntry.bind], hide_titles=True, model=self.filter_selection, show_column_separators=True)
         self.filter_view.add_css_class('filter')
         self.filter_view.add_css_class('data-table')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
@@ -123,7 +137,7 @@ class View(Gtk.Box):
         self.append(self.scrolled_filter_view)
 
         self.store_selection = Gtk.MultiSelection()
-        self.record_view = RecordView(fields, lambda: Gtk.Label(halign=Gtk.Align.START), self.bind_hooks, sortable, model=self.store_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)
+        self.record_view = RecordView(fields, self.make_record_label, self.bind_hooks, sortable, model=self.store_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)
         self.record_view.add_css_class('records')
         self.record_view.add_css_class('data-table')
         self.record_view_rows = self.record_view.get_last_child()
@@ -133,8 +147,6 @@ class View(Gtk.Box):
 
         self.store = record.RecordStore()
 
-        self.filter_filter = Gtk.CustomFilter()
-        self.filter_filter.set_filter_func(self.filter_func)
         self.store_filter = Gtk.FilterListModel(model=self.store, filter=self.filter_filter)
 
         if sortable:
@@ -159,6 +171,13 @@ class View(Gtk.Box):
         self.record_view.cleanup()
         del self.bind_hooks
 
+    def make_filter_entry(self):
+        return FilterEntry(self.filter_record, self.filter_filter)
+
+    @staticmethod
+    def make_record_label():
+        return Gtk.Label(halign=Gtk.Align.START)
+
     @staticmethod
     def bind_hook(label, item, name):
         label.set_label(item[name] or '')
@@ -171,15 +190,6 @@ class View(Gtk.Box):
         if not self.filtering and len(self.filter_store) == 1:
             self.filter_store.remove(0)
             self.filter_filter.changed(Gtk.FilterChange.LESS_STRICT)
-
-    def filter_entry_changed_cb(self, entry):
-        new = entry.get_buffer().get_text()
-        if not new:
-            del self.filter_record[entry.name]
-            self.filter_filter.changed(Gtk.FilterChange.LESS_STRICT)
-        else:
-            self.filter_record[entry.name] = new
-            self.filter_filter.changed(Gtk.FilterChange.DIFFERENT)
 
     def filter_func(self, record):
         if not self.filtering:
