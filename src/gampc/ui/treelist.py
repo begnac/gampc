@@ -84,15 +84,19 @@ class TreeNode(GObject.Object):
             return None
         elif self.state == self.STATE_UNEXPOSED:
             self.state = self.STATE_EXPOSED
-            for node in self.sub_nodes:
-                node.update()
-            self.sub_nodes.connect('items-changed', self.items_changed_cb)
+            for i, node in enumerate(self.sub_nodes):
+                node.update(self.update_cb, self.sub_nodes, i)
+            self.sub_nodes.connect('items-changed', self.items_changed_cb, self.update_cb)
         return self.sub_nodes
 
     @staticmethod
-    def items_changed_cb(model, p, r, a):
-        for node in model[p:p + a]:
-            node.update()
+    def update_cb(model, i):
+        model.items_changed(i, 1, 1)
+
+    @staticmethod
+    def items_changed_cb(model, p, r, a, cb):
+        for i in range(p, p + a):
+            model[i].update(cb, model, i)
 
 
 # class TreeListIconColumn(Gtk.TreeViewColumn):
