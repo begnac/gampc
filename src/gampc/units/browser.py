@@ -34,26 +34,17 @@ DIRECTORY = 'directory'
 
 
 class BrowserNode(treelist.TreeNode):
-    def update(self, cb=None, *cb_args):
-        if self.updated is False:
-            self.updated = self._update(cb, *cb_args)
-
     @ampd.task
-    async def _update(self, cb, *cb_args):
+    async def _update(self, model):
         if self.path:
             contents = await self.ampd.lsinfo('/'.join(self.path[1:]))
         else:
             contents = {DIRECTORY: [{DIRECTORY: _("Music")}]}
         folders = sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, []))
-        if not folders:
-            self.state = self.STATE_EMPTY
-        else:
-            for folder in folders:
-                self.sub_nodes.append(BrowserNode(name=folder, path=self.path, icon='folder-symbolic', ampd=self.ampd))
+        for folder in folders:
+            self.sub_nodes.append(BrowserNode(name=folder, path=self.path, icon='folder-symbolic', ampd=self.ampd))
         self.songs = contents.get('file', [])
-        self.updated = True
-        if cb is not None:
-            cb(*cb_args)
+        await super()._update(model)
 
 
 class Browser(songlistbase.SongListBaseWithPane, songlist.SongList):
