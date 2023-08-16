@@ -103,20 +103,25 @@ class Component(GObject.Object):
             widget.insert_action_group(prefix, None)
 
     def setup_context_menu(self, name, widget):
-        pass
-        # controller = Gtk.
-        # widget.connect('button-press-event', self.context_menu_button_press_event_cb, name)
+        controller = Gtk.GestureClick(button=3)
+        controller.connect('pressed', self.context_menu_pressed_cb, name)
+        widget.add_controller(controller)
+        # for signal in ('pressed', 'released', 'stopped', 'unpaired-release', 'begin', 'cancel', 'end', 'sequence-state-changed', 'update'):
+        #     controller.connect(signal, lambda *args: print(args[-1], args[:-1]), signal)
 
-    def context_menu_button_press_event_cb(self, widget, event, name):
-        if event.type != Gdk.EventType.BUTTON_PRESS or event.button != 3 or name not in self.unit.menu_aggregators:
-            return False
-        model = self.unit.menu_aggregators[name].menu
-        if model.get_n_items() == 0:
-            return False
-        menu = Gtk.Menu.new_from_model(model)
-        self.insert_action_groups(menu)
-        menu.popup_at_pointer(event)
-        return True
+    def context_menu_pressed_cb(self, controller, n_press, x, y, name):
+        if name not in self.unit.menu_aggregators:
+            return
+        menu_model = self.unit.menu_aggregators[name].menu
+        if menu_model.get_n_items() == 0:
+            return
+        rectangle = Gdk.Rectangle()
+        rectangle.x = x
+        rectangle.y = y
+        popup = Gtk.PopoverMenu(menu_model=menu_model, pointing_to=rectangle)
+        self.insert_action_groups(popup)
+        popup.set_parent(controller.get_widget())
+        popup.popup()
 
     @staticmethod
     def client_connected_cb(client):
@@ -137,7 +142,7 @@ class ComponentMixinPaned:
         self.paned.set_end_child(self.widget)
         self.widget = self.paned
 
-        # self.setup_context_menu(f'{self.name}.left-context', self.left_treeview)
+        self.setup_context_menu(f'{self.name}.left-context', self.left_view)
 
     @staticmethod
     def paned_notify_position_cb(paned, param, config):

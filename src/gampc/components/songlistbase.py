@@ -73,7 +73,7 @@ class SongListBase(component.Component):
 
         self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
 
-        # self.setup_context_menu(f'{self.name}.context', self.view)
+        self.setup_context_menu(f'{self.name}.context', self.view)
         self.view.record_view.connect('activate', self.view_activate_cb)
 
         self.view.bind_hooks.append(self.duplicate_bind_hook)
