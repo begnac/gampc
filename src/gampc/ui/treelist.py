@@ -87,22 +87,26 @@ class TreeNode(GObject.Object):
             return None
         elif self.state == self.STATE_UNEXPOSED:
             self.state = self.STATE_EXPOSED
+            assert self.updated is not False
             if self.updated is True:
                 for node in self.sub_nodes:
-                    node.update(self.model)
+                    node.update(*self.filler, model=self.model)
         return self.model
 
-    def update(self, model=None):
+    def update(self, *filler, model=None):
+        self.filler = filler
         if self.updated is False:
             self.updated = asyncio.ensure_future(self._update(model))
 
     async def _update(self, model):
+        filler, *args = self.filler
+        await filler(self, *args)
         self.updated = True
         if not self.sub_nodes:
             self.state = self.STATE_EMPTY
         elif self.state == self.STATE_EXPOSED:
             for node in self.sub_nodes:
-                node.update(self.model)
+                node.update(*self.filler, model=self.model)
         if model is not None:
             model.append(self)
 

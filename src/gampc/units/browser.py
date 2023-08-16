@@ -33,20 +33,6 @@ from ..components import songlist
 DIRECTORY = 'directory'
 
 
-class BrowserNode(treelist.TreeNode):
-    @ampd.task
-    async def _update(self, model):
-        if self.path:
-            contents = await self.ampd.lsinfo('/'.join(self.path[1:]))
-        else:
-            contents = {DIRECTORY: [{DIRECTORY: _("Music")}]}
-        folders = sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, []))
-        for folder in folders:
-            self.sub_nodes.append(BrowserNode(name=folder, path=self.path, icon='folder-symbolic', ampd=self.ampd))
-        self.songs = contents.get('file', [])
-        await super()._update(model)
-
-
 class Browser(songlistbase.SongListBaseWithPane, songlist.SongList):
     sortable = True
 
@@ -59,8 +45,8 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.root = BrowserNode(ampd=self.ampd)
-        self.left_store = Gtk.TreeListModel.new(self.root.expose(), False, False, lambda node: node.expose())
+        self.root = treelist.TreeNode()
+        self.left_store = Gtk.TreeListModel.new(self.root.model, False, False, lambda node: node.expose())
 
     def shutdown(self):
         super().shutdown()
@@ -69,6 +55,18 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
     @ampd.task
     async def client_connected_cb(self, client):
         while True:
-            self.root.update()
+            self.root.update(self.fill_node, self.ampd)
+            self.root.expose()
             await self.ampd.idle(ampd.DATABASE)
             self.root.reset()
+
+    @staticmethod
+    async def fill_node(node, executor):
+        if node.path:
+            contents = await executor.lsinfo('/'.join(node.path[1:]))
+        else:
+            contents = {DIRECTORY: [{DIRECTORY: _("Music")}]}
+        folders = sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, []))
+        for folder in folders:
+            node.sub_nodes.append(treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic'))
+        node.songs = contents.get('file', [])
