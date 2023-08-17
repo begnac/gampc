@@ -204,3 +204,9 @@ class View(Gtk.Box):
 
     def get_selection_records(self):
         return list(map(lambda i: self.store_selection[i], self._get_selection()))
+
+    def get_filenames(self, selection):
+        if selection:
+            return list(map(lambda i: self.store_selection[i].file, self._get_selection()))
+        else:
+            return list(map(lambda record: record.file, self.store_selection))

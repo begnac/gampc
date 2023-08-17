@@ -105,14 +105,6 @@ class SongListBase(component.Component):
             record_id = await self.ampd.addid(filename)
         await self.ampd.playid(record_id)
 
-    def get_filenames(self, selection=True):
-        if selection:
-            store, paths = self.view.get_selection().get_selected_rows()
-            rows = (store.get_record(store.get_iter(p)) for p in paths)
-        else:
-            rows = (self.widget.store.get_record(self.widget.store.iter_nth_child(None, i)) for i in range(self.widget.store.iter_n_children()))
-        return (row.file for row in rows if row)
-
     def duplicate_bind_hook(self, label, item, name):
         label.get_parent().set_css_classes([])
         duplicate = item[self.duplicate_field]

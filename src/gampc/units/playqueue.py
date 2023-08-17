@@ -30,7 +30,7 @@ from ..components import playqueue
 
 @ampd.task
 async def action_playqueue_add_replace_cb(songlist_, action, parameter):
-    filenames = songlist_.get_filenames(parameter.get_boolean())
+    filenames = songlist_.view.get_filenames(parameter.get_boolean())
     replace = '-replace' in action.get_name()
     if replace:
         await songlist_.ampd.clear()
@@ -41,7 +41,7 @@ async def action_playqueue_add_replace_cb(songlist_, action, parameter):
 
 @ampd.task
 async def action_playqueue_add_high_priority_cb(songlist_, action, parameter):
-    filenames = songlist_.get_filenames(parameter.get_boolean())
+    filenames = songlist_.view.get_filenames(parameter.get_boolean())
     queue = {song['file']: song for song in await songlist_.ampd.playlistinfo()}
     Ids = []
     for filename in filenames:
