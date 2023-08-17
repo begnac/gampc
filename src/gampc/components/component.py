@@ -104,7 +104,7 @@ class Component(GObject.Object):
 
     def setup_context_menu(self, name, widget):
         controller = Gtk.GestureClick(button=3)
-        controller.connect('pressed', self.context_menu_pressed_cb, name)
+        self.signal_handler_connect(controller, 'pressed', self.context_menu_pressed_cb, name)
         widget.add_controller(controller)
         # for signal in ('pressed', 'released', 'stopped', 'unpaired-release', 'begin', 'cancel', 'end', 'sequence-state-changed', 'update'):
         #     controller.connect(signal, lambda *args: print(args[-1], args[:-1]), signal)
