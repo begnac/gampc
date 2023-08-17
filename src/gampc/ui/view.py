@@ -61,8 +61,7 @@ class RecordView(Gtk.ColumnView):
         self.columns.disconnect_by_func(self.columns_changed_cb)
         del self.item_bind_hooks
         for col in self.columns_by_name.values():
-            col.set_factory(None)  # ?????
-            self.remove_column(col)
+            col.set_factory(None)
         del self.columns_by_name
 
     def rebind_listitem(self, listitem, name):
