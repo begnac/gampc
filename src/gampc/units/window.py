@@ -19,7 +19,6 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gdk
 from gi.repository import Gtk
 
 from ..util import resource
@@ -28,10 +27,10 @@ from ..util.logger import logger
 from ..ui import headerbar
 from ..ui import logging
 
+from .. import __application__
+
 
 class Window(Gtk.ApplicationWindow):
-    DEFAULT_TITLE = 'GAMPC'
-
     def __init__(self, app, unit):
         super().__init__(application=app, show_menubar=True)
         self.unit = unit
@@ -136,7 +135,7 @@ class Window(Gtk.ApplicationWindow):
         elif self.unit.unit_server.ampd_server_properties.state == 'pause':
             window_title = _("{artist} / {title} (paused)")
         else:
-            window_title = self.DEFAULT_TITLE
+            window_title = __application__.upper()
         artist = self.unit.unit_server.current_song.get('Artist', _("Unknown Artist"))
         title = self.unit.unit_server.current_song.get('Title', _("Unknown Title"))
         self.headerbar.set_title(window_title.format(artist=artist, title=title))

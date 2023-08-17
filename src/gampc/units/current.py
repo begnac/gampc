@@ -80,7 +80,7 @@ class Welcome(Gtk.Box):
         self.icon = Gtk.Image(icon_name='face-cool-gampc')
         self.bind_property('size', self.icon, 'pixel-size', GObject.BindingFlags(0), lambda x, y: y * 5)
 
-        self.label = Gtk.Label(label="GAMPC [Gtk4]")
+        self.label = Gtk.Label(label=__application__.upper())
         self.label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans Bold", 0 -1 scale 5'))
 
         self.append(Gtk.Label(hexpand=True))
