@@ -77,9 +77,7 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         self.set_cursor = True
         # self.TEST()
         while True:
-            # self.view.store.handler_block_by_func(self.records_changed_cb)
             self.set_records(await self.ampd.playlistinfo())
-            # self.view.store.handler_unblock_by_func(self.records_changed_cb)
             self.widget.record_view.rebind_columns()
             if self.set_cursor:
                 # self.widget.record_view.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
@@ -127,13 +125,6 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
     def notify_current_song_cb(self, *args):
         self.widget.record_view.rebind_columns()
 
-    # @ampd.task
-    # async def records_changed_cb(self, store, position, removed, added):
-    #     return
-    #     await self.delete(f'{position}:{position + removed}')
-    #     for i in range(position, position + added):
-    #         await self.ampd.add(store[i].file, i)
-
     @ampd.task
     async def remove_records(self, records):
         await self.ampd.command_list(self.ampd.deleteid(record.Id) for record in records)
@@ -141,24 +132,6 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
     @ampd.task
     async def add_records(self, position, filenames):
         await self.ampd.command_list(self.ampd.add(filename, position + i) for i, filename in enumerate(filenames))
-
-    # @ampd.task
-    # async def records_added_cb(self, store, position, added):
-    #     for i in range(position, position + added):
-    #         await self.ampd.addid(store[i].file, i)
-
-    # @ampd.task
-    # async def records_removed_cb(self, store, position, removed):
-    #     for i in range(position, position + removed):
-    #         song_id = store[i].Id
-    #         for j in range(len(store)):
-    #             if i != j and store[j].Id == song_id:
-    #                 ampd.task(self.ampd.command_list)((self.ampd.swap(i, j), self.ampd.delete(j)))
-    #                 store.remove(i)
-    #                 return
-    #         if not (self.unit.unit_persistent.protect_active and self.unit.unit_server.ampd_server_properties.current_song.get('pos') == song_id):
-    #             ampd.task(self.ampd.deleteid)(song_id)
-    #             store.remove(i)
 
     @ampd.task
     async def view_activate_cb(self, view, position):
