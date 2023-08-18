@@ -27,6 +27,7 @@ import types
 
 from ..util import resource
 from ..util import unit
+from ..util import misc
 from ..util.logger import logger
 from ..ui import entry
 
@@ -115,13 +116,9 @@ class Component(GObject.Object):
         menu_model = self.unit.menu_aggregators[name].menu
         if menu_model.get_n_items() == 0:
             return
-        rectangle = Gdk.Rectangle()
-        rectangle.x = x
-        rectangle.y = y
-        popup = Gtk.PopoverMenu(menu_model=menu_model, pointing_to=rectangle)
-        self.insert_action_groups(popup)
-        popup.set_parent(controller.get_widget())
-        popup.popup()
+        menu = Gtk.PopoverMenu(menu_model=menu_model, has_arrow=False, pointing_to=misc.Rectangle(x, y), halign=Gtk.Align.START)
+        menu.set_parent(controller.get_widget())
+        menu.popup()
 
     @staticmethod
     def client_connected_cb(client):

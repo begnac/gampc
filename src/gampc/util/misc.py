@@ -21,6 +21,14 @@
 from gi.repository import Gdk
 
 
+class Rectangle(Gdk.Rectangle):
+    def __init__(self, x, y, width=0, height=0):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+
 def format_time(time):
     time = int(time)
     hours = time // 3600
