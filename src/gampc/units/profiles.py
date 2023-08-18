@@ -101,7 +101,7 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
 
     def shutdown(self):
         super().shutdown()
-        asyncio.get_event_loop().run_without_glib_until_complete(self.zeroconf_profiles_cleanup())
+        asyncio.get_event_loop().run_until_complete(self.zeroconf_profiles_cleanup())
 
     def zeroconf_profiles_setup(self):
         self.zc_menu_actions = {}

@@ -99,7 +99,7 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
         if self.current_song_hooks:
             raise RuntimeError
         self.want_to_connect = False
-        asyncio.get_event_loop().run_without_glib_until_complete(self.ampd_client.close())
+        asyncio.get_event_loop().run_until_complete(self.ampd_client.close())
         self.disconnect_by_func(self.notify_server_profile_cb)
         self.ampd_client.disconnect_by_func(self.client_disconnected_cb)
         self.ampd_client.disconnect_by_func(self.client_connected_cb)
