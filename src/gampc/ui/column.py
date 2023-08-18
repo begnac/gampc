@@ -160,7 +160,7 @@ class FieldColumnFactory(Gtk.SignalListItemFactory):
 
     # @staticmethod
     # def teardown_cb(self, listitem):
-    #     self.labels.remove(listitem.label)
+    #     pass
 
 
 class FieldColumn(Gtk.ColumnViewColumn):

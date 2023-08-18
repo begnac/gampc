@@ -61,15 +61,14 @@ class SongListBase(component.Component):
         self.songlistbase_actions.add_action(resource.Action('reset', self.action_reset_cb))
         self.songlistbase_actions.add_action(resource.Action('copy', self.action_copy_delete_cb))
 
-        self.setup_drag(self.editable)
+        # self.setup_drag(self.editable)
 
         if self.editable:
             self.songlistbase_actions.add_action(resource.Action('paste', self.action_paste_cb))
             self.songlistbase_actions.add_action(resource.Action('paste-before', self.action_paste_cb))
             self.songlistbase_actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
             self.songlistbase_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
-            # self.signal_handler_connect(self.widget.store, 'items-changed', self.records_changed_cb)
-            self.setup_drop()
+            # self.setup_drop()
 
         self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
 
@@ -79,9 +78,9 @@ class SongListBase(component.Component):
         self.view.bind_hooks.append(self.duplicate_bind_hook)
 
     def shutdown(self):
-        self.cleanup_drag()
-        if self.editable:
-            self.cleanup_drop()
+        # self.cleanup_drag()
+        # if self.editable:
+        #     self.cleanup_drop()
         del self.songlistbase_actions
         self.view.record_view.disconnect_by_func(self.view_activate_cb)
         self.view.cleanup()
@@ -155,34 +154,6 @@ class SongListBase(component.Component):
 
     records_added_cb = records_removed_cb = NotImplemented
 
-    # @staticmethod
-    # def drag_data_get_cb(self, context, data, info, time):
-    #     data.set(data.get_target(), 8, context.data)
-
-    # def do_drag_data_delete(self, context):
-    #     self.get_model().delete_refs(context.drag_refs)
-    #     context.drag_refs = []
-
-    # def do_drag_data_received(self, context, x, y, data, info, time):
-    #     path, pos = self.get_dest_row_at_pos(x, y)
-    #     records = ast.literal_eval(data.get_data().decode())
-    #     self.paste_at(records, path, pos in [Gtk.TreeViewDropPosition.BEFORE, Gtk.TreeViewDropPosition.INTO_OR_BEFORE])
-
-    # def do_drag_end(self, context):
-    #     del context.drag_refs
-
-    # def do_drag_motion(self, context, x, y, time):
-    #     dest = self.get_dest_row_at_pos(x, y)
-    #     if dest is None:
-    #         return False
-    #     self.set_drag_dest_row(*dest)
-    #     if context.get_actions() & Gdk.DragAction.MOVE and not get_modifier_state() & Gdk.ModifierType.CONTROL_MASK:
-    #         action = Gdk.DragAction.MOVE
-    #     else:
-    #         action = Gdk.DragAction.COPY
-    #     Gdk.drag_status(context, action, time)
-    #     return True
-
     # def drag_begin_cb(self, source, drag):
     #     positions = self.get_selection()
     #     if not positions:
@@ -232,114 +203,114 @@ class SongListBase(component.Component):
             return
         self.paste_at_row(result, self.view.record_view_rows.get_focus_child(), before)
 
-    def setup_drag(self, editable):
-        self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
-        self.drag_source.set_icon(Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('face-cool', None, 48, 1, Gtk.TextDirection.NONE, 0), 5, 5)
-        self.drag_source.connect('prepare', self.drag_prepare_cb)
-        self.drag_source.connect('drag-begin', self.drag_begin_cb)
-        self.drag_source.connect('drag-cancel', self.drag_cancel_cb)
-        self.drag_source.connect('drag-end', self.drag_end_cb)
-        self.view.record_view_rows.add_controller(self.drag_source)
+    # def setup_drag(self, editable):
+    #     self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
+    #     self.drag_source.set_icon(Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('face-cool', None, 48, 1, Gtk.TextDirection.NONE, 0), 5, 5)
+    #     self.drag_source.connect('prepare', self.drag_prepare_cb)
+    #     self.drag_source.connect('drag-begin', self.drag_begin_cb)
+    #     self.drag_source.connect('drag-cancel', self.drag_cancel_cb)
+    #     self.drag_source.connect('drag-end', self.drag_end_cb)
+    #     self.view.record_view_rows.add_controller(self.drag_source)
 
-        self.drag_key_controller = Gtk.EventControllerKey()
-        self.drag_key_controller.connect('key-pressed', self.drag_key_pressed_cb, self.drag_source)
-        self.view.record_view_rows.add_controller(self.drag_key_controller)
+    #     self.drag_key_controller = Gtk.EventControllerKey()
+    #     self.drag_key_controller.connect('key-pressed', self.drag_key_pressed_cb, self.drag_source)
+    #     self.view.record_view_rows.add_controller(self.drag_key_controller)
 
-    def cleanup_drag(self):
-        self.view.record_view_rows.remove_controller(self.drag_source)
-        self.view.record_view_rows.remove_controller(self.drag_key_controller)
-        del self.drag_source
-        del self.drag_key_controller
+    # def cleanup_drag(self):
+    #     self.view.record_view_rows.remove_controller(self.drag_source)
+    #     self.view.record_view_rows.remove_controller(self.drag_key_controller)
+    #     del self.drag_source
+    #     del self.drag_key_controller
 
-    def drag_prepare_cb(self, source, x, y):
-        source.records = self.view.get_selection_records()
-        if not source.records:
-            row, x, y = misc.find_descendant_at_xy(self.view.record_view_rows, x, y, 1)
-            if row is not None:
-                source.records = [self.view.store_selection[row.get_first_child()._pos]]
-            else:
-                return None
-        source.set_content(self.content_from_records(source.records))
-        return self.content_from_records(source.records)
+    # def drag_prepare_cb(self, source, x, y):
+    #     source.records = self.view.get_selection_records()
+    #     if not source.records:
+    #         row, x, y = misc.find_descendant_at_xy(self.view.record_view_rows, x, y, 1)
+    #         if row is not None:
+    #             source.records = [self.view.store_selection[row.get_first_child()._pos]]
+    #         else:
+    #             return None
+    #     source.set_content(self.content_from_records(source.records))
+    #     return self.content_from_records(source.records)
 
-    def drag_begin_cb(self, source, drag):
-        pass
+    # def drag_begin_cb(self, source, drag):
+    #     pass
 
-    def drag_cancel_cb(self, source, drag, reason):
-        print(2, source.get_content(), drag, reason)
-        source.set_content(None)
-        drag.drop_done(False)
-        return False
+    # def drag_cancel_cb(self, source, drag, reason):
+    #     print(2, source.get_content(), drag, reason)
+    #     source.set_content(None)
+    #     drag.drop_done(False)
+    #     return False
 
-    def drag_end_cb(self, source, drag, delete):
-        if delete:
-            self.remove_records(source.records)
-        del source.records
+    # def drag_end_cb(self, source, drag, delete):
+    #     if delete:
+    #         self.remove_records(source.records)
+    #     del source.records
 
-    @staticmethod
-    def drag_key_pressed_cb(controller, keyval, keycode, modifiers, source):
-        if keyval == Gdk.KEY_Escape:
-            source.drag_cancel()
-        return False
+    # @staticmethod
+    # def drag_key_pressed_cb(controller, keyval, keycode, modifiers, source):
+    #     if keyval == Gdk.KEY_Escape:
+    #         source.drag_cancel()
+    #     return False
 
-    def setup_drop(self):
-        self.drop_target = Gtk.DropTarget.new(GLib.Variant, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
-        self.drop_target.connect('enter', self.drop_action_cb)
-        self.drop_target.connect('motion', self.drop_action_cb)
-        self.drop_target.connect('drop', self.drop_cb)
-        # self.drop_target.connect('notify::value', misc.AutoWeakMethod(self.drop_notify_value_cb))
-        # self.drop_target.set_preload(True)
-        self.view.record_view_rows.add_controller(self.drop_target)
+    # def setup_drop(self):
+    #     self.drop_target = Gtk.DropTarget.new(GLib.Variant, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
+    #     self.drop_target.connect('enter', self.drop_action_cb)
+    #     self.drop_target.connect('motion', self.drop_action_cb)
+    #     self.drop_target.connect('drop', self.drop_cb)
+    #     # self.drop_target.connect('notify::value', misc.AutoWeakMethod(self.drop_notify_value_cb))
+    #     # self.drop_target.set_preload(True)
+    #     self.view.record_view_rows.add_controller(self.drop_target)
 
-        self.drop_key_controller = Gtk.EventControllerKey()
-        self.drop_key_controller.connect('key-pressed', self.drop_key_pressed_cb, self.drop_target)
-        self.drop_key_controller.connect('modifiers', self.drop_modifiers_cb, self.drop_target)
-        self.view.record_view_rows.add_controller(self.drop_key_controller)
+    #     self.drop_key_controller = Gtk.EventControllerKey()
+    #     self.drop_key_controller.connect('key-pressed', self.drop_key_pressed_cb, self.drop_target)
+    #     self.drop_key_controller.connect('modifiers', self.drop_modifiers_cb, self.drop_target)
+    #     self.view.record_view_rows.add_controller(self.drop_key_controller)
 
-    def cleanup_drop(self):
-        self.view.record_view_rows.remove_controller(self.drop_target)
-        self.view.record_view_rows.remove_controller(self.drop_key_controller)
-        del self.drop_target
-        del self.drop_key_controller
+    # def cleanup_drop(self):
+    #     self.view.record_view_rows.remove_controller(self.drop_target)
+    #     self.view.record_view_rows.remove_controller(self.drop_key_controller)
+    #     del self.drop_target
+    #     del self.drop_key_controller
 
-    def drop_action_cb(self, target, x, y):
-        row, x, y = misc.find_descendant_at_xy(target.get_widget(), x, y, 1)
-        if row is None:
-            return 0
-        if target.get_value() is not None and not target.get_value().is_of_type(GLib.VariantType('as')):
-            return 0
-        if target.get_actions() & Gdk.DragAction.MOVE and misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
-            return Gdk.DragAction.MOVE
-        else:
-            return Gdk.DragAction.COPY
+    # def drop_action_cb(self, target, x, y):
+    #     row, x, y = misc.find_descendant_at_xy(target.get_widget(), x, y, 1)
+    #     if row is None:
+    #         return 0
+    #     if target.get_value() is not None and not target.get_value().is_of_type(GLib.VariantType('as')):
+    #         return 0
+    #     if target.get_actions() & Gdk.DragAction.MOVE and misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
+    #         return Gdk.DragAction.MOVE
+    #     else:
+    #         return Gdk.DragAction.COPY
 
-    def drop_cb(self, target, value, x, y):
-        row, x, y = misc.find_descendant_at_xy(self.view.record_view_rows, x, y, 1)
-        if row is not None:
-            if y < row.get_allocation().height / 2:
-                before = True
-            else:
-                before = False
-            self.paste_at_row(value, row, before)
+    # def drop_cb(self, target, value, x, y):
+    #     row, x, y = misc.find_descendant_at_xy(self.view.record_view_rows, x, y, 1)
+    #     if row is not None:
+    #         if y < row.get_allocation().height / 2:
+    #             before = True
+    #         else:
+    #             before = False
+    #         self.paste_at_row(value, row, before)
 
-    # def drop_notify_value_cb(self, target, param):
-    #     drop = target.get_current_drop()
-    #     if drop is None:
-    #         return
-    #     if not target.get_value().is_of_type(GLib.VariantType('as')):
+    # # def drop_notify_value_cb(self, target, param):
+    # #     drop = target.get_current_drop()
+    # #     if drop is None:
+    # #         return
+    # #     if not target.get_value().is_of_type(GLib.VariantType('as')):
+    # #         target.reject()
+
+    # @staticmethod
+    # def drop_key_pressed_cb(controller, keyval, keycode, modifiers, target):
+    #     if keyval == Gdk.KEY_Escape:
+    #         target.get_drop().finish(0)
     #         target.reject()
+    #     return False
 
-    @staticmethod
-    def drop_key_pressed_cb(controller, keyval, keycode, modifiers, target):
-        if keyval == Gdk.KEY_Escape:
-            target.get_drop().finish(0)
-            target.reject()
-        return False
-
-    @staticmethod
-    def drop_modifiers_cb(controller, modifiers, target):
-        if target.get_actions() & Gdk.DragAction.MOVE and misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
-            pass
+    # @staticmethod
+    # def drop_modifiers_cb(controller, modifiers, target):
+    #     if target.get_actions() & Gdk.DragAction.MOVE and misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
+    #         pass
 
 
 class SongListBaseWithEditDel(SongListBase):

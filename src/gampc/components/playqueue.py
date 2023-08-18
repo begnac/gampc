@@ -55,27 +55,8 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
     #         self.cursor_by_profile[self.unit.unit_server.server_profile] = self.widget.column_view.get_cursor().path
 
     @ampd.task
-    async def TEST(self):
-        while True:
-            await self.ampd.idle(0, timeout=1)
-            if self.view.get_root() is None:
-                continue
-            a = self.view.get_root().get_focus()
-            print(a)
-            if a is not None:
-                print(a, a.get_css_name(), a.get_parent())
-    #         self.widget.column_view.queue_draw()
-    #         # for col in self.widget.cols.values():
-    #         #     print()
-    #         #     print(col.name)
-    #         #     for x in col.factory.bound:
-    #         #         y = x.get_child().get_parent().get_parent()
-    #         #         print(y, y.get_parent(), y.has_focus())
-
-    @ampd.task
     async def client_connected_cb(self, client):
         self.set_cursor = True
-        # self.TEST()
         while True:
             self.set_records(await self.ampd.playlistinfo())
             self.widget.record_view.rebind_columns()
