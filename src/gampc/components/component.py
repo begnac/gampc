@@ -20,7 +20,6 @@
 
 from gi.repository import GObject
 from gi.repository import Gio
-from gi.repository import Gdk
 from gi.repository import Gtk
 
 import types
@@ -30,6 +29,7 @@ from ..util import unit
 from ..util import misc
 from ..util.logger import logger
 from ..ui import entry
+from ..ui import listviewsearch
 
 
 class Component(GObject.Object):
@@ -131,7 +131,8 @@ class ComponentMixinPaned:
         self.left_view = Gtk.ListView(factory=self.get_left_factory())
         self.left_scrolled = Gtk.ScrolledWindow()
         self.left_scrolled.set_child(self.left_view)
-        # self.left_treeview.set_search_equal_func(lambda store, col, key, i: key.lower() not in store.get_value(i, col).lower())
+        self.left_view_search = listviewsearch.ListViewSearch()
+        self.left_view_search.setup(self.left_view, lambda text, node: text.lower() in node.name.lower())
 
         self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config.pane_separator._get())
         self.paned.connect('notify::position', self.paned_notify_position_cb, self.config)
@@ -140,6 +141,10 @@ class ComponentMixinPaned:
         self.widget = self.paned
 
         self.setup_context_menu(f'{self.name}.left-context', self.left_view)
+
+    def shutdown(self):
+        super().shutdown()
+        self.left_view_search.cleanup()
 
     @staticmethod
     def paned_notify_position_cb(paned, param, config):

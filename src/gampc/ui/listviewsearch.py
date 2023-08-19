@@ -31,7 +31,7 @@ class ListViewSearch(Gtk.SearchEntry):
         controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Down, modifiers=Gdk.ModifierType(0)), action=Gtk.SignalAction(signal_name='next-match')))
         self.add_controller(controller)
 
-    def setup(self, widget):
+    def setup(self, widget, test_func):
         if self.popover is not None:
             raise RuntimeError
 
@@ -39,10 +39,10 @@ class ListViewSearch(Gtk.SearchEntry):
         self.popover.set_parent(widget)
         self.popover.set_child(self)
 
-        self.connect('activate', self.do_search, widget, True, True)
-        self.connect('next-match', self.do_search, widget, True, False)
-        self.connect('previous-match', self.do_search, widget, False, False)
-        self.connect('search-changed', self.do_search, widget, None, True)
+        self.connect('activate', self.do_search, widget, True, True, test_func)
+        self.connect('next-match', self.do_search, widget, True, False, test_func)
+        self.connect('previous-match', self.do_search, widget, False, False, test_func)
+        self.connect('search-changed', self.do_search, widget, None, True, test_func)
         self.connect('stop-search', self.stop_search_cb)
 
         search_action = Gtk.CallbackAction.new(self.search_action_cb)
@@ -74,7 +74,7 @@ class ListViewSearch(Gtk.SearchEntry):
         self.up = True
 
     @staticmethod
-    def do_search(self, widget, up, from_base):
+    def do_search(self, widget, up, from_base, test_func):
         if up is None:
             up = self.up
         else:
@@ -93,15 +93,14 @@ class ListViewSearch(Gtk.SearchEntry):
 
         for i in range(n):
             j = (pos + i if up else pos - i) % n
-            for value in model[j].get_data_clean().values():
-                if text.lower() in value.lower():
-                    widget.scroll_to(j, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
-                    self.remove_css_class('error')
-                    self.grab_focus()
-                    self.pos = j
-                    if not from_base:
-                        self.base = j
-                    return
+            if test_func(text, model[j]):
+                widget.scroll_to(j, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
+                self.remove_css_class('error')
+                self.grab_focus()
+                self.pos = j
+                if not from_base:
+                    self.base = j
+                return
         self.add_css_class('error')
 
     @staticmethod

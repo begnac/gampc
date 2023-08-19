@@ -52,6 +52,7 @@ class TreeItemFactory(Gtk.SignalListItemFactory):
         listitem.icon.set_from_icon_name(node.icon)
         listitem.label.set_label(node.name)
         listitem.expander.set_list_row(row)
+        row.name = node.name
 
     # @staticmethod
     # def unbind_cb(self, listitem):

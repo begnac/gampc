@@ -20,7 +20,6 @@
 
 from gi.repository import GObject
 from gi.repository import Gio
-from gi.repository import Gdk
 from gi.repository import Gtk
 
 import re
@@ -54,8 +53,6 @@ class RecordView(Gtk.ColumnView):
             self.get_first_child().set_visible(False)
         self.columns.connect('items-changed', self.columns_changed_cb)
         self.fields.order.connect('items-changed', self.fields_order_changed_cb)
-
-        # self.set_search_equal_func(lambda store, col, key, i: not any(isinstance(value, str) and key.lower() in value.lower() for value in store.get_record(i).get_data().values()))
 
     def cleanup(self):
         del self.item_widget
@@ -138,15 +135,8 @@ class View(Gtk.Box):
             self.store_selection.set_model(self.store_filter)
             self.record_view.sort_by_column(None, 0)
 
-        # self.shortcut_controller = Gtk.ShortcutController()
-        # self.record_view.add_controller(self.shortcut_controller)
-        # shortcut_action = Gtk.CallbackAction.new(lambda *args: print(888, args) or True)
-        # shortcut_action = Gtk.NamedAction.new('songlistbase.copy')
-        # shortcut = Gtk.Shortcut(action=shortcut_action, trigger=Gtk.ShortcutTrigger.parse_string('<Control>p'))
-        # self.shortcut_controller.add_shortcut(shortcut)
-
-        self.list_view_search = listviewsearch.ListViewSearch()
-        self.list_view_search.setup(self.record_view_rows)
+        self.view_search = listviewsearch.ListViewSearch()
+        self.view_search.setup(self.record_view_rows, lambda text, record: any(text.lower() in value.lower() for value in record.get_data_clean().values()))
 
         self.connect('notify::filtering', self.notify_filtering_cb)
 
@@ -155,7 +145,7 @@ class View(Gtk.Box):
         self.filter_view.cleanup()
         self.record_view.cleanup()
         del self.bind_hooks
-        self.list_view_search.cleanup()
+        self.view_search.cleanup()
 
     def make_filter_entry(self):
         filter_entry = entry.Entry(unit_misc=self.unit_misc)
