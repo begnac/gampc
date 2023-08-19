@@ -26,6 +26,10 @@ class ListViewSearch(Gtk.SearchEntry):
     def __init__(self):
         super().__init__()
         self.popover = None
+        controller = Gtk.ShortcutController()
+        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Up, modifiers=Gdk.ModifierType(0)), action=Gtk.SignalAction(signal_name='previous-match')))
+        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Down, modifiers=Gdk.ModifierType(0)), action=Gtk.SignalAction(signal_name='next-match')))
+        self.add_controller(controller)
 
     def setup(self, widget):
         if self.popover is not None:
