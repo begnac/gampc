@@ -20,6 +20,7 @@
 
 from gi.repository import GObject
 from gi.repository import Gio
+from gi.repository import Gdk
 from gi.repository import Gtk
 
 import re
@@ -28,6 +29,63 @@ from ..util import record
 
 from . import column
 from . import entry
+
+
+class ViewSearchPopover(Gtk.Popover):
+    def __init__(self):
+        super().__init__(has_arrow=False, halign=Gtk.Align.START)
+
+    def setup(self, widget):
+        if self.get_parent() is not None:
+            raise RuntimeError
+        self.set_parent(widget)
+
+        entry = Gtk.SearchEntry()
+        for x in ('activate', 'next-match', 'previous-match', 'search-changed', 'search-started'):
+            entry.connect(x, lambda *args: print(args[-1], args[:-1]), x)
+
+        entry.connect('next-match', self.next_match_cb)
+        entry.connect('stop-search', lambda entry: self.popdown())
+        self.set_child(entry)
+
+        search_action = Gtk.CallbackAction.new(lambda widget, param: self.popup())
+        search_trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_f, modifiers=Gdk.ModifierType.CONTROL_MASK)
+        search_shortcut = Gtk.Shortcut(trigger=search_trigger, action=search_action)
+        self.search_controller = Gtk.ShortcutController()
+        self.search_controller.add_shortcut(search_shortcut)
+
+        widget.add_controller(self.search_controller)
+
+    def cleanup(self):
+        widget = self.get_parent()
+        if widget is None:
+            raise RuntimeError
+        self.unparent()
+
+        self.set_child(None)
+        widget.remove_controller(self.search_controller)
+        del self.search_controller
+
+    def next_match_cb(self, entry):
+        print(list(self.get_parent().observe_children()))
+        print(entry.get_text())
+        self.do_search(self.get_parent(), entry, 0, True)
+
+    @staticmethod
+    def do_search(widget, entry, pos, up):
+        text = entry.get_text()
+        print(widget.get_focus_child())
+        model = widget.get_model()
+        n = len(model)
+        for i in range(n):
+            j = (pos + i if up else pos - i) % n
+            for value in model[j].get_data_clean().values():
+                if text.lower() in value.lower():
+                    widget.scroll_to(j, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
+                    entry.remove_css_class('error')
+                    entry.grab_focus()
+                    return
+        entry.add_css_class('error')
 
 
 class RecordView(Gtk.ColumnView):
@@ -143,6 +201,9 @@ class View(Gtk.Box):
         # shortcut = Gtk.Shortcut(action=shortcut_action, trigger=Gtk.ShortcutTrigger.parse_string('<Control>p'))
         # self.shortcut_controller.add_shortcut(shortcut)
 
+        self.search_popover = ViewSearchPopover()
+        self.search_popover.setup(self.record_view_rows)
+
         self.connect('notify::filtering', self.notify_filtering_cb)
 
     def cleanup(self):
@@ -150,6 +211,7 @@ class View(Gtk.Box):
         self.filter_view.cleanup()
         self.record_view.cleanup()
         del self.bind_hooks
+        self.search_popover.cleanup()
 
     def make_filter_entry(self):
         filter_entry = entry.Entry(unit_misc=self.unit_misc)
