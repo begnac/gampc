@@ -36,17 +36,21 @@ class EditorRow(GObject.Object):
         self.subrows = []
 
 
-class DialogEditor(Gtk.Dialog):
+class DialogEditor(dialog.AsyncDialog):
     valid = GObject.Property(type=bool, default=True)
     editing = GObject.Property(type=bool, default=False)
 
     def __init__(self, struct, parent, value=None, size=None, scrolled=False):
-        super().__init__(parent=parent)
+        super().__init__(transient_for=parent)
         self._struct = struct
         self.parent = parent
         self.size = size
 
-        self.set_destroy_with_parent(True)
+        self.connect('close-request', self.cancel_cb)
+        controller = Gtk.ShortcutController()
+        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Escape, modifiers=Gdk.ModifierType(0)), action=Gtk.CallbackAction.new(self.cancel_cb)))
+        self.add_controller(controller)
+
         self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         self.ok_button = self.add_button(_("_OK"), Gtk.ResponseType.OK)
         self.bind_property('valid', self.ok_button, 'sensitive', GObject.BindingFlags.SYNC_CREATE)
@@ -65,8 +69,8 @@ class DialogEditor(Gtk.Dialog):
             self._renderers[target] = renderer
 
         self._store = Gtk.TreeStore(EditorRow)
-        self._treeview = Gtk.TreeView(headers_visible=False, show_expanders=True, enable_tree_lines=True, enable_search=False, model=self._store)
-        self._treeview.connect('key-press-event', self._key_press_event_cb)
+        self._treeview = Gtk.TreeView(headers_visible=False, show_expanders=True, enable_tree_lines=True, enable_search=False, model=self._store, vexpand=True)
+        # self._treeview.connect('key-press-event', self._key_press_event_cb)
         self._treeview.connect('row-activated', self.row_activated_cb)
         self._treeview.insert_column_with_data_func(0, '', Gtk.CellRendererText(), self._label_data_func)
         self._treeview.append_column(self._value_col)
@@ -74,11 +78,11 @@ class DialogEditor(Gtk.Dialog):
         if size:
             self.set_default_size(*size)
         if scrolled:
-            scrolled_window = Gtk.ScrolledWindow(expand=True)
-            scrolled_window.add(self._treeview)
-            self.get_content_area().add(scrolled_window)
+            scrolled_window = Gtk.ScrolledWindow()
+            scrolled_window.set_child(self._treeview)
+            self.main_box.prepend(scrolled_window)
         else:
-            self.get_content_area().add(self._treeview)
+            self.main_box.prepend.append(self._treeview)
         if self._struct.label:
             self.set_title(self._struct.label)
 
@@ -86,25 +90,33 @@ class DialogEditor(Gtk.Dialog):
         self._set_row(None, self._row)
         self.value = None
         self.validate()
-        self.connect('destroy', self.destroy_cb)
 
-    def edit(self):
-        if self.run() == Gtk.ResponseType.OK:
+    async def edit(self):
+        if await self.run() == Gtk.ResponseType.OK:
             if self.size:
-                (self.size[0], self.size[1]) = self.get_size()
+                self.size[0] = self.allocation.width
+                self.size[1] = self.allocation.height
             return self.value
         else:
             return None
 
     @staticmethod
-    def destroy_cb(self):
-        self.destroy()
+    def cancel_cb(self, *args):
+        self.future.set_result(Gtk.ResponseType.CANCEL)
+
+    def destroy(self):
+        self.allocation = self.get_allocation()
         for renderer in self._renderers.values():
             for handler in renderer.handlers:
                 renderer.disconnect(handler)
+        while (col := self._treeview.get_column(0)) is not None:
+            self._treeview.remove_column(col)
         del self._value_col
+        self._treeview.disconnect_by_func(self.row_activated_cb)
+
         if self.parent:
             self.parent.present()
+        super().destroy()
 
     def editing_started_cb(self, renderer, editable, path):
         editable.connect('editing-done', self.editing_done_cb, self._get_row(self._store.get_iter(path)))
@@ -201,16 +213,6 @@ class DialogEditor(Gtk.Dialog):
         self.validate()
 
 
-class AsyncDialogEditor(DialogEditor, dialog.AsyncDialog):
-    async def edit_async(self):
-        if await self.run_async() == Gtk.ResponseType.OK:
-            if self.size:
-                (self.size[0], self.size[1]) = self.get_size()
-            return self.value
-        else:
-            return None
-
-
 class _Struct(object):
     def __init__(self, default=None, label=None, name=None, validator=lambda value: True):
         self.default = default
@@ -219,16 +221,9 @@ class _Struct(object):
         self.validator = validator
         self._substructs = []
 
-    def edit(*args, **kwargs):
-        editor = DialogEditor(*args, **kwargs)
-        value = editor.edit()
-        editor.destroy()
-        return value
-
-    async def edit_async(self, parent=None, *args, **kwargs):
-        editor = AsyncDialogEditor(self, parent, *args, **kwargs)
-        value = await editor.edit_async()
-        editor.destroy()
+    async def edit(self, parent=None, *args, **kwargs):
+        editor = DialogEditor(self, parent, *args, **kwargs)
+        value = await editor.edit()
         return value
 
     def _get_all_targets(self):

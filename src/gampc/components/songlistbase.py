@@ -91,11 +91,20 @@ class SongListBase(component.Component):
     #         if action_ is not None:
     #             action_.set_enabled(editable)
 
+    def get_current_position(self):
+        if (row := self.view.record_view_rows.get_focus_child()) is not None:
+            return row.get_first_child()._pos
+        found, i, pos = Gtk.BitsetIter.init_first(self.view.record_selection.get_selection())
+        if found and not i.next()[0]:
+            return pos
+        else:
+            return None
+
     @ampd.task
-    async def view_activate_cb(self, view, position):
+    async def view_activate_cb(self, view, position): ### THIS LOOKS BAD
         if self.unit.unit_persistent.protect_active:
             return
-        filename = self.view.store_selection[position].file
+        filename = self.view.record_selection[position].file
         records = await self.ampd.playlistfind('file', filename)
         if records:
             record_id = sorted(records, key=lambda record: record['Pos'])[0]['Id']
@@ -332,17 +341,6 @@ class SongListBaseWithEditDel(SongListBase):
         else:
             self.widget.store.get_record(i)._status = self.RECORD_DELETED
             self.merge_new_del(i)
-        self.view.queue_draw()
-
-    def modify_record(self, i, record):
-        _record = self.widget.store.get_record(i)
-        status = _record._status
-        if status == self.RECORD_UNDEFINED:
-            return
-        _record.set_data(record)
-        self.set_modified()
-        if status is None:
-            _record._status = self.RECORD_MODIFIED
         self.view.queue_draw()
 
     def merge_new_del(self, i):

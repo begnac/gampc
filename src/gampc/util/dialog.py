@@ -23,27 +23,40 @@ from gi.repository import Gtk
 import asyncio
 
 
-class AsyncDialog(Gtk.Dialog):
+class AsyncDialog(Gtk.Window):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.future = None
-        self.connect('response', self.response_cb)
+        super().__init__(modal=True, destroy_with_parent=True, **kwargs)
+        self.future = asyncio.Future()
+
+        self.button_box = Gtk.Box(halign=Gtk.Align.CENTER)
+
+        self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.main_box.append(self.button_box)
+
+        self.set_child(self.main_box)
+
+    def add_button(self, label, response):
+        button = Gtk.Button(label=label)
+        button.connect('clicked', self.button_clicked_cb, self.future, response)
+        self.button_box.append(button)
+        return button
 
     @staticmethod
-    def response_cb(self, response_id):
-        if self.future is not None and not self.future.done():
-            self.future.set_result(response_id)
-            self.future = None
+    def button_clicked_cb(button, future, response):
+        future.set_result(response)
 
-    async def run_async(self, *, destroy=False):
-        self.set_modal(True)
-        self.show()
-        if self.future:
-            self.future.cancel()
-        self.future = asyncio.Future()
+    # @staticmethod
+    # def response_cb(self, response_id):
+    #     if self.future is not None and not self.future.done():
+    #         self.future.set_result(response_id)
+    #         self.future = None
+
+    async def run(self):
+        if self.future.done():
+            raise RuntimeError
+        self.present()
         result = await self.future
-        if destroy:
-            self.destroy()
+        self.destroy()
         return result
 
 

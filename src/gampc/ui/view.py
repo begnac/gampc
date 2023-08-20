@@ -115,8 +115,8 @@ class View(Gtk.Box):
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
         self.append(self.scrolled_filter_view)
 
-        self.store_selection = Gtk.MultiSelection()
-        self.record_view = RecordView(fields, self.make_record_label, self.bind_hooks, sortable, model=self.store_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)
+        self.record_selection = Gtk.MultiSelection()
+        self.record_view = RecordView(fields, self.make_record_label, self.bind_hooks, sortable, model=self.record_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)
         self.record_view.add_css_class('records')
         self.record_view.add_css_class('data-table')
         self.record_view_rows = self.record_view.get_last_child()
@@ -130,9 +130,9 @@ class View(Gtk.Box):
 
         if sortable:
             self.store_sort = Gtk.SortListModel(model=self.store_filter, sorter=self.record_view.get_sorter())
-            self.store_selection.set_model(self.store_sort)
+            self.record_selection.set_model(self.store_sort)
         else:
-            self.store_selection.set_model(self.store_filter)
+            self.record_selection.set_model(self.store_filter)
             self.record_view.sort_by_column(None, 0)
 
         self.view_search = listviewsearch.ListViewSearch()
@@ -193,16 +193,16 @@ class View(Gtk.Box):
         return True
 
     def _get_selection(self):
-        return filter(lambda i: self.store_selection.is_selected(i), range(len(self.store_selection)))
+        return filter(lambda i: self.record_selection.is_selected(i), range(len(self.record_selection)))
 
     def get_selection(self):
         return list(self._get_selection())
 
     def get_selection_records(self):
-        return list(map(lambda i: self.store_selection[i], self._get_selection()))
+        return list(map(lambda i: self.record_selection[i], self._get_selection()))
 
     def get_filenames(self, selection):
         if selection:
-            return list(map(lambda i: self.store_selection[i].file, self._get_selection()))
+            return list(map(lambda i: self.record_selection[i].file, self._get_selection()))
         else:
-            return list(map(lambda record: record.file, self.store_selection))
+            return list(map(lambda record: record.file, self.record_selection))

@@ -65,9 +65,7 @@ class ListViewSearch(Gtk.SearchEntry):
 
     def search_action_cb(self, widget, param):
         self.popover.popup()
-        model = widget.get_model()
-        selection = model.get_selection()
-        found, i, self.base = Gtk.BitsetIter.init_first(selection)
+        found, i, self.base = Gtk.BitsetIter.init_first(widget.get_model().get_selection())
         if not found:
             self.base = 0
         self.pos = self.base

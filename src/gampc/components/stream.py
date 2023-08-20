@@ -18,6 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import ampd
+
 from ..util import ssde
 from ..util import resource
 from . import songlistbase
@@ -70,18 +72,20 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
         if value:
             self.add_record(value)
 
-    def action_modify_cb(self, action, parameter):
-        path, column = self.treeview.get_cursor()
-        if path is None:
+    @ampd.task
+    async def action_modify_cb(self, action, parameter):
+        pos = self.get_current_position()
+        if pos is None:
             return
-        i = self.view.store.get_iter(path)
-        value = self.view.store.get_record(i).get_data()
-        value = self.ssde_struct.edit(self.get_window(), value, size=self.config.edit_dialog_size._get(), scrolled=True)
-        if value is not None:
-            self.modify_record(i, value)
+        record = self.view.record_selection[pos]
+        value = await self.ssde_struct.edit(self.get_window(), record.get_data(), size=self.config.edit_dialog_size._get(), scrolled=True)
+        print(self.config.edit_dialog_size)
+        if value is None:
+            return
+        record.set_data(value)
+        print(record._data)
+        record._modified = True
+        self.view.record_view.rebind_columns()
 
     def notify_current_song_cb(self, *args):
-        self.widget.record_view.rebind_columns()
-
-    def set_modified(self):
-        pass
+        self.view.record_view.rebind_columns()
