@@ -25,7 +25,6 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import misc
 from ..util import resource
 from ..ui import view
 from ..ui import treelist
@@ -176,28 +175,29 @@ class SongListBase(component.Component):
     def action_copy_delete_cb(self, action, parameter):
         records = self.view.get_selection_records()
         if action.get_name() in ['copy', 'cut']:
-            misc.get_clipboard().set_content(misc.content_filenames_from_records(records))
+            self.widget.get_clipboard().set_content(self.content_from_records(records))
         if action.get_name() in ['delete', 'cut']:
             self.remove_records(records)
 
-    def paste_at_row(self, filenames, row, before):
-        position = row.get_first_child()._pos
-        if not before:
-            position += 1
-        self.add_filenames(position, filenames)
+    @staticmethod
+    def row_get_position(row, *, after=False):
+        pos = row.get_first_child()._pos
+        if after:
+            pos += 1
+        return pos
 
     def action_paste_cb(self, action, parameter):
-        misc.get_clipboard().read_text_async(None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
+        self.widget.get_clipboard().read_text_async(None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
 
     def action_paste_finish_cb(self, clipboard, result, before):
         try:
-            filenames = misc.filenames_from_raw(clipboard.read_text_finish(result))
+            data = self.data_from_raw(clipboard.read_text_finish(result))
         except GLib.GError as error:
             print(error)
             return
         row = self.view.record_view_rows.get_focus_child()
-        if filenames is not None and row is not None:
-            self.paste_at_row(filenames, row, before)
+        if data is not None and row is not None:
+            self.add_records_from_data(data, self.row_get_position(row, after=not before))
 
     # def setup_drag(self, editable):
     #     self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)

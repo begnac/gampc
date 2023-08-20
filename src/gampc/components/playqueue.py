@@ -111,8 +111,8 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         await self.ampd.command_list(self.ampd.deleteid(record.Id) for record in records)
 
     @ampd.task
-    async def add_filenames(self, position, filenames):
-        await self.ampd.command_list(self.ampd.add(filename, position + i) for i, filename in enumerate(filenames))
+    async def add_records_from_data(self, filenames, position):
+        await self.ampd.command_list(self.ampd.add(filename, position) for filename in reversed(filenames))
 
     @ampd.task
     async def view_activate_cb(self, view, position):

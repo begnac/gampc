@@ -20,7 +20,10 @@
 
 from gi.repository import GLib
 from gi.repository import Gio
+from gi.repository import Gdk
 from gi.repository import Gtk
+
+import ast
 
 from ..util import ssde
 from ..util import resource
@@ -43,6 +46,19 @@ class SongList(songlistbase.SongListBase):
     def shutdown(self):
         del self.songlist_actions
         super().shutdown()
+
+    @staticmethod
+    def content_from_records(records):
+        return Gdk.ContentProvider.new_for_value(repr([record.file for record in records]))
+
+    @staticmethod
+    def data_from_raw(raw):
+        try:
+            filenames = ast.literal_eval(raw)
+            if isinstance(filenames, list) and all(isinstance(filename, str) for filename in filenames):
+                return filenames
+        except Exception:
+            pass
 
     def records_set_fields(self, songs):
         for song in songs:

@@ -20,8 +20,6 @@
 
 from gi.repository import Gdk
 
-import ast
-
 
 class Rectangle(Gdk.Rectangle):
     def __init__(self, x, y, width=0, height=0):
@@ -49,19 +47,6 @@ def get_modifier_state():
 
 def get_clipboard():
     return get_display().get_clipboard()
-
-
-def content_filenames_from_records(records):
-    return Gdk.ContentProvider.new_for_value(repr([record.file for record in records]))
-
-
-def filenames_from_raw(raw):
-    try:
-        filenames = ast.literal_eval(raw)
-        if isinstance(filenames, list) and all(isinstance(filename, str) for filename in filenames):
-            return filenames
-    except Exception:
-        pass
 
 
 def find_descendant_at_xy(widget, x, y, levels):
