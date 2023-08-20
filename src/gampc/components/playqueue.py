@@ -111,7 +111,7 @@ class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
         await self.ampd.command_list(self.ampd.deleteid(record.Id) for record in records)
 
     @ampd.task
-    async def add_records(self, position, filenames):
+    async def add_filenames(self, position, filenames):
         await self.ampd.command_list(self.ampd.add(filename, position + i) for i, filename in enumerate(filenames))
 
     @ampd.task
