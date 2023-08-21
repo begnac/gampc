@@ -72,6 +72,7 @@ class __unit__(unit.UnitMixinServer, unit.Unit):
     async def play_or_pause_cb(self, action_, parameter):
         if not self.unit_server.ampd_server_properties.state:
             await self.ampd.idle(ampd.IDLE)
+            await self.ampd.idle(ampd.IDLE)
         await (self.ampd.pause(1) if self.unit_server.ampd_server_properties.state == 'play' else self.ampd.play())
 
     @ampd.task
