@@ -1,2 +1,2 @@
 #! /bin/sh
-exec /usr/bin/python3 -m gampc
+exec /usr/bin/python3 -m gampc "$@"
