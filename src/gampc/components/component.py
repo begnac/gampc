@@ -125,7 +125,7 @@ class Component(GObject.Object):
         pass
 
 
-class ComponentMixinPaned:
+class ComponentPaneMixin:
     def __init__(self, unit):
         super().__init__(unit)
         self.left_view = Gtk.ListView(factory=self.get_left_factory())

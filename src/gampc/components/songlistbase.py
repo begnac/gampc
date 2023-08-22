@@ -19,6 +19,7 @@
 
 
 from gi.repository import GLib
+from gi.repository import GObject
 from gi.repository import Gio
 from gi.repository import Gdk
 from gi.repository import Gtk
@@ -127,14 +128,15 @@ class SongListBase(component.Component):
     def set_records(self, records, set_fields=True):
         records = list(records)
         if set_fields:
-            self.records_set_fields(records)
+            self.set_extra_fields(records)
         if self.duplicate_test_columns:
             self.find_duplicates(records, self.duplicate_test_columns)
         self.view.store.set_records(records)
         self.view.record_view.rebind_columns()
 
-    def records_set_fields(self, records):
-        self.fields.records_set_fields(records)
+    def set_extra_fields(self, records):
+        for record in records:
+            self.fields.set_derived_fields(record)
 
     def find_duplicates(self, records, test_fields):
         dup_marker = 0
@@ -318,57 +320,155 @@ class SongListBase(component.Component):
     #         pass
 
 
-class SongListBaseWithEditDel(SongListBase):
+class SimpleDelta(GObject.Object):
+    def __init__(self, records, position, push):
+        super().__init__()
+        self.records = records
+        self.position = position
+        self.push = push
+
+    def apply(self, selection_model, push, deselect=True):
+        if not self.push:
+            push = not push
+        model = selection_model.get_model()
+        if isinstance(model, Gtk.FilterListModel):
+            if model.get_filter() is not None:
+                raise RuntimeError
+            else:
+                model = model.get_model()
+        if push:
+            model[self.position:self.position] = self.records
+            selection_model.select_range(self.position, len(self.records), deselect)
+        else:
+            if model[self.position:self.position + len(self.records)] != self.records:
+                raise RuntimeError
+            model[self.position:self.position + len(self.records)] = []
+            selection_model.select_item(self.position, deselect)
+
+
+class MetaDelta(GObject.Object):
+    def __init__(self, deltas, push):
+        super().__init__()
+        self.deltas = deltas
+        self.push = push
+
+    def apply(self, selection_model, push):
+        if not self.push:
+            push = not push
+        selection_model.unselect_all()
+        if push:
+            for delta in self.deltas:
+                delta.apply(selection_model, True, False)
+        else:
+            for delta in reversed(self.deltas):
+                delta.apply(selection_model, False, False)
+
+
+class SongListBaseEditStackMixin(SongListBase):
+    delta_pos = GObject.Property(type=int, default=0)
+
+    editable = True
+
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
         self.songlistbase_actions.add_action(resource.Action('save', self.action_save_cb))
-        self.songlistbase_actions.add_action(resource.Action('undelete', self.action_undelete_cb))
+        self.songlistbase_actions.add_action(resource.Action('reset', self.action_reset_cb))
+        self.songlistbase_actions.add_action(resource.Action('undo', self.action_do_cb))
+        self.songlistbase_actions.add_action(resource.Action('redo', self.action_do_cb))
 
-    def action_undelete_cb(self, action, parameter):
-        store, paths = self.view.get_selection().get_selected_rows()
-        for p in paths:
-            i = self.widget.store.get_iter(p)
-            if self.widget.store.get_record(i)._status == self.RECORD_DELETED:
-                del self.widget.store.get_record(i)._status
-        self.view.queue_draw()
+        self.deltas = Gio.ListStore()
 
-    def record_delete_cb(self, store, i):
-        if self.widget.store.get_record(i)._status == self.RECORD_UNDEFINED:
+    def delta_push(self):
+        self.deltas[self.delta_pos].apply(self.view.record_selection, True)
+        self.delta_pos += 1
+        self.enable_actions()
+
+    def delta_pop(self):
+        self.delta_pos -= 1
+        self.deltas[self.delta_pos].apply(self.view.record_selection, False)
+        self.enable_actions()
+
+    def remove_records(self, records):
+        if not records:
             return
-        self.set_modified()
-        if self.widget.store.get_record(i)._status == self.RECORD_NEW:
-            self.widget.store.remove(i)
+        indices = []
+        for i, record in enumerate(self.view.record_selection):
+            if record in records:
+                indices.append(i)
+                records.remove(record)
+        if records:
+            raise RuntimeError
+        deltas = []
+        i = j = indices[0]
+        for k in indices[1:] + [0]:
+            j += 1
+            if j != k:
+                deltas.append(SimpleDelta(self.view.record_selection[i:j], i, True))
+                i = j = k
+        self.deltas[self.delta_pos:] = [MetaDelta(deltas, False)]
+        self.delta_push()
+
+    def add_records(self, records, position):
+        if not records:
+            return
+        self.deltas[self.delta_pos:] = [SimpleDelta(records, position, True)]
+        self.delta_push()
+
+    @ampd.task
+    async def add_records_from_data(self, data, position):
+        self.add_records(await self.records_from_data(data), position)
+
+    def enable_actions(self):
+        if self.deltas is None:
+            self.songlistbase_actions.lookup_action('save').set_enabled(False)
+            self.songlistbase_actions.lookup_action('reset').set_enabled(False)
+            self.songlistbase_actions.lookup_action('undo').set_enabled(False)
+            self.songlistbase_actions.lookup_action('redo').set_enabled(False)
         else:
-            self.widget.store.get_record(i)._status = self.RECORD_DELETED
-            self.merge_new_del(i)
-        self.view.queue_draw()
+            self.songlistbase_actions.lookup_action('save').set_enabled(True)
+            self.songlistbase_actions.lookup_action('reset').set_enabled(True)
+            self.songlistbase_actions.lookup_action('undo').set_enabled(self.delta_pos > 0)
+            self.songlistbase_actions.lookup_action('redo').set_enabled(self.delta_pos < len(self.deltas))
 
-    def merge_new_del(self, i):
-        _status = self.widget.store.get_record(i)._status
-        for f in [self.widget.store.iter_previous, self.widget.store.iter_next]:
-            j = f(i)
-            if j and self.widget.store.get_record(j).file == self.widget.store.get_record(i).file and {_status, self.widget.store.get_record(j)._status} == {self.RECORD_DELETED, self.RECORD_NEW}:
-                del self.widget.store.get_record(i)._status
-                self.widget.store.remove(j)
-                return
+    def action_do_cb(self, action, parameter):
+        if action.get_name() == 'redo':
+            self.delta_push()
+        elif action.get_name() == 'undo':
+            self.delta_pop()
+        else:
+            raise RuntimeError
+        self.enable_actions()
+
+    # def action_undelete_cb(self, action, parameter):
+    #     store, paths = self.view.get_selection().get_selected_rows()
+    #     for p in paths:
+    #         i = self.widget.store.get_iter(p)
+    #         if self.widget.store.get_record(i)._status == self.RECORD_DELETED:
+    #             del self.widget.store.get_record(i)._status
+    #     self.view.queue_draw()
+
+    # def record_delete_cb(self, store, i):
+    #     if self.widget.store.get_record(i)._status == self.RECORD_UNDEFINED:
+    #         return
+    #     self.set_modified()
+    #     if self.widget.store.get_record(i)._status == self.RECORD_NEW:
+    #         self.widget.store.remove(i)
+    #     else:
+    #         self.widget.store.get_record(i)._status = self.RECORD_DELETED
+    #         self.merge_new_del(i)
+    #     self.view.queue_draw()
+
+    # def merge_new_del(self, i):
+    #     _status = self.widget.store.get_record(i)._status
+    #     for f in [self.widget.store.iter_previous, self.widget.store.iter_next]:
+    #         j = f(i)
+    #         if j and self.widget.store.get_record(j).file == self.widget.store.get_record(i).file and {_status, self.widget.store.get_record(j)._status} == {self.RECORD_DELETED, self.RECORD_NEW}:
+    #             del self.widget.store.get_record(i)._status
+    #             self.widget.store.remove(j)
+    #             return
 
 
-class SongListBaseWithAdd(SongListBase):
-    def add_record(self, record):
-        # dest = self.view.get_path_at_pos(int(self.view.context_menu_x), int(self.view.context_menu_y))
-        # path = None if dest is None else dest[0]
-        path, column = self.view.get_cursor()
-        self.view.paste_at([record], path, False)
-
-
-class SongListBaseWithEditDelNew(SongListBaseWithEditDel, SongListBaseWithAdd):
-    def record_new_cb(self, store, i):
-        self.set_modified()
-        store.get_record(i)._status = self.RECORD_NEW
-        self.merge_new_del(i)
-
-
-class SongListBaseWithPane(component.ComponentMixinPaned, SongListBase):
+class SongListBasePaneMixin(component.ComponentPaneMixin, SongListBase):
     def __init__(self, unit):
         super().__init__(unit)
         self.left_store = Gtk.MultiSelection(model=self.init_left_store())

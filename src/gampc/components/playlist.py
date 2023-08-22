@@ -37,7 +37,7 @@ ICONS = {
 }
 
 
-class Playlist(songlist.SongListWithEditDelNew, songlist.SongListWithTotals, songlistbase.SongListBaseWithPane, songlist.SongList):
+class Playlist(songlistbase.SongListBaseEditStackMixin, songlistbase.SongListBasePaneMixin, songlist.SongListTotalsMixin, songlist.SongList):
     duplicate_test_columns = ['file']
 
     left_title = _("Playlists")

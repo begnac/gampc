@@ -25,7 +25,7 @@ from ..util import resource
 from . import songlistbase
 
 
-class Stream(songlistbase.SongListBaseWithEditDelNew):
+class Stream(songlistbase.SongListBaseEditStackMixin, songlistbase.SongListBase):
     use_resources = ['songlistbase']
     DND_TARGET = 'GAMPC_STREAM'
 
@@ -79,11 +79,9 @@ class Stream(songlistbase.SongListBaseWithEditDelNew):
             return
         record = self.view.record_selection[pos]
         value = await self.ssde_struct.edit(self.get_window(), record.get_data(), size=self.config.edit_dialog_size._get(), scrolled=True)
-        print(self.config.edit_dialog_size)
         if value is None:
             return
         record.set_data(value)
-        print(record._data)
         record._modified = True
         self.view.record_view.rebind_columns()
 

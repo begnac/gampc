@@ -26,6 +26,7 @@ from gi.repository import Gtk
 import ast
 
 from ..util import ssde
+from ..util import record
 from ..util import resource
 from ..util.misc import format_time
 
@@ -60,14 +61,20 @@ class SongList(songlistbase.SongListBase):
         except Exception:
             pass
 
-    def records_set_fields(self, songs):
-        for song in songs:
-            gfile = Gio.File.new_for_path(GLib.build_filenamev([self.unit.unit_songlist.config.music_dir._get(), song['file']]))
-            if gfile.query_exists():
-                song['_gfile'] = gfile
-            else:
-                song['_status'] = self.RECORD_MODIFIED
-        super().records_set_fields(songs)
+    async def records_from_data(self, filenames):
+        songs = await self.ampd.command_list(self.ampd.find(f'(file == "{filename}")') for filename in filenames)
+        songs = [song[0] for song in songs]
+        self.set_extra_fields(songs)
+        return [record.Record(song) for song in songs]
+
+    # def records_set_fields(self, songs):
+    #     for song in songs:
+    #         gfile = Gio.File.new_for_path(GLib.build_filenamev([self.unit.unit_songlist.config.music_dir._get(), song['file']]))
+    #         if gfile.query_exists():
+    #             song['_gfile'] = gfile
+    #         else:
+    #             song['_status'] = self.RECORD_MODIFIED
+    #     super().records_set_fields(songs)
 
     def action_delete_file_cb(self, action, parameter):
         store, paths = self.treeview.get_selection().get_selected_rows()
@@ -87,18 +94,14 @@ class SongList(songlistbase.SongListBase):
                     song._status = self.RECORD_MODIFIED
 
 
-class SongListWithTotals(SongList):
+class SongListTotalsMixin:
     def set_records(self, songs, set_fields=True):
         super().set_records(songs, set_fields)
         time = sum(int(song.get('Time', '0')) for song in songs)
         self.status = '{} / {}'.format(len(songs), format_time(time))
 
 
-class SongListWithEditDel(SongList, songlistbase.SongListBaseWithEditDel):
-    pass
-
-
-class SongListWithAdd(SongList, songlistbase.SongListBaseWithAdd):
+class SongListAddSpecialMixin: #####  Not ready
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
         self.actions_dict['songlist'].add_action(resource.Action('add-separator', self.action_add_separator_cb))
@@ -112,10 +115,6 @@ class SongListWithAdd(SongList, songlistbase.SongListBaseWithAdd):
         url = struct.edit(self.get_window())
         if url:
             self.add_record(dict(file=url))
-
-
-class SongListWithEditDelNew(SongListWithAdd, songlistbase.SongListBaseWithEditDelNew):
-    pass
 
 
 # class SongListWithEditDelFile(SongListWithEditDel):

@@ -40,12 +40,13 @@ from ..util.logger import logger
 from ..ui import column
 
 from ..components import component
+from ..components import songlistbase
 from ..components import songlist
 
 from . import search
 
 
-class Tanda(component.ComponentMixinPaned, component.Component):
+class Tanda(component.ComponentPaneMixin, component.Component):
     GENRES = ('Tango', 'Vals', 'Milonga', _("Other"), _("All"))
     GENRE_OTHER = len(GENRES) - 2
     GENRE_ALL = len(GENRES) - 1
@@ -274,7 +275,7 @@ RGBA_PINK.parse('pink')
 RGBA_YELLOW.parse('yellow')
 
 
-class TandaEdit(TandaSubComponent, songlist.SongListWithEditDelNew):
+class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, songlist.SongList):
     duplicate_field = '_duplicate_edit'
 
     def __init__(self, unit):

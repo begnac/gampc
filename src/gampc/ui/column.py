@@ -119,15 +119,11 @@ class FieldFamily(GObject.Object):
         del self.fields[field.name]
         field.disconnect_by_func(config_notify_cb)
 
-    def record_set_fields(self, record):
+    def set_derived_fields(self, record):
         for name in self.derived_names:
             value = self.fields[name].get_value(record)
             if value is not None:
                 record[name] = value
-
-    def records_set_fields(self, records):
-        for record in records:
-            self.record_set_fields(record)
 
 
 class FieldColumnFactory(Gtk.SignalListItemFactory):

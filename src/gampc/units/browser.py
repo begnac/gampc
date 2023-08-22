@@ -33,7 +33,7 @@ from ..components import songlist
 DIRECTORY = 'directory'
 
 
-class Browser(songlistbase.SongListBaseWithPane, songlist.SongList):
+class Browser(songlistbase.SongListBasePaneMixin, songlist.SongList):
     sortable = True
 
 

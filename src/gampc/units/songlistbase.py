@@ -55,7 +55,9 @@ class __unit__(unit.UnitMixinConfig, unit.UnitMixinCss, unit.Unit):
             resource.MenuAction('edit/songlist/base', 'songlistbase.paste', _("Paste"), ['<Control>v'], accels_fragile=True),
             resource.MenuAction('edit/songlist/base', 'songlistbase.paste-before', _("Paste before"), ['<Control>b']),
             resource.MenuAction('edit/songlist/base', 'songlistbase.delete', _("Delete"), ['Delete'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'songlistbase.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'songlistbase.undo', _("Undo"), ['<Control>z'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'songlistbase.redo', _("Redo"), ['<Shift><Control>z'], accels_fragile=True),
+            # resource.MenuAction('edit/songlist/base', 'songlistbase.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
         ]
 
         self.add_resources(

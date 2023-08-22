@@ -29,7 +29,7 @@ from ..util import resource
 from . import songlist
 
 
-class PlayQueue(songlist.SongListWithTotals, songlist.SongListWithAdd):
+class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, songlist.SongList):
     editable = True
     duplicate_test_columns = ['Title']
 
