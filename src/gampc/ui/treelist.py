@@ -23,6 +23,7 @@ from gi.repository import Gio
 from gi.repository import Gtk
 
 import asyncio
+import ampd
 
 
 class TreeItemFactory(Gtk.SignalListItemFactory):
@@ -101,7 +102,10 @@ class TreeNode(GObject.Object):
 
     async def _update(self, model):
         filler, *args = self.filler
-        await filler(self, *args)
+        try:
+            await filler(self, *args)
+        except ampd.ConnectionError:
+            pass
         self.updated = True
         if not self.sub_nodes:
             self.state = self.STATE_EMPTY
