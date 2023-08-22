@@ -107,8 +107,9 @@ class View(Gtk.Box):
 
         self.filter_record = record.Record()
         self.filter_store = Gio.ListStore(item_type=record.Record)
+        self.filter_store.append(self.filter_record)
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = RecordView(fields, self.make_filter_entry, [self.filter_entry_bind], hide_titles=True, model=self.filter_selection, show_column_separators=True)
+        self.filter_view = RecordView(fields, self.make_filter_entry, [self.filter_entry_bind], hide_titles=True, model=self.filter_selection, show_column_separators=True, visible=False)
         self.filter_view.add_css_class('filter')
         self.filter_view.add_css_class('data-table')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
@@ -126,7 +127,7 @@ class View(Gtk.Box):
 
         self.store = record.RecordStore()
 
-        self.store_filter = Gtk.FilterListModel(model=self.store, filter=self.filter_filter)
+        self.store_filter = Gtk.FilterListModel(model=self.store)
 
         if sortable:
             self.store_sort = Gtk.SortListModel(model=self.store_filter, sorter=self.record_view.get_sorter())
@@ -177,16 +178,13 @@ class View(Gtk.Box):
 
     @staticmethod
     def notify_filtering_cb(self, param):
-        if self.filtering and len(self.filter_store) == 0:
-            self.filter_store.append(self.filter_record)
-            self.filter_filter.changed(Gtk.FilterChange.MORE_STRICT)
-        if not self.filtering and len(self.filter_store) == 1:
-            self.filter_store.remove(0)
-            self.filter_filter.changed(Gtk.FilterChange.LESS_STRICT)
+        self.filter_view.set_visible(self.filtering)
+        if self.filtering:
+            self.store_filter.set_filter(self.filter_filter)
+        else:
+            self.store_filter.set_filter(None)
 
     def filter_func(self, record):
-        if not self.filtering:
-            return True
         for name, value in self.filter_record.items():
             if re.search(value, record[name] or '', re.IGNORECASE) is None:
                 return False
