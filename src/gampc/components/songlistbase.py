@@ -42,20 +42,6 @@ class SongListBase(component.Component):
     sortable = True
 
     duplicate_test_columns = []
-    duplicate_field = '_duplicate'
-
-    RECORD_NEW = 1
-    RECORD_DELETED = 2
-    RECORD_MODIFIED = 3
-    RECORD_UNDEFINED = 4
-
-    STATUS_PROPERTIES = ('background-rgba', 'font', 'strikethrough')
-    STATUS_PROPERTY_TABLE = {
-        RECORD_NEW: (Gdk.RGBA(0.0, 1.0, 0.0, 1.0), 'bold', None),
-        RECORD_DELETED: (Gdk.RGBA(1.0, 0.0, 0.0, 1.0), 'italic', True),
-        RECORD_MODIFIED: (Gdk.RGBA(1.0, 1.0, 0.0, 1.0), None, None),
-        RECORD_UNDEFINED: (None, 'bold italic', None),
-    }
 
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
@@ -75,6 +61,8 @@ class SongListBase(component.Component):
 
         self.setup_context_menu(f'{self.name}.context', self.view)
         self.signal_handler_connect(self.view.record_view, 'activate', self.view_activate_cb)
+        if self.duplicate_test_columns:
+            self.signal_handler_connect(self.view.record_store, 'items-changed', self.find_duplicates)
 
         self.view.bind_hooks.append(self.duplicate_bind_hook)
 
@@ -112,42 +100,46 @@ class SongListBase(component.Component):
 
     def duplicate_bind_hook(self, label, item, name):
         label.get_parent().set_css_classes([])
-        duplicate = item[self.duplicate_field]
+        duplicate = item._duplicate
         if duplicate is not None:
             label.get_parent().add_css_class(f'duplicate{duplicate % 64}')
 
-    def set_songs(self, songs, set_fields=True):
+    def set_songs(self, songs, *, set_fields=True):
         songs = list(songs)
         if set_fields:
             self.set_extra_fields(songs)
-        self.set_records(map(record.Record, songs))
+        self._set_songs(songs)
 
-    def set_records(self, records):
-        if self.duplicate_test_columns:
-            self.find_duplicates(records)
-        self.view.record_store[:] = records
-        # self.view.record_view.rebind_columns()
+    def _set_songs(self, songs):
+        self.view.record_store[:] = map(record.Record, songs)
 
     def set_extra_fields(self, songs):
         for song in songs:
             self.fields.set_derived_fields(song)
 
-    def find_duplicates(self, records):
+    def find_duplicates(self, *args):
+        model = self.view.record_store
+        model.handler_block_by_func(self.find_duplicates)
         marker = 0
         firsts = {}
-        for record_ in records:
+        for i, record_ in enumerate(model):
             if record_.file == self.unit.unit_server.SEPARATOR_FILE:
                 continue
             test = tuple(record_[field] for field in self.duplicate_test_columns)
             first = firsts.get(test)
-            if first:
-                if first._duplicate is None:
-                    first._duplicate = marker
-                    marker += 1
-                record_._duplicate = first._duplicate
+            if first is None:
+                firsts[test] = i
+                if record_._duplicate is not None:
+                    del record_._duplicate
+                    model.items_changed(i, 1, 1)
             else:
-                firsts[test] = record_
-                del record_._duplicate
+                if model[first]._duplicate is None:
+                    model[first]._duplicate = marker
+                    marker += 1
+                    model.items_changed(first, 1, 1)
+                record_._duplicate = model[first]._duplicate
+                model.items_changed(i, 1, 1)
+        model.handler_unblock_by_func(self.find_duplicates)
 
     def action_reset_cb(self, action, parameter):
         self.view.filter_record.set_data({})
@@ -260,7 +252,6 @@ class SongListBaseEditableMixin:
             self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
     def action_paste_cb(self, action, parameter):
-        print(self.widget.get_clipboard().get_formats().to_string())
         self.widget.get_clipboard().read_text_async(None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
 
     def action_paste_finish_cb(self, clipboard, result, before):
@@ -400,10 +391,10 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
         if not records:
             return
         indices = []
-        for i, record in enumerate(self.view.record_selection):
-            if record in records:
+        for i, record_ in enumerate(self.view.record_selection):
+            if record_ in records:
                 indices.append(i)
-                records.remove(record)
+                records.remove(record_)
         if records:
             raise RuntimeError
         deltas = []
@@ -489,14 +480,11 @@ class SongListBasePaneMixin(component.ComponentPaneMixin, SongListBase):
         return self.unit.left_store
 
     def left_selection_changed_cb(self, selection, position, n_items):
-        records = []
         self.left_selected = []
         found, i, pos = Gtk.BitsetIter.init_first(selection.get_selection())
         while found:
             self.left_selected.append(pos)
-            records += selection[pos].get_item().records
             found, pos = i.next()
-        self.set_records(records)
 
     @staticmethod
     def left_view_activate_cb(view, position):

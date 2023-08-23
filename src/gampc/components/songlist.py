@@ -95,8 +95,8 @@ class SongList(songlistbase.SongListBase):
 
 
 class SongListTotalsMixin:
-    def set_songs(self, songs, set_fields=True):
-        super().set_songs(songs, set_fields)
+    def set_songs(self, songs, **kwargs):
+        super().set_songs(songs, **kwargs)
         time = sum(int(song.get('Time', '0')) for song in songs)
         self.status = '{} / {}'.format(len(songs), format_time(time))
 

@@ -67,6 +67,7 @@ class Playlist(songlistbase.SongListBaseEditStackMixin, songlistbase.SongListBas
             self.edit_node.delta_pos = self.delta_pos
             self.edit_node.records = list(self.view.record_store)
         super().left_selection_changed_cb(selection, position, n_items)
+        self.view.record_store[:] = sum((selection[pos].get_item().records for pos in self.left_selected), [])
         self.edit_node = None
         if len(self.left_selected) == 1:
             node = selection[self.left_selected[0]].get_item()

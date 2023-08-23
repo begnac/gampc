@@ -24,6 +24,7 @@ from gi.repository import Gtk
 import ampd
 
 from ..util import ssde
+from ..util import record
 from ..util import resource
 
 from . import songlistbase
@@ -45,25 +46,20 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
         for name in self.songlistbase_actions.list_actions():
             if name.startswith('playqueue-ext-'):
                 self.songlistbase_actions.remove(name)
-        # self.widget.record_view.connect('cursor-changed', self.cursor_changed_cb)
         self.cursor_by_profile = {}
-        self.set_cursor = False
+        # self.set_cursor = False
 
         self.view.bind_hooks.append(self.current_song_bind_hook)
 
-    # def cursor_changed_cb(self, view):
-    #     if not self.set_cursor:
-    #         self.cursor_by_profile[self.unit.unit_server.server_profile] = self.widget.column_view.get_cursor().path
-
     @ampd.task
     async def client_connected_cb(self, client):
-        self.set_cursor = True
+        # self.set_cursor = True
         while True:
             self.set_songs(await self.ampd.playlistinfo())
             self.widget.record_view.rebind_columns()
-            if self.set_cursor:
-                # self.widget.record_view.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
-                self.set_cursor = False
+            # if self.set_cursor:
+            #     self.widget.record_view.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
+            #     self.set_cursor = False
             await self.ampd.idle(ampd.PLAYLIST)
 
     def current_song_bind_hook(self, label, item, name):
@@ -92,24 +88,37 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
     async def action_shuffle_cb(self, action, parameter):
         await self.ampd.shuffle()
 
+    def _set_songs(self, songs):  # If not we may lose the cursor and it's hell to get it right.
+        n = len(self.view.record_store)
+        self.view.record_store.handler_block_by_func(self.find_duplicates)
+        for i, song in enumerate(songs):
+            if i < n:
+                self.view.record_store[i].set_data(song)
+            else:
+                self.view.record_store[n:] = map(record.Record, songs[n:])
+                break
+        else:
+            self.view.record_store[len(songs):] = []
+        self.view.record_store.handler_unblock_by_func(self.find_duplicates)
+        self.find_duplicates()
+
     def action_go_to_current_cb(self, action, parameter):
         Id = self.unit.unit_server.ampd_server_properties.current_song.get('Id')
         if Id is None:
             return
-        for position, record in enumerate(self.view.record_store_filter):
-            if record.Id == Id:
+        for position, record_ in enumerate(self.view.record_store_filter):
+            if record_.Id == Id:
                 self.view.record_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
-                return
-                # view_height = self.view.record_view_rows.get_allocation().height
-                # row_height = self.view.record_view_rows.get_allocation().height
-                # self.view.scrolled_record_view.get_vadjustment().set_value(how_height * (position + 0.5) - view_height / 2)
+                view_height = self.view.record_view_rows.get_allocation().height
+                # row_height = self.view.record_view_rows.get_focus_child().get_allocation().height
+                self.view.scrolled_record_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
 
     def notify_current_song_cb(self, *args):
         self.widget.record_view.rebind_columns()
 
     @ampd.task
     async def remove_records(self, records):
-        await self.ampd.command_list(self.ampd.deleteid(record.Id) for record in records)
+        await self.ampd.command_list(self.ampd.deleteid(record_.Id) for record_ in records)
 
     @ampd.task
     async def add_records_from_data(self, filenames, position):

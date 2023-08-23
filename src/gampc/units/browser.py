@@ -24,7 +24,6 @@ import os
 
 import ampd
 
-from ..util import record
 from ..util import unit
 from ..ui import treelist
 from ..components import songlistbase
@@ -36,6 +35,10 @@ DIRECTORY = 'directory'
 
 class Browser(songlistbase.SongListBasePaneMixin, songlist.SongList):
     sortable = True
+
+    def left_selection_changed_cb(self, selection, position, n_items):
+        super().left_selection_changed_cb(selection, position, n_items)
+        self.set_songs(sum((selection[pos].get_item().songs for pos in self.left_selected), []))
 
 
 class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
@@ -68,7 +71,4 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
             contents = {DIRECTORY: [{DIRECTORY: _("Music")}]}
         folders = sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, []))
         node.sub_nodes = [treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic') for folder in folders]
-        songs = contents.get('file', [])
-        for song in songs:
-            self.unit_songlist.fields.set_derived_fields(song)
-        node.records = list(map(record.Record, songs))
+        node.songs = contents.get('file', [])
