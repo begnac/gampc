@@ -120,11 +120,11 @@ class SongListBase(component.Component):
         songs = list(songs)
         if set_fields:
             self.set_extra_fields(songs)
-        if self.duplicate_test_columns:  ### MOVE ELSEWHERE
-            self.find_duplicates(songs, self.duplicate_test_columns)
         self.set_records(map(record.Record, songs))
 
     def set_records(self, records):
+        if self.duplicate_test_columns:
+            self.find_duplicates(records)
         self.view.record_store[:] = records
         # self.view.record_view.rebind_columns()
 
@@ -132,23 +132,22 @@ class SongListBase(component.Component):
         for song in songs:
             self.fields.set_derived_fields(song)
 
-    def find_duplicates(self, songs, test_fields):
-        dup_marker = 0
-        dup_dict = {}
-        for song in songs:
-            if song['file'] == self.unit.unit_server.SEPARATOR_FILE:
+    def find_duplicates(self, records):
+        marker = 0
+        firsts = {}
+        for record_ in records:
+            if record_.file == self.unit.unit_server.SEPARATOR_FILE:
                 continue
-            test = tuple(song.get(field) for field in test_fields)
-            duplicates = dup_dict.get(test)
-            if duplicates:
-                if len(duplicates) == 1:
-                    duplicates[0][self.duplicate_field] = dup_marker
-                    dup_marker += 1
-                song[self.duplicate_field] = duplicates[0][self.duplicate_field]
-                duplicates.append(song)
+            test = tuple(record_[field] for field in self.duplicate_test_columns)
+            first = firsts.get(test)
+            if first:
+                if first._duplicate is None:
+                    first._duplicate = marker
+                    marker += 1
+                record_._duplicate = first._duplicate
             else:
-                dup_dict[test] = [song]
-                song.pop(self.duplicate_field, None)
+                firsts[test] = record_
+                del record_._duplicate
 
     def action_reset_cb(self, action, parameter):
         self.view.filter_record.set_data({})
