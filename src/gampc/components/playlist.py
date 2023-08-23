@@ -62,14 +62,6 @@ class Playlist(songlistbase.SongListBaseEditStackMixin, songlistbase.SongListBas
         pos = self.edit_node.parent_model.find(self.edit_node).position
         self.edit_node.parent_model.emit('items-changed', pos, 1, 1)
 
-    # async def get_node_songs(self, node):
-    #     if node.kind == NODE_FOLDER:
-    #         return []
-    #     elif node.modified:
-    #         return node.songs
-    #     else:
-    #         return await self.ampd.listplaylistinfo(PSEUDO_SEPARATOR.join(node.path))
-
     def left_selection_changed_cb(self, selection, position, n_items):
         if self.edit_node is not None:
             self.edit_node.delta_pos = self.delta_pos
@@ -83,13 +75,6 @@ class Playlist(songlistbase.SongListBaseEditStackMixin, songlistbase.SongListBas
                 self.deltas = node.deltas
                 self.delta_pos = node.delta_pos
         self.set_editable(self.edit_node is not None)
-
-    # @ampd.task
-    # async def left_treeview_selection_changed_cb(self, *args):
-    #     if self.selected_node is not None and self.selected_node.modified:
-    #         self.selected_node.songs = [song.get_data() for i, p, song in self.store]
-    #     await super().left_treeview_selection_changed_cb(*args)
-    #     self.set_editable(self.selected_node is not None and self.selected_node.kind == NODE_PLAYLIST)
 
     def left_treeview_row_activated_cb(self, left_treeview, p, col):
         node = self.left_store.get_node(self.left_store.get_iter(p))
