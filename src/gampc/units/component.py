@@ -22,8 +22,15 @@ from ..util import resource
 from ..util import unit
 
 
-class __unit__(unit.Unit):
+class __unit__(unit.UnitMixinCss, unit.Unit):
     REQUIRED_UNITS = ['menubar']
+
+    CSS = """
+    listview > row > treeexpander > box > label.modified {
+      font-style: italic;
+      font-weight: bold;
+    }
+    """
 
     def __init__(self, name, manager):
         super().__init__(name, manager)

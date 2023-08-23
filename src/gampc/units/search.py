@@ -70,7 +70,7 @@ class Search(component.ComponentMixinEntry, songlist.SongList):
         condition = sum((['any', s] if '=' not in s else s.split('=', 1) for s in self.parse(query)), [])
         if condition:
             songs = await (self.ampd.find if find else self.ampd.search)(*condition)
-            self.set_records(songs)
+            self.set_songs(songs)
 
     @staticmethod
     def parse(s):

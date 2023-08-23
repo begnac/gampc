@@ -125,15 +125,15 @@ class View(Gtk.Box):
         self.scrolled_record_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_record_view)
 
-        self.store = record.RecordStore()
+        self.record_store = Gio.ListStore(item_type=record.Record)
 
-        self.store_filter = Gtk.FilterListModel(model=self.store)
+        self.record_store_filter = Gtk.FilterListModel(model=self.record_store)
 
         if sortable:
-            self.store_sort = Gtk.SortListModel(model=self.store_filter, sorter=self.record_view.get_sorter())
-            self.record_selection.set_model(self.store_sort)
+            self.record_store_sort = Gtk.SortListModel(model=self.record_store_filter, sorter=self.record_view.get_sorter())
+            self.record_selection.set_model(self.record_store_sort)
         else:
-            self.record_selection.set_model(self.store_filter)
+            self.record_selection.set_model(self.record_store_filter)
             self.record_view.sort_by_column(None, 0)
 
         self.view_search = listviewsearch.ListViewSearch()
@@ -180,9 +180,9 @@ class View(Gtk.Box):
     def notify_filtering_cb(self, param):
         self.filter_view.set_visible(self.filtering)
         if self.filtering:
-            self.store_filter.set_filter(self.filter_filter)
+            self.record_store_filter.set_filter(self.filter_filter)
         else:
-            self.store_filter.set_filter(None)
+            self.record_store_filter.set_filter(None)
 
     def filter_func(self, record):
         for name, value in self.filter_record.items():

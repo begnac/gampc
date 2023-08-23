@@ -23,6 +23,7 @@ from gi.repository import Gtk
 
 import ampd
 
+from ..util import record
 from ..util import unit
 from ..util import dialog
 from ..util import resource
@@ -116,17 +117,21 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
 
     def shutdown(self):
         super().shutdown()
-        # del self.left_store
+        del self.root
 
-    @classmethod
-    async def fill_node(cls, node, executor, playlists):
+    async def fill_node(self, node, playlists):
         if node.kind == playlist.NODE_PLAYLIST:
-            node.songs = await executor.listplaylistinfo(playlist.PSEUDO_SEPARATOR.join(node.path))
+            songs = await self.ampd.listplaylistinfo(playlist.PSEUDO_SEPARATOR.join(node.path))
+            for song in songs:
+                self.unit_songlist.fields.set_derived_fields(song)
+            node.records = list(map(record.Record, songs))
+            node.deltas = []
+            node.delta_pos = 0
         else:
-            folders, playlists = cls.get_pseudo_folder_contents(node.path, playlists)
+            folders, playlists = self.get_pseudo_folder_contents(node.path, playlists)
             node.sub_nodes = \
-                [treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER, songs=[]) for name in sorted(folders)] + \
-                [treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_PLAYLIST], kind=playlist.NODE_PLAYLIST, songs=[]) for name in sorted(playlists)]
+                [treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER, records=[]) for name in sorted(folders)] + \
+                [treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_PLAYLIST], kind=playlist.NODE_PLAYLIST, records=[]) for name in sorted(playlists)]
 
     @staticmethod
     def get_pseudo_folder_contents(path, pseudo_names):
@@ -155,7 +160,7 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
         try:
             while True:
                 self.playlists = sorted(map(lambda entry: entry['playlist'], await self.ampd.listplaylists()))
-                self.root.update(self.fill_node, self.ampd, self.playlists)
+                self.root.update(self.fill_node, self.playlists)
                 self.root.expose()
                 await self.ampd.idle(ampd.STORED_PLAYLIST)
                 self.root.reset()

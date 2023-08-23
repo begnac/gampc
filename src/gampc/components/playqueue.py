@@ -26,10 +26,11 @@ import ampd
 from ..util import ssde
 from ..util import resource
 
+from . import songlistbase
 from . import songlist
 
 
-class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, songlist.SongList):
+class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, songlistbase.SongListBaseEditableMixin, songlist.SongList):
     editable = True
     duplicate_test_columns = ['Title']
 
@@ -58,7 +59,7 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
     async def client_connected_cb(self, client):
         self.set_cursor = True
         while True:
-            self.set_records(await self.ampd.playlistinfo())
+            self.set_songs(await self.ampd.playlistinfo())
             self.widget.record_view.rebind_columns()
             if self.set_cursor:
                 # self.widget.record_view.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
@@ -95,7 +96,7 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
         Id = self.unit.unit_server.ampd_server_properties.current_song.get('Id')
         if Id is None:
             return
-        for position, record in enumerate(self.view.store_filter):
+        for position, record in enumerate(self.view.record_store_filter):
             if record.Id == Id:
                 self.view.record_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
                 return
@@ -117,4 +118,4 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
     @ampd.task
     async def view_activate_cb(self, view, position):
         if not self.unit.unit_persistent.protect_active:
-            await self.ampd.playid(self.view.store_filter[position].Id)
+            await self.ampd.playid(self.view.record_store_filter[position].Id)

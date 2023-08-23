@@ -51,9 +51,14 @@ class TreeItemFactory(Gtk.SignalListItemFactory):
         row = listitem.get_item()
         node = row.get_item()
         listitem.icon.set_from_icon_name(node.icon)
-        listitem.label.set_label(node.name)
+        if node.modified:
+            listitem.label.set_label('* ' + node.name)
+            listitem.label.set_css_classes(['modified'])
+        else:
+            listitem.label.set_label(node.name)
+            listitem.label.set_css_classes([])
         listitem.expander.set_list_row(row)
-        row.name = node.name
+        # row.name = node.name
 
     # @staticmethod
     # def unbind_cb(self, listitem):
@@ -75,14 +80,18 @@ class TreeNode(GObject.Object):
         self.path = [] if path is None else path + [name]
         self.joined_path = '/'.join(self.path)
         self.__dict__.update(kwargs)
+        self.model = Gio.ListStore(item_type=type(self))
         self.reset()
+
+    def __del__(self):
+        self.model.remove_all()
 
     def reset(self):
         self.modified = False
         self.updated = False
         self.state = self.STATE_UNEXPOSED
         self.sub_nodes = []
-        self.model = Gio.ListStore(item_type=type(self))
+        self.model.remove_all()
 
     def expose(self):
         if self.state == self.STATE_EMPTY:
@@ -114,6 +123,7 @@ class TreeNode(GObject.Object):
                 node.update(*self.filler, model=self.model)
         if model is not None:
             model.append(self)
+        self.parent_model = model
 
 
 # class TreeListIconColumn(Gtk.TreeViewColumn):

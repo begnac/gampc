@@ -24,6 +24,7 @@ import os
 
 import ampd
 
+from ..util import record
 from ..util import unit
 from ..ui import treelist
 from ..components import songlistbase
@@ -50,22 +51,24 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
 
     def shutdown(self):
         super().shutdown()
-        del self.left_store
+        del self.root
 
     @ampd.task
     async def client_connected_cb(self, client):
         while True:
-            self.root.update(self.fill_node, self.ampd)
+            self.root.update(self.fill_node)
             self.root.expose()
             await self.ampd.idle(ampd.DATABASE)
             self.root.reset()
 
-    @staticmethod
-    async def fill_node(node, executor):
+    async def fill_node(self, node):
         if node.path:
-            contents = await executor.lsinfo('/'.join(node.path[1:]))
+            contents = await self.ampd.lsinfo('/'.join(node.path[1:]))
         else:
             contents = {DIRECTORY: [{DIRECTORY: _("Music")}]}
         folders = sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, []))
         node.sub_nodes = [treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic') for folder in folders]
-        node.songs = contents.get('file', [])
+        songs = contents.get('file', [])
+        for song in songs:
+            self.unit_songlist.fields.set_derived_fields(song)
+        node.records = list(map(record.Record, songs))

@@ -51,20 +51,3 @@ class Record(GObject.Object):
 
     def items(self):
         return self._data.items()
-
-
-class RecordStore(Gio.ListStore):
-    def __init__(self):
-        super().__init__(item_type=Record)
-
-    def set_records(self, datalist):
-        i = 0
-        n = len(self)
-        for data in datalist:
-            if i < n:
-                self[i].set_data(data)
-                i += 1
-            else:
-                self.append(Record(data))
-        if i < n:
-            self[i:] = []

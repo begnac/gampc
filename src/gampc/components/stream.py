@@ -57,10 +57,10 @@ class Stream(songlistbase.SongListBaseEditStackMixin, songlistbase.SongListBase)
 
     def load_streams(self):
         streams = self.unit.db.get_streams()
-        self.set_records(streams)
+        self.set_songs(streams)
 
     def action_save_cb(self, action, parameter):
-        streams = [stream.get_data() for i, p, stream in self.view.store if stream._status != self.RECORD_DELETED]
+        streams = [stream.get_data() for i, p, stream in self.view.record_store if stream._status != self.RECORD_DELETED]
         self.unit.db.save_streams(streams)
         self.load_streams()
 
