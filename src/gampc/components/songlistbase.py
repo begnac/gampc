@@ -442,20 +442,17 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
 
 class SongListBasePaneMixin(component.ComponentPaneMixin):
     def __init__(self, unit, **kwargs):
-        super().__init__(unit, **kwargs)
-        self.left_store = Gtk.MultiSelection(model=self.init_left_store())
-        self.left_view.set_model(self.left_store)
+        self.left_store = Gtk.MultiSelection(model=unit.left_store)
         self.left_selected = []
         self.left_selected_item = None
+
+        super().__init__(unit, **kwargs)
 
         self.signal_handler_connect(self.left_view, 'activate', self.left_view_activate_cb)
         self.signal_handler_connect(self.left_store, 'selection_changed', self.left_selection_changed_cb)
         self.left_store.select_item(0, True)
 
         self.focus_widget = self.left_view
-
-    def init_left_store(self):
-        return self.unit.left_store
 
     def left_selection_changed_cb(self, selection, position, n_items):
         self.left_selected = []

@@ -171,7 +171,7 @@ class TreeItemFactory(Gtk.SignalListItemFactory):
 class ComponentPaneMixin:
     def __init__(self, unit, **kwargs):
         super().__init__(unit, **kwargs)
-        self.left_view = Gtk.ListView(factory=self.get_left_factory())
+        self.left_view = Gtk.ListView(model=self.left_store, factory=self.get_left_factory())
         self.left_scrolled = Gtk.ScrolledWindow()
         self.left_scrolled.set_child(self.left_view)
         self.left_view_search = listviewsearch.ListViewSearch()
