@@ -440,7 +440,7 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
         self.edit_stack_changed()
 
 
-class SongListBasePaneMixin(component.ComponentPaneMixin):
+class SongListBasePaneMixin(component.ComponentPaneTreeMixin):
     def __init__(self, unit, **kwargs):
         self.left_store = Gtk.MultiSelection(model=unit.left_store)
 
@@ -456,7 +456,7 @@ class SongListBasePaneMixin(component.ComponentPaneMixin):
             row.set_expanded(not row.get_expanded())
 
 
-class UnitMixinSongListBase(component.UnitMixinComponent):
+class UnitSongListBaseMixin(component.UnitComponentMixin):
     def __init__(self, name, manager, *, menus=[]):
         self.REQUIRED_UNITS = ['misc', 'songlistbase'] + self.REQUIRED_UNITS
         super().__init__(name, manager, menus=menus + ['context'])

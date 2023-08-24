@@ -29,7 +29,7 @@ from ..util import unit
 from ..util.misc import get_modifier_state
 
 
-class __unit__(unit.UnitMixinServer, unit.Unit):
+class __unit__(unit.UnitServerMixin, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 

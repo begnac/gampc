@@ -62,7 +62,7 @@ class Unit(resource.ResourceProvider):
         logger.debug("Deleting {self}".format(self=self))
 
 
-class UnitMixinCss:
+class UnitCssMixin:
     def __init__(self, name, manager):
         super().__init__(name, manager)
         self.css_provider = Gtk.CssProvider()
@@ -74,14 +74,14 @@ class UnitMixinCss:
         super().shutdown()
 
 
-class UnitMixinConfig:
+class UnitConfigMixin:
     def __init__(self, name, manager):
         self.REQUIRED_UNITS = ['config'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
         self.config = self.unit_config.load_config(name)
 
 
-class UnitMixinServer:
+class UnitServerMixin:
     def __init__(self, name, manager):
         self.REQUIRED_UNITS = ['server'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
@@ -101,7 +101,7 @@ class UnitMixinServer:
         pass
 
 
-class UnitMixinCache:
+class UnitCacheMixin:
     def __init__(self, name, manager):
         self.REQUIRED_UNITS = ['cache'] + self.REQUIRED_UNITS
         super().__init__(name, manager)

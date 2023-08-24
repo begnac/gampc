@@ -31,7 +31,7 @@ from ..components import component
 from ..components import songlist
 
 
-class SavedSearch(component.ComponentMixinPaned, songlist.SongList):
+class SavedSearch(component.ComponentPanedMixin, songlist.SongList):
     title = _("Saved Searches")
     name = 'savedsearch'
     key = '9'
@@ -181,7 +181,7 @@ class SearchDatabase(db.Database):
         self.connection.cursor().execute('DELETE FROM searches WHERE name=?', (name,))
 
 
-class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
+class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
     COMPONENT_CLASS = SavedSearch
 
     def __init__(self, name, manager):

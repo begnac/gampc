@@ -49,7 +49,7 @@ async def action_playqueue_add_high_priority_cb(songlist_, action, parameter):
     await songlist_.ampd.prioid(255, *Ids)
 
 
-class __unit__(songlist.UnitMixinSongList, unit.UnitMixinCss, unit.Unit):
+class __unit__(songlist.UnitSongListMixin, unit.UnitCssMixin, unit.Unit):
     title = _("Play Queue")
     key = '1'
 

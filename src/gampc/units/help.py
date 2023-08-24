@@ -75,7 +75,7 @@ def xml_interface(objects):
     yield '</interface>'
 
 
-class __unit__(unit.UnitMixinServer, unit.Unit):
+class __unit__(unit.UnitServerMixin, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 

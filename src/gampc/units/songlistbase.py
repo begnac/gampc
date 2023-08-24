@@ -40,7 +40,7 @@ for d in range(N ** 3):
     '''
 
 
-class __unit__(unit.UnitMixinConfig, unit.UnitMixinCss, unit.Unit):
+class __unit__(unit.UnitConfigMixin, unit.UnitCssMixin, unit.Unit):
     CSS = CSS
 
     def __init__(self, name, manager):

@@ -28,7 +28,7 @@ from ..components import component
 from ..components import songlist
 
 
-class Search(component.ComponentMixinEntry, songlist.SongList):
+class Search(component.ComponentEntryMixin, songlist.SongList):
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
 
     sortable = True
@@ -101,7 +101,7 @@ class Search(component.ComponentMixinEntry, songlist.SongList):
             yield token
 
 
-class __unit__(songlist.UnitMixinSongList, unit.Unit):
+class __unit__(songlist.UnitSongListMixin, unit.Unit):
     title = _("Search")
     key = '3'
 

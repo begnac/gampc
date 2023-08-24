@@ -34,7 +34,7 @@ class ServerOption(GObject.Object):
     value = GObject.Property(type=bool, default=False)
 
 
-class __unit__(unit.UnitMixinConfig, unit.Unit):
+class __unit__(unit.UnitConfigMixin, unit.Unit):
     REQUIRED_UNITS = ['menubar', 'profiles', 'songlist']
 
     SEPARATOR_FILE = 'separator.mp3'

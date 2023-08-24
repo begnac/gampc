@@ -74,7 +74,7 @@ class ChoosePathDialog(dialog.AsyncTextDialog):
         return True
 
 
-class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
+class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
     title = _("Playlists")
     key = '5'
 

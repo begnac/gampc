@@ -29,7 +29,7 @@ from ..util.misc import format_time
 from ..ui import column
 
 
-class __unit__(unit.UnitMixinConfig, unit.Unit):
+class __unit__(unit.UnitConfigMixin, unit.Unit):
     REQUIRED_UNITS = ['songlistbase']
 
     def __init__(self, name, manager):

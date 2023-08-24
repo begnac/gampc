@@ -55,7 +55,7 @@ class Profile:
         return f'{self.address}={self.name}'
 
 
-class __unit__(unit.UnitMixinConfig, unit.Unit):
+class __unit__(unit.UnitConfigMixin, unit.Unit):
     REQUIRED_UNITS = ['menubar']
 
     LOCAL_HOST_NAME = _("Local host")

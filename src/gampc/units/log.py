@@ -63,7 +63,7 @@ class Log(component.Component):
         adjustment.set_value(adjustment.get_upper())
 
 
-class __unit__(component.UnitMixinComponent, unit.Unit):
+class __unit__(component.UnitComponentMixin, unit.Unit):
     title = _("View log")
     key = '8'
 

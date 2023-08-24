@@ -39,11 +39,11 @@ class _Command(component.Component):
         self.label.set_label('\n'.join(str(x) for x in reply) if reply else _("Empty reply"))
 
 
-class Command(component.ComponentMixinEntry, _Command):
+class Command(component.ComponentEntryMixin, _Command):
     pass
 
 
-class __unit__(component.UnitMixinComponent, unit.Unit):
+class __unit__(component.UnitComponentMixin, unit.Unit):
     title = _("Execute MPD commands")
     key = '7'
 

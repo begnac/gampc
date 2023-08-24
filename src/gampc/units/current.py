@@ -255,7 +255,7 @@ class Current(component.Component):
         self.set_size()
 
 
-class __unit__(component.UnitMixinComponent, unit.Unit):
+class __unit__(component.UnitComponentMixin, unit.Unit):
     title = _("Current Song")
     key = '0'
 

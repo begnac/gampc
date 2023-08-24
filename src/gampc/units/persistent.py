@@ -29,7 +29,7 @@ from ..util import unit
 from ..util.logger import logger
 
 
-class __unit__(unit.UnitMixinServer, unit.Unit):
+class __unit__(unit.UnitServerMixin, unit.Unit):
     REQUIRED_UNITS = ['menubar']
     STICKER_PROPERTIES = ('protect-requested', 'dark')
 

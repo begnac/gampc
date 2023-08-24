@@ -41,7 +41,7 @@ class Browser(songlistbase.SongListBasePaneMixin, songlist.SongList):
         self.set_songs(sum((selection[pos].get_item().songs for pos in self.left_selection), []))
 
 
-class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
+class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
     title = _("Database Browser")
     key = '2'
 

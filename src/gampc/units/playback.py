@@ -26,7 +26,7 @@ from ..util import resource
 from ..util import unit
 
 
-class __unit__(unit.UnitMixinServer, unit.Unit):
+class __unit__(unit.UnitServerMixin, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 

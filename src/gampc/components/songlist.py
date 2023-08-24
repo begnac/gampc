@@ -147,12 +147,12 @@ class SongListAddSpecialMixin: #####  Not ready
 #         super().set_records(songs, set_fields)
 
 
-class UnitMixinSongList(songlistbase.UnitMixinSongListBase):
+class UnitSongListMixin(songlistbase.UnitSongListBaseMixin):
     def __init__(self, name, manager, *, menus=[]):
         self.REQUIRED_UNITS = ['songlist'] + self.REQUIRED_UNITS
         super().__init__(name, manager, menus=menus)
 
 
-class UnitMixinPanedSongList(UnitMixinSongList, component.UnitMixinPanedComponent):
+class UnitPanedSongListMixin(UnitSongListMixin, component.UnitPanedComponentMixin):
     def __init__(self, name, manager, *, menus=[]):
         super().__init__(name, manager, menus=menus + ['left-context'])

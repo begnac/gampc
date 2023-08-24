@@ -178,7 +178,6 @@ class ComponentPaneMixin:
         self.left_view_search.setup(self.left_view, lambda text, node: text.lower() in node.name.lower())
 
         self.left_selection = []
-        self.left_selected_item = None
         self.signal_handler_connect(self.left_store, 'selection_changed', self.left_selection_changed_cb)
 
         self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config.pane_separator._get())
@@ -194,10 +193,6 @@ class ComponentPaneMixin:
         self.left_view_search.cleanup()
 
     @staticmethod
-    def get_left_factory():
-        return TreeItemFactory()
-
-    @staticmethod
     def paned_notify_position_cb(paned, param, config):
         config.pane_separator._set(paned.get_position())
 
@@ -207,13 +202,26 @@ class ComponentPaneMixin:
         while found:
             self.left_selection.append(pos)
             found, pos = i.next()
+
+
+class ComponentPaneTreeMixin(ComponentPaneMixin):
+    def __init__(self, unit, **kwargs):
+        super().__init__(unit, **kwargs)
+        self.left_selected_item = None
+
+    @staticmethod
+    def get_left_factory():
+        return TreeItemFactory()
+
+    def left_selection_changed_cb(self, selection, position, n_items):
+        super().left_selection_changed_cb(selection, position, n_items)
         if len(self.left_selection) == 1:
             self.left_selected_item = selection[self.left_selection[0]].get_item()
         else:
             self.left_selected_item = None
 
 
-class ComponentMixinEntry:
+class ComponentEntryMixin:
     def __init__(self, unit):
         super().__init__(unit)
 
@@ -226,7 +234,7 @@ class ComponentMixinEntry:
         self.widget = box
 
 
-class UnitMixinComponent(unit.UnitMixinConfig, unit.UnitMixinServer):
+class UnitComponentMixin(unit.UnitConfigMixin, unit.UnitServerMixin):
     def __init__(self, name, manager, *, menus=[]):
         self.REQUIRED_UNITS = ['component', 'persistent'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
@@ -257,7 +265,7 @@ class UnitMixinComponent(unit.UnitMixinConfig, unit.UnitMixinServer):
         self.menu_aggregators[f'{name}.{kind}'] = aggregator
 
 
-class UnitMixinPanedComponent(UnitMixinComponent, unit.UnitMixinConfig):
+class UnitPanedComponentMixin(UnitComponentMixin, unit.UnitConfigMixin):
     def __init__(self, name, manager, **kwargs):
         super().__init__(name, manager, **kwargs)
         self.config.pane_separator._get(default=100)

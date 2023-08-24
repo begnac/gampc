@@ -82,7 +82,7 @@ class CacheDatabase(db.Database):
             cursor.execute(f'UPDATE {LAST_MODIFIED} SET {LAST_MODIFIED}=?', (last_modified,))
 
 
-class __unit__(unit.UnitMixinServer, unit.Unit):
+class __unit__(unit.UnitServerMixin, unit.Unit):
     def __init__(self, name, manager):
         self.REQUIRED_UNITS = ['songlist'] + self.REQUIRED_UNITS
         super().__init__(name, manager)

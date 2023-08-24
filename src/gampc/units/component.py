@@ -22,7 +22,7 @@ from ..util import resource
 from ..util import unit
 
 
-class __unit__(unit.UnitMixinCss, unit.Unit):
+class __unit__(unit.UnitCssMixin, unit.Unit):
     REQUIRED_UNITS = ['menubar']
 
     CSS = """

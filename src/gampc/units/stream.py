@@ -49,7 +49,7 @@ class StreamDatabase(db.Database):
                                                                                                        ':' + ',:'.join(self.fields.basic_names)), stream_)
 
 
-class __unit__(songlistbase.UnitMixinSongListBase, unit.UnitMixinCss, unit.Unit):
+class __unit__(songlistbase.UnitSongListBaseMixin, unit.UnitCssMixin, unit.Unit):
     title = _("Internet Streams")
     key = '4'
 

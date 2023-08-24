@@ -161,7 +161,7 @@ class Window(Gtk.ApplicationWindow):
             self.volume_button.emit('popdown')
 
 
-class __unit__(unit.UnitMixinConfig, unit.UnitMixinServer, unit.Unit):
+class __unit__(unit.UnitConfigMixin, unit.UnitServerMixin, unit.Unit):
     REQUIRED_UNITS = ['persistent']
 
     def __init__(self, manager, name):
