@@ -21,6 +21,7 @@
 import ampd
 
 from ..util import resource
+from ..util import dialog
 
 from . import songlistbase
 from . import songlist
@@ -90,8 +91,7 @@ class Playlist(songlistbase.SongListBasePaneMixin, songlistbase.SongListBaseEdit
     async def action_save_cb(self, action, parameter):
         if not self.deltas:
             return
-        result = await self.unit.save_playlist(self.left_selected_item.joined_path, [record.file for record in self.view.record_store], self.widget.get_root())
-        if result:
+        if await self.unit.save_playlist(self.left_selected_item.joined_path, [record.file for record in self.view.record_store], self.widget.get_root()):
             self.deltas[:] = []
             self.delta_pos = 0
             self.edit_stack_changed()
@@ -105,10 +105,10 @@ class Playlist(songlistbase.SongListBasePaneMixin, songlistbase.SongListBaseEdit
 
     @ampd.task
     async def action_playlist_delete_cb(self, action, parameter):
-        if not self.selected_node:
+        if not self.left_selected_item:
             return
-        playlist_path = self.selected_node.joined_path
-        if not await self.unit.confirm(self.widget.get_root(), _("Delete playlist {name}?").format(name=playlist_path)):
+        playlist_path = self.left_selected_item.joined_path
+        if not await dialog.AsyncMessageDialog(transient_for=self.widget.get_root(), message=_("Delete playlist {name}?").format(name=playlist_path)).run():
             return
         await self.ampd.rm(playlist_path.replace('/', PSEUDO_SEPARATOR))
 

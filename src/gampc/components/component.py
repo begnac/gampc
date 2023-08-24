@@ -125,6 +125,49 @@ class Component(GObject.Object):
         pass
 
 
+class TreeItemFactory(Gtk.SignalListItemFactory):
+    def __init__(self):
+        super().__init__()
+
+        self.connect('setup', self.setup_cb)
+        self.connect('bind', self.bind_cb)
+        # self.connect('unbind', self.unbind_cb)
+        # self.connect('teardown', self.teardown_cb)
+
+    @staticmethod
+    def setup_cb(self, listitem):
+        listitem.icon = Gtk.Image()
+        listitem.label = Gtk.Label()
+        box = Gtk.Box(spacing=4)
+        box.append(listitem.icon)
+        box.append(listitem.label)
+        listitem.expander = Gtk.TreeExpander(child=box)
+        listitem.expander.set_focusable(False)
+        listitem.set_child(listitem.expander)
+
+    @staticmethod
+    def bind_cb(self, listitem):
+        row = listitem.get_item()
+        node = row.get_item()
+        listitem.icon.set_from_icon_name(node.icon)
+        if node.modified:
+            listitem.label.set_label('* ' + node.name)
+            listitem.label.set_css_classes(['modified'])
+        else:
+            listitem.label.set_label(node.name)
+            listitem.label.set_css_classes([])
+        listitem.expander.set_list_row(row)
+        # row.name = node.name
+
+    # @staticmethod
+    # def unbind_cb(self, listitem):
+    #     pass
+
+    # @staticmethod
+    # def teardown_cb(self, listitem):
+    #     self.labels.remove(listitem.label)
+
+
 class ComponentPaneMixin:
     def __init__(self, unit, **kwargs):
         super().__init__(unit, **kwargs)
@@ -145,6 +188,9 @@ class ComponentPaneMixin:
     def shutdown(self):
         super().shutdown()
         self.left_view_search.cleanup()
+
+    def get_left_factory(self):
+        return TreeItemFactory()
 
     @staticmethod
     def paned_notify_position_cb(paned, param, config):

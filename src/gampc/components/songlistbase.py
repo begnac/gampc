@@ -454,9 +454,6 @@ class SongListBasePaneMixin(component.ComponentPaneMixin):
 
         self.focus_widget = self.left_view
 
-    def get_left_factory(self):
-        return treelist.TreeItemFactory()
-
     def init_left_store(self):
         return self.unit.left_store
 
