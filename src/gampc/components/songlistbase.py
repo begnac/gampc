@@ -29,6 +29,7 @@ import ampd
 from ..util import record
 from ..util import misc
 from ..util import resource
+from ..util import dialog
 from ..ui import view
 from ..ui import treelist
 from . import component
@@ -71,12 +72,6 @@ class SongListBase(component.Component):
         self.view.cleanup()
         super().shutdown()
 
-    def set_editable(self, editable):
-        for name in ['paste', 'paste-before', 'delete', 'cut']:
-            action_ = self.songlistbase_actions.lookup(name)
-            if action_ is not None:
-                action_.set_enabled(editable)
-
     def get_current_position(self):
         if (row := self.view.record_view_rows.get_focus_child()) is not None:
             return row.get_first_child()._pos
@@ -87,7 +82,7 @@ class SongListBase(component.Component):
             return None
 
     @ampd.task
-    async def view_activate_cb(self, view, position): ### THIS LOOKS BAD
+    async def view_activate_cb(self, view, position):
         if self.unit.unit_persistent.protect_active:
             return
         filename = self.view.record_selection[position].file
@@ -119,7 +114,6 @@ class SongListBase(component.Component):
 
     def find_duplicates(self, *args):
         model = self.view.record_store
-        model.handler_block_by_func(self.find_duplicates)
         marker = 0
         firsts = {}
         for i, record_ in enumerate(model):
@@ -131,15 +125,12 @@ class SongListBase(component.Component):
                 firsts[test] = i
                 if record_._duplicate is not None:
                     del record_._duplicate
-                    model.items_changed(i, 1, 1)
             else:
                 if model[first]._duplicate is None:
                     model[first]._duplicate = marker
                     marker += 1
-                    model.items_changed(first, 1, 1)
                 record_._duplicate = model[first]._duplicate
-                model.items_changed(i, 1, 1)
-        model.handler_unblock_by_func(self.find_duplicates)
+        self.view.record_view.rebind_columns()
 
     def action_reset_cb(self, action, parameter):
         self.view.filter_record.set_data({})
@@ -228,7 +219,7 @@ class SongListBase(component.Component):
         return False
 
 
-class SongListBaseEditableMixin:
+class SongListBaseEditableMixin(SongListBase):
     editable = GObject.Property(type=bool, default=True)
 
     sortable = False
@@ -328,9 +319,10 @@ class SimpleDelta(GObject.Object):
         self.position = position
         self.push = push
 
-    def apply(self, selection_model, push, deselect=True):
+    def apply(self, view, push, deselect=True):
         if not self.push:
             push = not push
+        selection_model = view.get_model()
         model = selection_model.get_model()
         if isinstance(model, Gtk.FilterListModel):
             if model.get_filter() is not None:
@@ -344,7 +336,12 @@ class SimpleDelta(GObject.Object):
             if model[self.position:self.position + len(self.records)] != self.records:
                 raise RuntimeError
             model[self.position:self.position + len(self.records)] = []
-            selection_model.select_item(self.position, deselect)
+            # selection_model.select_item(self.position, deselect)
+            pos = self.position
+            if pos == len(model):
+                pos -= 1
+            if pos >= 0:
+                view.scroll_to(pos, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
 
 
 class MetaDelta(GObject.Object):
@@ -353,16 +350,16 @@ class MetaDelta(GObject.Object):
         self.deltas = deltas
         self.push = push
 
-    def apply(self, selection_model, push):
+    def apply(self, view, push):
         if not self.push:
             push = not push
-        selection_model.unselect_all()
+        view.get_model().unselect_all()
         if push:
             for delta in self.deltas:
-                delta.apply(selection_model, True, False)
+                delta.apply(view, True, False)
         else:
             for delta in reversed(self.deltas):
-                delta.apply(selection_model, False, False)
+                delta.apply(view, False, False)
 
 
 class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Must take in SongListBase or GObject property doesn't work
@@ -378,13 +375,13 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
         self.deltas = Gio.ListStore()
 
     def delta_push(self):
-        self.deltas[self.delta_pos].apply(self.view.record_selection, True)
+        self.deltas[self.delta_pos].apply(self.view.record_view, True)
         self.delta_pos += 1
         self.edit_stack_changed()
 
     def delta_pop(self):
         self.delta_pos -= 1
-        self.deltas[self.delta_pos].apply(self.view.record_selection, False)
+        self.deltas[self.delta_pos].apply(self.view.record_view, False)
         self.edit_stack_changed()
 
     def remove_records(self, records):
@@ -431,41 +428,25 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
             raise RuntimeError
         self.edit_stack_changed()
 
-    # def action_undelete_cb(self, action, parameter):
-    #     store, paths = self.view.get_selection().get_selected_rows()
-    #     for p in paths:
-    #         i = self.widget.store.get_iter(p)
-    #         if self.widget.store.get_record(i)._status == self.RECORD_DELETED:
-    #             del self.widget.store.get_record(i)._status
-    #     self.view.queue_draw()
-
-    # def record_delete_cb(self, store, i):
-    #     if self.widget.store.get_record(i)._status == self.RECORD_UNDEFINED:
-    #         return
-    #     self.set_modified()
-    #     if self.widget.store.get_record(i)._status == self.RECORD_NEW:
-    #         self.widget.store.remove(i)
-    #     else:
-    #         self.widget.store.get_record(i)._status = self.RECORD_DELETED
-    #         self.merge_new_del(i)
-    #     self.view.queue_draw()
-
-    # def merge_new_del(self, i):
-    #     _status = self.widget.store.get_record(i)._status
-    #     for f in [self.widget.store.iter_previous, self.widget.store.iter_next]:
-    #         j = f(i)
-    #         if j and self.widget.store.get_record(j).file == self.widget.store.get_record(i).file and {_status, self.widget.store.get_record(j)._status} == {self.RECORD_DELETED, self.RECORD_NEW}:
-    #             del self.widget.store.get_record(i)._status
-    #             self.widget.store.remove(j)
-    #             return
+    @ampd.task
+    async def action_reset_cb(self, action, parameter):
+        if not self.deltas:
+            return
+        if not await dialog.AsyncMessageDialog(transient_for=self.widget.get_root(), message=_("Reset and lose all modifications?")).run():
+            return
+        while self.delta_pos:
+            self.delta_pop()
+        self.deltas[:] = []
+        self.edit_stack_changed()
 
 
-class SongListBasePaneMixin(component.ComponentPaneMixin, SongListBase):
-    def __init__(self, unit):
-        super().__init__(unit)
+class SongListBasePaneMixin(component.ComponentPaneMixin):
+    def __init__(self, unit, **kwargs):
+        super().__init__(unit, **kwargs)
         self.left_store = Gtk.MultiSelection(model=self.init_left_store())
         self.left_view.set_model(self.left_store)
         self.left_selected = []
+        self.left_selected_item = None
 
         self.signal_handler_connect(self.left_view, 'activate', self.left_view_activate_cb)
         self.signal_handler_connect(self.left_store, 'selection_changed', self.left_selection_changed_cb)
@@ -485,6 +466,10 @@ class SongListBasePaneMixin(component.ComponentPaneMixin, SongListBase):
         while found:
             self.left_selected.append(pos)
             found, pos = i.next()
+        if len(self.left_selected) == 1:
+            self.left_selected_item = selection[self.left_selected[0]].get_item()
+        else:
+            self.left_selected_item = None
 
     @staticmethod
     def left_view_activate_cb(view, position):

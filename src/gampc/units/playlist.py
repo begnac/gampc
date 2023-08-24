@@ -167,10 +167,9 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
         finally:
             self.playlists = []
 
-    @staticmethod
-    def playlist_paths(playlists):
+    def playlist_paths(self):
         last_path = []
-        for playlist_name in playlists:
+        for playlist_name in self.playlists:
             playlist_path = playlist_name.split(playlist.PSEUDO_SEPARATOR)
             common = min(len(last_path), len(playlist_path) - 1)
             for i in range(common):
@@ -183,14 +182,10 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
                 yield '/'.join(last_path) + '/'
             yield '/'.join(playlist_path)
 
-    @staticmethod
-    async def confirm(win, question):
-        return await dialog.AsyncMessageDialog(parent=win, message=question).run_async(destroy=True)
-
     async def save_playlist(self, playlist_path, filenames, win):
         playlist_name = playlist_path.replace('/', playlist.PSEUDO_SEPARATOR)
 
-        if playlist_name in self.playlists and not await self.confirm(win, _("Replace existing playlist {name}?").format(name=playlist_path)):
+        if playlist_name in self.playlists and not await dialog.AsyncMessageDialog(transient_for=win, message=_("Replace existing playlist {name}?").format(name=playlist_path)).run():
             return False
 
         tempname = '$$TEMP$$'
@@ -213,8 +208,8 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
 
     async def rename_playlist(self, old_path, win, folder):
         title = _("Rename playlist folder") if folder else _("Rename playlist")
-        dialog_ = ChoosePathDialog(parent=win, title=title, paths=self.playlist_paths(), init=old_path)
-        new_path = await dialog_.run_async(destroy=True)
+        dialog_ = ChoosePathDialog(transient_for=win, title=title, paths=self.playlist_paths(), init=old_path)
+        new_path = await dialog_.run()
         if new_path is None or old_path == new_path:
             return
 
@@ -231,22 +226,17 @@ class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):
 
     @ampd.task
     async def action_playlist_add_saveas_cb(self, songlist_, action, parameter):
-        filenames = list(songlist_.get_filenames(parameter.get_boolean()))
+        filenames = list(songlist_.view.get_filenames(parameter.get_boolean()))
         if not filenames:
-            dialog_ = dialog.AsyncDialog(parent=songlist_.widget.get_toplevel(), title="")
-            dialog_.get_content_area().add(Gtk.Label(label=_("Nothing to save!")))
-            dialog_.add_button(_("_OK"), Gtk.ResponseType.OK)
-            await dialog_.run_async()
-            dialog_.destroy()
+            await dialog.AsyncMessageDialog(message=_("Nothing to save!"), transient_for=songlist_.widget.get_root(), title="", cancel_button=False).run()
             return
 
         saveas = '-saveas' in action.get_name()
         title = _("Save as playlist") if saveas else _("Add to playlist")
-        dialog_ = ChoosePathDialog(parent=songlist_.widget.get_toplevel(), title=title, paths=self.playlist_paths())
-        playlist_path = await dialog_.run_async(destroy=True)
+        playlist_path = await ChoosePathDialog(transient_for=songlist_.widget.get_root(), title=title, paths=self.playlist_paths()).run()
         if playlist_path is None:
             return
         playlist_name = playlist_path.replace('/', playlist.PSEUDO_SEPARATOR)
         if not saveas and playlist_name in self.playlists:
             filenames = await self.ampd.listplaylist(playlist_name) + filenames
-        await self.save_playlist(playlist_path, filenames, songlist_.widget.get_toplevel())
+        await self.save_playlist(playlist_path, filenames, songlist_.widget.get_root())

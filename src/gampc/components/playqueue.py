@@ -78,7 +78,7 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
         if priority == -1:
             priority = sum(int(song.get('Prio', 0)) for song in songs) // len(songs)
             struct = ssde.Integer(default=priority, min_value=0, max_value=255)
-            priority = await struct.edit_async(self.widget.get_toplevel())
+            priority = await struct.edit_async(self.widget.get_root())
             if priority is None:
                 return
         if songs:

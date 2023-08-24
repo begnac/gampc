@@ -36,7 +36,7 @@ class AsyncDialog(Gtk.Window):
         self.set_child(self.main_box)
 
     def add_button(self, label, response):
-        button = Gtk.Button(label=label)
+        button = Gtk.Button.new_with_mnemonic(label)
         button.connect('clicked', self.button_clicked_cb, self.future, response)
         self.button_box.append(button)
         return button
@@ -44,12 +44,6 @@ class AsyncDialog(Gtk.Window):
     @staticmethod
     def button_clicked_cb(button, future, response):
         future.set_result(response)
-
-    # @staticmethod
-    # def response_cb(self, response_id):
-    #     if self.future is not None and not self.future.done():
-    #         self.future.set_result(response_id)
-    #         self.future = None
 
     async def run(self):
         if self.future.done():
@@ -63,13 +57,13 @@ class AsyncDialog(Gtk.Window):
 class AsyncMessageDialog(AsyncDialog):
     def __init__(self, *, message, cancel_button=True, title=None, **kwargs):
         super().__init__(title=title or message, **kwargs)
-        self.get_content_area().add(Gtk.Label(label=message))
+        self.main_box.prepend(Gtk.Label(label=message))
         if cancel_button:
             self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         self.add_button(_("_OK"), Gtk.ResponseType.OK)
 
-    async def run_async(self, **kwargs):
-        return await super().run_async(**kwargs) == Gtk.ResponseType.OK
+    async def run(self, **kwargs):
+        return await super().run(**kwargs) == Gtk.ResponseType.OK
 
 
 class AsyncTextDialog(AsyncDialog):
@@ -80,16 +74,15 @@ class AsyncTextDialog(AsyncDialog):
         self.ok_button = self.add_button(_("_OK"), Gtk.ResponseType.OK)
 
         self.entry = Gtk.Entry()
-        self.get_content_area().add(self.entry)
+        self.main_box.prepend(self.entry)
         if text is not None:
             self.entry.set_text(text)
         self.entry.connect('notify::text', self.entry_notify_text_cb)
 
-    async def run_async(self, destroy=False):
-        result = await super().run_async()
+    async def run(self):
+        result = await super().run()
         result = self.entry.get_text() if result == Gtk.ResponseType.OK else None
-        if destroy:
-            self.destroy()
+        self.entry.disconnect_by_func(self.entry_notify_text_cb)
         return result
 
     def entry_notify_text_cb(self, entry, param):

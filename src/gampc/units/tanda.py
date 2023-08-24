@@ -214,7 +214,7 @@ class Tanda(component.ComponentPaneMixin, component.Component):
             self.status = None
 
     def db_missing_song_cb(self, db, song_file, *fields):
-        search_window = Gtk.Window(destroy_with_parent=True, transient_for=self.widget.get_toplevel(), window_position=Gtk.WindowPosition.CENTER_ON_PARENT,
+        search_window = Gtk.Window(destroy_with_parent=True, transient_for=self.widget.get_root(), window_position=Gtk.WindowPosition.CENTER_ON_PARENT,
                                    default_width=500, default_height=500,
                                    title=_("Replace {}").format(' / '.join(fields)))
         search_window.update_title = lambda *args: None
@@ -222,7 +222,7 @@ class Tanda(component.ComponentPaneMixin, component.Component):
         search_component.entry.set_text(' '.join('{}="{}"'.format(field, fields[i]) for i, field in enumerate(db.MISSING_SONG_FIELDS)))
         button_box = Gtk.ButtonBox(layout_style=Gtk.ButtonBoxStyle.CENTER)
         cancel_button = Gtk.Button(label=_("_Cancel"), use_underline=True)
-        cancel_button.connect('clicked', lambda button: button.get_toplevel().destroy())
+        cancel_button.connect('clicked', lambda button: button.get_root().destroy())
         button_box.add(cancel_button)
         ok_button = Gtk.Button(label=_("_OK"), use_underline=True)
         ok_button.connect('clicked', self.db_missing_song_ok_cb, db, search_component, song_file)
@@ -239,7 +239,7 @@ class Tanda(component.ComponentPaneMixin, component.Component):
             song = search_component.store.get_record(i).get_data()
             db.replace_song(song_file, song)
             db.emit('changed', -1)
-            search_component.widget.get_toplevel().destroy()
+            search_component.widget.get_root().destroy()
 
 
 class TandaSubComponent(component.Component):
@@ -439,7 +439,7 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
         i = self.tanda_store.get_iter(path)
         tanda = self.tanda_store.get_record(i)
         title = ' / '.join(filter(lambda x: x, (tanda.Artist, tanda.Years, tanda.Performer)))
-        dialog = Gtk.Dialog(parent=self.widget.get_toplevel(), title=_("Delete tanda"))
+        dialog = Gtk.Dialog(parent=self.widget.get_root(), title=_("Delete tanda"))
         dialog.get_content_area().add(Gtk.Label(label=_("Delete {tanda}?").format(tanda=title)))
         dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
@@ -494,7 +494,7 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
         self.tanda_treeview.queue_draw()
 
     def get_focus(self):
-        window = self.widget.get_toplevel()
+        window = self.widget.get_root()
         if isinstance(window, Gtk.Window):
             return window.get_focus()
         return None

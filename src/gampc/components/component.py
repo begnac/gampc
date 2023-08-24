@@ -38,8 +38,8 @@ class Component(GObject.Object):
     status = GObject.Property()
     full_title = GObject.Property(type=str)
 
-    def __init__(self, unit, *, name=None):
-        super().__init__(full_title=unit.title)
+    def __init__(self, unit, *, name=None, **kwargs):
+        super().__init__(full_title=unit.title, **kwargs)
         self.focus_widget = None
         self.unit = unit
         self.name = name or unit.name
@@ -126,8 +126,8 @@ class Component(GObject.Object):
 
 
 class ComponentPaneMixin:
-    def __init__(self, unit):
-        super().__init__(unit)
+    def __init__(self, unit, **kwargs):
+        super().__init__(unit, **kwargs)
         self.left_view = Gtk.ListView(factory=self.get_left_factory())
         self.left_scrolled = Gtk.ScrolledWindow()
         self.left_scrolled.set_child(self.left_view)
