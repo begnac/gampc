@@ -50,22 +50,20 @@ class SongList(songlistbase.SongListBase):
 
     @staticmethod
     def content_from_records(records):
-        return Gdk.ContentProvider.new_for_value(repr([record.file for record in records]))
+        return Gdk.ContentProvider.new_for_value(repr([record.get_data_clean() for record in records]))
 
     @staticmethod
     def data_from_raw(raw):
         try:
-            filenames = ast.literal_eval(raw)
-            if isinstance(filenames, list) and all(isinstance(filename, str) for filename in filenames):
-                return filenames
+            songs = ast.literal_eval(raw)
+            if isinstance(songs, list) and all(isinstance(song, dict) and all(isinstance(key, str) and isinstance(value, str) for key, value in song.items()) for song in songs):
+                return songs
         except Exception:
             pass
 
-    async def records_from_data(self, filenames):
-        songs = await self.ampd.command_list(self.ampd.find(f'(file == "{filename}")') for filename in filenames)
-        songs = [song[0] for song in songs]
+    def records_from_data(self, songs):
         self.set_extra_fields(songs)
-        return [record.Record(song) for song in songs]
+        return list(map(record.Record, songs))
 
     # def records_set_fields(self, songs):
     #     for song in songs:

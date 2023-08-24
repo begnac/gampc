@@ -95,7 +95,7 @@ class RecordView(Gtk.ColumnView):
 class View(Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, sortable, unit_misc):
+    def __init__(self, fields, sortable, unit_misc, *, selection_model=Gtk.MultiSelection):
         self.bind_hooks = [self.bind_hook]
         self.sortable = sortable
         self.unit_misc = unit_misc
@@ -116,7 +116,7 @@ class View(Gtk.Box):
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
         self.append(self.scrolled_filter_view)
 
-        self.record_selection = Gtk.MultiSelection()
+        self.record_selection = selection_model()
         self.record_view = RecordView(fields, self.make_record_label, self.bind_hooks, sortable, model=self.record_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)
         self.record_view.add_css_class('records')
         self.record_view.add_css_class('data-table')
@@ -174,7 +174,7 @@ class View(Gtk.Box):
 
     @staticmethod
     def bind_hook(label, item, name):
-        label.set_label(str(item[name]) or '')
+        label.set_label('' if item[name] is None else str(item[name]))
 
     @staticmethod
     def notify_filtering_cb(self, param):

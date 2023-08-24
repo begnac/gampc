@@ -121,8 +121,8 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
         await self.ampd.command_list(self.ampd.deleteid(record_.Id) for record_ in records)
 
     @ampd.task
-    async def add_records_from_data(self, filenames, position):
-        await self.ampd.command_list(self.ampd.add(filename, position) for filename in reversed(filenames))
+    async def add_records_from_data(self, songs, position):
+        await self.ampd.command_list(self.ampd.add(song['file'], position) for song in reversed(songs))
 
     @ampd.task
     async def view_activate_cb(self, view, position):

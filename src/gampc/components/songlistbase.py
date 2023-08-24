@@ -363,8 +363,6 @@ class MetaDelta(GObject.Object):
 
 
 class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Must take in SongListBase or GObject property doesn't work
-    delta_pos = GObject.Property(type=int, default=0)
-
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
         self.songlistbase_actions.add_action(resource.Action('save', self.action_save_cb))
@@ -372,7 +370,8 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
         self.songlistbase_actions.add_action(resource.Action('undo', self.action_do_cb))
         self.songlistbase_actions.add_action(resource.Action('redo', self.action_do_cb))
 
-        self.deltas = Gio.ListStore()
+        self.deltas = []
+        self.delta_pos = 0
 
     def delta_push(self):
         self.deltas[self.delta_pos].apply(self.view.record_view, True)
@@ -412,7 +411,7 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
 
     @ampd.task
     async def add_records_from_data(self, data, position):
-        self.add_records(await self.records_from_data(data), position)
+        self.add_records(self.records_from_data(data), position)
 
     def edit_stack_changed(self):
         self.songlistbase_actions.lookup_action('save').set_enabled(True)
