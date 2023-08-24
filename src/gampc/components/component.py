@@ -193,7 +193,8 @@ class ComponentPaneMixin:
         super().shutdown()
         self.left_view_search.cleanup()
 
-    def get_left_factory(self):
+    @staticmethod
+    def get_left_factory():
         return TreeItemFactory()
 
     @staticmethod

@@ -174,7 +174,7 @@ class View(Gtk.Box):
 
     @staticmethod
     def bind_hook(label, item, name):
-        label.set_label(item[name] or '')
+        label.set_label(str(item[name]) or '')
 
     @staticmethod
     def notify_filtering_cb(self, param):

@@ -35,7 +35,7 @@ class ServerOption(GObject.Object):
 
 
 class __unit__(unit.UnitMixinConfig, unit.Unit):
-    REQUIRED_UNITS = ['menubar', 'profiles']
+    REQUIRED_UNITS = ['menubar', 'profiles', 'songlist']
 
     SEPARATOR_FILE = 'separator.mp3'
 
@@ -72,7 +72,8 @@ class __unit__(unit.UnitMixinConfig, unit.Unit):
 
         self.connect('notify::server-profile', self.notify_server_profile_cb)
 
-        self.separator_song = {'file': self.SEPARATOR_FILE}
+        self.separator_song = {name: '----------' for name in self.unit_songlist.fields.basic_names if name != 'Time'}
+        self.separator_song['file'] = self.SEPARATOR_FILE
 
         self.add_resources(
             'app.action',
