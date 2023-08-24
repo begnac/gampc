@@ -177,7 +177,7 @@ class ComponentPaneMixin:
         self.left_view_search = listviewsearch.ListViewSearch()
         self.left_view_search.setup(self.left_view, lambda text, node: text.lower() in node.name.lower())
 
-        self.left_selected = []
+        self.left_selection = []
         self.left_selected_item = None
         self.signal_handler_connect(self.left_store, 'selection_changed', self.left_selection_changed_cb)
 
@@ -202,13 +202,13 @@ class ComponentPaneMixin:
         config.pane_separator._set(paned.get_position())
 
     def left_selection_changed_cb(self, selection, position, n_items):
-        self.left_selected = []
+        self.left_selection = []
         found, i, pos = Gtk.BitsetIter.init_first(selection.get_selection())
         while found:
-            self.left_selected.append(pos)
+            self.left_selection.append(pos)
             found, pos = i.next()
-        if len(self.left_selected) == 1:
-            self.left_selected_item = selection[self.left_selected[0]].get_item()
+        if len(self.left_selection) == 1:
+            self.left_selected_item = selection[self.left_selection[0]].get_item()
         else:
             self.left_selected_item = None
 

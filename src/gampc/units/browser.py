@@ -38,7 +38,7 @@ class Browser(songlistbase.SongListBasePaneMixin, songlist.SongList):
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
-        self.set_songs(sum((selection[pos].get_item().songs for pos in self.left_selected), []))
+        self.set_songs(sum((selection[pos].get_item().songs for pos in self.left_selection), []))
 
 
 class __unit__(songlist.UnitMixinPanedSongList, unit.Unit):

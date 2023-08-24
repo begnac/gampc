@@ -68,7 +68,7 @@ class Playlist(songlistbase.SongListBasePaneMixin, songlistbase.SongListBaseEdit
             self.left_selected_item.delta_pos = self.delta_pos
             self.left_selected_item.records = list(self.view.record_store)
         super().left_selection_changed_cb(selection, position, n_items)
-        self.view.record_store[:] = sum((selection[pos].get_item().records for pos in self.left_selected), [])
+        self.view.record_store[:] = sum((selection[pos].get_item().records for pos in self.left_selection), [])
         if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
             self.deltas = self.left_selected_item.deltas
             self.delta_pos = self.left_selected_item.delta_pos
