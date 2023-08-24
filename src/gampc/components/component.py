@@ -171,11 +171,15 @@ class TreeItemFactory(Gtk.SignalListItemFactory):
 class ComponentPaneMixin:
     def __init__(self, unit, **kwargs):
         super().__init__(unit, **kwargs)
-        self.left_view = Gtk.ListView(model=self.left_store, factory=self.get_left_factory())
+        self.focus_widget = self.left_view = Gtk.ListView(model=self.left_store, factory=self.get_left_factory())
         self.left_scrolled = Gtk.ScrolledWindow()
         self.left_scrolled.set_child(self.left_view)
         self.left_view_search = listviewsearch.ListViewSearch()
         self.left_view_search.setup(self.left_view, lambda text, node: text.lower() in node.name.lower())
+
+        self.left_selected = []
+        self.left_selected_item = None
+        self.signal_handler_connect(self.left_store, 'selection_changed', self.left_selection_changed_cb)
 
         self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config.pane_separator._get())
         self.paned.connect('notify::position', self.paned_notify_position_cb, self.config)
@@ -195,6 +199,17 @@ class ComponentPaneMixin:
     @staticmethod
     def paned_notify_position_cb(paned, param, config):
         config.pane_separator._set(paned.get_position())
+
+    def left_selection_changed_cb(self, selection, position, n_items):
+        self.left_selected = []
+        found, i, pos = Gtk.BitsetIter.init_first(selection.get_selection())
+        while found:
+            self.left_selected.append(pos)
+            found, pos = i.next()
+        if len(self.left_selected) == 1:
+            self.left_selected_item = selection[self.left_selected[0]].get_item()
+        else:
+            self.left_selected_item = None
 
 
 class ComponentMixinEntry:

@@ -443,27 +443,11 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
 class SongListBasePaneMixin(component.ComponentPaneMixin):
     def __init__(self, unit, **kwargs):
         self.left_store = Gtk.MultiSelection(model=unit.left_store)
-        self.left_selected = []
-        self.left_selected_item = None
 
         super().__init__(unit, **kwargs)
 
         self.signal_handler_connect(self.left_view, 'activate', self.left_view_activate_cb)
-        self.signal_handler_connect(self.left_store, 'selection_changed', self.left_selection_changed_cb)
         self.left_store.select_item(0, True)
-
-        self.focus_widget = self.left_view
-
-    def left_selection_changed_cb(self, selection, position, n_items):
-        self.left_selected = []
-        found, i, pos = Gtk.BitsetIter.init_first(selection.get_selection())
-        while found:
-            self.left_selected.append(pos)
-            found, pos = i.next()
-        if len(self.left_selected) == 1:
-            self.left_selected_item = selection[self.left_selected[0]].get_item()
-        else:
-            self.left_selected_item = None
 
     @staticmethod
     def left_view_activate_cb(view, position):
