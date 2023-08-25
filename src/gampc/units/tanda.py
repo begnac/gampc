@@ -217,7 +217,7 @@ class Tanda(component.ComponentPaneMixin, component.Component):
         tandas = [tanda for tanda in self.filtered_tandas if '*' in self.selected_artists or tanda.get('Artist') in self.selected_artists]
         for c in self.subcomponents:
             c.set_tandas(tandas)
-            # c.set_cursor_tandaid(self.current_tandaid)
+            c.set_cursor_tandaid(self.current_tandaid)
 
     def db_changed_cb(self, db, tandaid):
         if tandaid == -1:
@@ -274,32 +274,24 @@ class TandaSubComponent(component.Component):
 
     def __init__(self, unit, *, name):
         super().__init__(unit, name=name)
-        # self.widget.connect('map', lambda widget: self.set_cursor_tandaid(self.current_tandaid))
+        self.widget.connect('map', lambda widget: self.set_cursor_tandaid(self.current_tandaid))
         self.color = Gdk.RGBA()
 
     def init_tandaid_view(self, view):
         self.tandaid_view = view
-        self.tandaid_store = view.record_store
-        # self.tandaid_view.connect('cursor-changed', self.tandaid_cursor_changed_cb)
+        self.tandaid_view.record_selection.connect('selection-changed', self.tandaid_selection_changed_cb)
 
     def set_cursor_tandaid(self, tandaid):
-        for i, p, row in self.tandaid_store:
-            if row.tandaid == tandaid:
-                self.tandaid_view.set_cursor(p)
-                self.tandaid_view.scroll_to_cell(p, None, False)
+        if tandaid is None:
+            return
+        for i, item in enumerate(self.tandaid_view.record_selection):
+            if item.tandaid == tandaid:
+                self.tandaid_view.record_view.scroll_to(i, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
                 return
 
-    def tandaid_cursor_changed_cb(self, view):
-        path, column = self.tandaid_view.get_cursor()
-        self.current_tandaid = path and self.tandaid_store.get_record(self.tandaid_store.get_iter(path)).tandaid
-
-
-RGBA_PURPLE = Gdk.RGBA()
-RGBA_PINK = Gdk.RGBA()
-RGBA_YELLOW = Gdk.RGBA()
-RGBA_PURPLE.parse('purple')
-RGBA_PINK.parse('pink')
-RGBA_YELLOW.parse('yellow')
+    def tandaid_selection_changed_cb(self, model, *args):
+        selection = list(misc.get_selection(model))
+        self.current_tandaid = model[selection[0]].tandaid if selection else None
 
 
 class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, songlist.SongList):
@@ -328,9 +320,8 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
         #     col.renderer.connect('editing-started', self.renderer_editing_started_cb, name)
         self.tanda_store = self.tanda_view.record_store
         self.signal_handler_connect(self.tanda_view.record_selection, 'selection-changed', self.tanda_selection_changed_cb)
-        # self.tanda_filter = data.ViewFilter(self.unit.unit_misc, self.tanda_view)
 
-        # Ugly hack but works  ?????????????????XXXXXXXXXXXXXXXXXX
+        # Ugly hack but works
         self.songlistbase_actions.remove('filter')
         self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_view, property_name='filtering'))
 
@@ -578,8 +569,6 @@ class TandaView(TandaSubComponent, songlist.SongList):
         self.init_tandaid_view(self.view)
 
     def set_tandas(self, tandas):
-        # separator = record.Record(self.unit.unit_server.separator_song)
-        # separator.tandaid = None
         records = [record.Record(self.unit.unit_server.separator_song)]
         for tanda in tandas:
             tandaid = tanda['tandaid']
@@ -679,7 +668,11 @@ class TandaDatabase(GObject.Object, db.Database):
     def _get_tanda_from_tuple(self, t):
         tanda = self._tuple_to_dict(t, ['tandaid'] + self.fields.basic_names)
         query = self.connection.cursor().execute('SELECT {} FROM tanda_songs,songs USING(file) WHERE tanda_songs.tandaid=?'.format(', songs.'.join(['tanda_songs.position'] + self.unit.unit_songlist.fields.basic_names)), (tanda['tandaid'],))
-        tanda['_records'] = [record.Record(self._tuple_to_dict(s, ['_position'] + self.unit.unit_songlist.fields.basic_names)) for s in query]
+        tanda['_records'] = []
+        for s in query:
+            song = self._tuple_to_dict(s, ['_position'] + self.unit.unit_songlist.fields.basic_names)
+            self.unit.unit_songlist.fields.set_derived_fields(song)
+            tanda['_records'].append(record.Record(song))
         self.fields.set_derived_fields(tanda)
         return tanda
 
