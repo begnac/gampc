@@ -39,8 +39,8 @@ class Window(Gtk.ApplicationWindow):
         self.default_width = self.unit.config.width._get(default=1000)
         self.default_height = self.unit.config.height._get(default=600)
         self.set_default_size(self.default_width, self.default_height)
-
-        self.connect('map', self.map_cb)
+        self.connect('notify::default-width', self.notify_default_size_cb)
+        self.connect('notify::default-height', self.notify_default_size_cb)
 
         self.unit.unit_server.connect('notify::current-song', self.notify_current_song_cb)
         self.unit.unit_server.ampd_server_properties.connect('notify::state', self.update_title)
@@ -78,11 +78,6 @@ class Window(Gtk.ApplicationWindow):
 
     def __del__(self):
         logger.debug("Deleting {}".format(self))
-
-    @staticmethod
-    def map_cb(self):
-        self.width_delta = self.get_allocation().width - self.default_width
-        self.height_delta = self.get_allocation().height - self.default_height
 
     def shutdown(self):
         logger.debug("Destroying window: {}".format(self))
@@ -153,6 +148,13 @@ class Window(Gtk.ApplicationWindow):
             self.unfullscreen()
         else:
             self.fullscreen()
+
+    @staticmethod
+    def notify_default_size_cb(self, param):
+        if not self.is_fullscreen():
+            width, height = self.get_default_size()
+            self.unit.config.width._set(width)
+            self.unit.config.height._set(height)
 
     def action_volume_popup_cb(self, action, parameter):
         if self.volume_button.is_sensitive() and not self.volume_button.get_popup().get_mapped():
