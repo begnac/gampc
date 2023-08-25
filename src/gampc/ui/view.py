@@ -176,6 +176,7 @@ class View(Gtk.Box):
     @staticmethod
     def bind_hook(label, item, name):
         label.set_label('' if item[name] is None else str(item[name]))
+        label.get_parent().set_css_classes([])
 
     @staticmethod
     def notify_filtering_cb(self, param):

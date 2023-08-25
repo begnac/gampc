@@ -85,7 +85,6 @@ class SongListBase(component.Component):
         await self.ampd.playid(record_id)
 
     def duplicate_bind_hook(self, label, item, name):
-        label.get_parent().set_css_classes([])
         duplicate = item._duplicate
         if duplicate is not None:
             label.get_parent().add_css_class(f'duplicate{duplicate % 64}')

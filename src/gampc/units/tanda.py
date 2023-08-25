@@ -115,10 +115,10 @@ class Tanda(component.ComponentPaneMixin, component.Component):
         self.right_box.append(self.stack)
 
         self.edit = TandaEdit(unit)
-        # self.view = TandaView(unit)
+        self.view = TandaView(unit)
         self.stack.add_titled(self.edit.widget, 'edit', _("Edit tandas"))
-        # self.stack.add_titled(self.view.widget, 'view', _("View tandas"))
-        self.subcomponents = [self.edit]#, self.view]
+        self.stack.add_titled(self.view.widget, 'view', _("View tandas"))
+        self.subcomponents = [self.edit, self.view]
         for c in self.subcomponents:
             self.bind_property('current-tandaid', c, 'current-tandaid', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.subcomponent_index = 0
@@ -144,7 +144,7 @@ class Tanda(component.ComponentPaneMixin, component.Component):
     def shutdown(self):
         self.change_subcomponent_actions(False)
         self.edit.shutdown()
-        # self.view.shutdown()
+        self.view.shutdown()
         super().shutdown()
 
     @staticmethod
@@ -315,7 +315,9 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
         self.actions.add_action(resource.Action('fill-field', self.action_tanda_field_cb))
 
         self.tanda_view = view.View(self.unit.db.fields, True, unit.unit_misc)
-        self.tanda_view.set_name('tanda-view')
+        self.tanda_view.record_view.add_css_class('tanda-edit')
+        self.tanda_view.bind_hooks.append(self.tanda_bind_hook)
+
         # self.tanda_view.connect('button-press-event', self.tanda_view_button_press_event_cb)
         self.setup_context_menu(f'{self.name}.left-context', self.tanda_view)
         self.init_tandaid_view(self.tanda_view)
@@ -359,6 +361,7 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
             tanda._edit_stack_pos = 0
         self.current_tanda = None
         self.tanda_selection_changed_cb()
+        self.tanda_view.record_view.rebind_columns()
 
     def tanda_selection_changed_cb(self, *args):
         selection = self.tanda_view.get_selection()
@@ -387,6 +390,21 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
             tanda_selection = self.tanda_view.get_selection()
             return sum(([record_.file for record_ in self.tanda_view.record_selection[i]._records] + [self.unit.unit_server.SEPARATOR_FILE] for i in tanda_selection), [self.unit.unit_server.SEPARATOR_FILE])
 
+    def tanda_bind_hook(self, label, tanda, name):
+        if label.get_parent().get_css_classes():
+            print(name, label.get_parent().get_css_classes())
+        if tanda[name] is None:
+            return
+        cell = label.get_parent()
+        if 'Last_Played' in name:
+            t = min(tanda.Last_Played_Weeks, 10)
+            cell.add_css_class(f'last-played-{t}')
+        elif name in ('Rhythm', 'Energy', 'Speed', 'Level'):
+            cell.add_css_class(f'property-{tanda[name]}')
+        elif name == 'Emotion':
+            cell.add_css_class(f'emotion-{tanda[name]}')
+        elif name in ('Genre',):
+            cell.add_css_class(f'genre-{tanda[name].lower()}')
 
 
 
@@ -402,42 +420,6 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
 
 
 
-    def tanda_data_func(self, column, renderer, store, i, j):
-        tanda = store.get_record(i)
-        if tanda._modified:
-            renderer.set_property('font', 'bold italic')
-        else:
-            renderer.set_property('font', None)
-
-        rgba = self.cell_background(tanda, column.field.name)
-
-        if rgba is None:
-            renderer.set_property('background-set', False)
-        else:
-            renderer.set_property('background-rgba', rgba)
-            renderer.set_property('background-set', True)
-
-    @staticmethod
-    def cell_background(tanda, name):
-        if name in tanda.get_data():
-            if 'Last_Played' in name and 'Last_Played_Weeks' in tanda.get_data():
-                t = min(tanda.Last_Played_Weeks / 10.0, 1.0)
-                return Gdk.RGBA(1.0 - t, t, 0.0, 1.0)
-            elif name in ('Rhythm', 'Energy', 'Speed', 'Level'):
-                t = min((int(tanda.get_data()[name]) - 1) / 4.0, 1.0)
-                return Gdk.RGBA(t, 0.5, 1.0 - t, 1.0)
-            elif name == 'Emotion':
-                if tanda.Emotion == 'T':
-                    return RGBA_PURPLE
-                elif tanda.Emotion == 'R':
-                    return RGBA_PINK
-                elif tanda.Emotion == 'J':
-                    return RGBA_YELLOW
-            elif name in ('Genre',):
-                if tanda.Genre == 'Vals':
-                    return RGBA_PINK
-                elif tanda.Genre == 'Milonga':
-                    return RGBA_YELLOW
 
     def set_modified(self, modified=True):
         self.current_tanda._modified = modified
@@ -587,29 +569,24 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
         else:
             self.view.clipboard_paste_cb(clipboard, raw, before)
 
-    # def set_records(self, songs):
-    #     super().set_records(songs)
-    #     self.view.set_size_request(-1, max(26, 25 + self.store.iter_n_children() * 27))
-
 
 class TandaView(TandaSubComponent, songlist.SongList):
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
-    duplicate_field = '_duplicate_view'
 
     def __init__(self, unit):
         super().__init__(unit, name='tanda-view')
         self.init_tandaid_view(self.view)
 
     def set_tandas(self, tandas):
-        separator = record.Record(self.unit.unit_server.separator_song)
+        # separator = record.Record(self.unit.unit_server.separator_song)
         # separator.tandaid = None
-        records = [separator]
+        records = [record.Record(self.unit.unit_server.separator_song)]
         for tanda in tandas:
             tandaid = tanda['tandaid']
             for record_ in tanda['_records']:
                 record_.tandaid = tandaid
                 records.append(record_)
-            records.append(separator)
+            records.append(record.Record(self.unit.unit_server.separator_song))
         self.view.record_store[:] = records
 
 
@@ -820,12 +797,52 @@ def get_last_played_weeks(tanda):
     return None
 
 
+CSS = 'tanda-view.view { outline-width: 4px; outline-style: solid; }'
+
+CSS += '''
+columnview.tanda-edit > listview > row > cell.modified {
+  font-style: italic;
+  font-weight: bold;
+}
+columnview.tanda-edit > listview > row > cell.emotion-T {
+  background: purple;
+}
+columnview.tanda-edit > listview > row > cell.emotion-R {
+  background: pink;
+}
+columnview.tanda-edit > listview > row > cell.emotion-J {
+  background: yellow;
+}
+columnview.tanda-edit > listview > row > cell.genre-vals {
+  background: pink;
+}
+columnview.tanda-edit > listview > row > cell.genre-milonga {
+  background: yellow;
+}
+'''
+
+for t in range(11):
+    CSS += f'''
+    columnview.tanda-edit > listview > row > cell.last-played-{t} {{
+      background: rgba({255 - t * 255 // 10},{t * 255 // 10},0,1);
+    }}
+    '''
+
+for p in range(5):
+    CSS += f'''
+    columnview.tanda-edit > listview > row > cell.property-{p+1} {{
+      background: rgba({p * 255 // 4},{255/2},{255 - p * 255 // 4},1);
+    }}
+    '''
+
+
 class __unit__(songlist.UnitPanedSongListMixin, unit.UnitCssMixin, unit.Unit):
     title = _("Tandas")
     key = '6'
 
+    CSS = CSS
+
     COMPONENT_CLASS = Tanda
-    CSS = '#tanda-view.view { outline-width: 4px; outline-style: solid; }'
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
