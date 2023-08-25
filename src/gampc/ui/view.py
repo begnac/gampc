@@ -25,6 +25,7 @@ from gi.repository import Gtk
 import re
 
 from ..util import record
+from ..util import misc
 
 from . import column
 from . import entry
@@ -200,7 +201,7 @@ class View(Gtk.Box):
             return None
 
     def _get_selection(self):
-        return filter(lambda i: self.record_selection.is_selected(i), range(len(self.record_selection)))
+        return misc.get_selection(self.record_selection)
 
     def get_selection(self):
         return list(self._get_selection())

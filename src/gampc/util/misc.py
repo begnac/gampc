@@ -19,6 +19,7 @@
 
 
 from gi.repository import Gdk
+from gi.repository import Gtk
 
 
 class Rectangle(Gdk.Rectangle):
@@ -60,3 +61,10 @@ def find_descendant_at_xy(widget, x, y, levels):
         else:
             return None, x, y
     return widget, x, y
+
+
+def get_selection(selection):
+    found, i, pos = Gtk.BitsetIter.init_first(selection.get_selection())
+    while found:
+        yield pos
+        found, pos = i.next()

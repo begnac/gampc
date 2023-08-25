@@ -226,7 +226,7 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
 
     @ampd.task
     async def action_playlist_add_saveas_cb(self, songlist_, action, parameter):
-        filenames = list(songlist_.view.get_filenames(parameter.get_boolean()))
+        filenames = list(songlist_.get_filenames(parameter.get_boolean()))
         if not filenames:
             await dialog.AsyncMessageDialog(message=_("Nothing to save!"), transient_for=songlist_.widget.get_root(), title="", cancel_button=False).run()
             return

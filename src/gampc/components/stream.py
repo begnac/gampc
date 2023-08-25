@@ -74,7 +74,7 @@ class Stream(songlistbase.SongListBaseEditStackMixin, songlistbase.SongListBase)
 
     @ampd.task
     async def action_modify_cb(self, action, parameter):
-        pos = self.get_current_position()
+        pos = self.view.get_current_position()
         if pos is None:
             return
         record = self.view.record_selection[pos]

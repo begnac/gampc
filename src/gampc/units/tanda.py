@@ -35,7 +35,7 @@ from ..util import db
 from ..util import record
 from ..util import resource
 from ..util import unit
-from ..util.misc import format_time
+from ..util import misc
 from ..util.logger import logger
 
 from ..ui import column
@@ -115,10 +115,10 @@ class Tanda(component.ComponentPaneMixin, component.Component):
         self.right_box.append(self.stack)
 
         self.edit = TandaEdit(unit)
-        self.view = TandaView(unit)
+        # self.view = TandaView(unit)
         self.stack.add_titled(self.edit.widget, 'edit', _("Edit tandas"))
-        self.stack.add_titled(self.view.widget, 'view', _("View tandas"))
-        self.subcomponents = [self.edit, self.view]
+        # self.stack.add_titled(self.view.widget, 'view', _("View tandas"))
+        self.subcomponents = [self.edit]#, self.view]
         for c in self.subcomponents:
             self.bind_property('current-tandaid', c, 'current-tandaid', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.subcomponent_index = 0
@@ -144,7 +144,7 @@ class Tanda(component.ComponentPaneMixin, component.Component):
     def shutdown(self):
         self.change_subcomponent_actions(False)
         self.edit.shutdown()
-        self.view.shutdown()
+        # self.view.shutdown()
         super().shutdown()
 
     @staticmethod
@@ -314,7 +314,7 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
         self.actions.add_action(resource.Action('reset-field', self.action_tanda_field_cb))
         self.actions.add_action(resource.Action('fill-field', self.action_tanda_field_cb))
 
-        self.tanda_view = view.View(self.unit.db.fields, True, unit.unit_misc, selection_model=Gtk.SingleSelection)
+        self.tanda_view = view.View(self.unit.db.fields, True, unit.unit_misc)
         self.tanda_view.set_name('tanda-view')
         # self.tanda_view.connect('button-press-event', self.tanda_view_button_press_event_cb)
         self.setup_context_menu(f'{self.name}.left-context', self.tanda_view)
@@ -351,6 +351,56 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
                 self.find_duplicates(self.queue + self.current_tanda._records, ['Title'])
                 self.view.record_view.rebind_columns()
             await self.ampd.idle(ampd.PLAYLIST)
+
+    def set_tandas(self, tandas):
+        self.tanda_store[:] = map(record.Record, tandas)
+        for tanda in self.tanda_store:
+            tanda._edit_stack_deltas = []
+            tanda._edit_stack_pos = 0
+        self.current_tanda = None
+        self.tanda_selection_changed_cb()
+
+    def tanda_selection_changed_cb(self, *args):
+        selection = self.tanda_view.get_selection()
+        self.current_tanda_pos = selection[0] if len(selection) == 1 else None
+        self.set_current_tanda()
+
+    def set_current_tanda(self):
+        if self.current_tanda is not None:
+            self.current_tanda._edit_stack_pos = self.edit_stack_pos
+            self.current_tanda._records = list(self.view.record_store)
+        if self.current_tanda_pos is None:
+            self.current_tanda = None
+            self.view.record_store.remove_all()
+        else:
+            self.current_tanda = self.tanda_store[self.current_tanda_pos]
+            self.find_duplicates(self.queue + self.current_tanda._records, ['Title'])
+            self.view.record_store[:] = self.current_tanda._records
+            self.edit_stack_deltas = self.current_tanda._edit_stack_deltas
+            self.edit_stack_pos = self.current_tanda._edit_stack_pos
+        self.edit_stack_changed()
+
+    def get_filenames(self, selection):
+        if selection:
+            return self.view.get_filenames(True)
+        else:
+            tanda_selection = self.tanda_view.get_selection()
+            return sum(([record_.file for record_ in self.tanda_view.record_selection[i]._records] + [self.unit.unit_server.SEPARATOR_FILE] for i in tanda_selection), [self.unit.unit_server.SEPARATOR_FILE])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def tanda_data_func(self, column, renderer, store, i, j):
         tanda = store.get_record(i)
@@ -392,34 +442,6 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
     def set_modified(self, modified=True):
         self.current_tanda._modified = modified
         self.tanda_view.queue_draw()
-
-    def set_tandas(self, tandas):
-        self.tanda_store[:] = map(record.Record, tandas)
-        for tanda in self.tanda_store:
-            tanda._edit_stack_deltas = []
-            tanda._edit_stack_pos = 0
-        self.current_tanda = None
-        self.current_tanda_pos = 0 if tandas else None
-        self.set_current_tanda()
-
-    def tanda_selection_changed_cb(self, *args):
-        self.current_tanda_pos = self.tanda_view.get_current_position()
-        self.set_current_tanda()
-
-    def set_current_tanda(self):
-        if self.current_tanda is not None:
-            self.current_tanda._edit_stack_pos = self.edit_stack_pos
-            self.current_tanda._records = list(self.view.record_store)
-        if self.current_tanda_pos is None:
-            self.current_tanda = None
-            self.view.record_store.remove_all()
-        else:
-            self.current_tanda = self.tanda_store[self.current_tanda_pos]
-            self.find_duplicates(self.queue + self.current_tanda._records, ['Title'])
-            self.view.record_store[:] = self.current_tanda._records
-            self.edit_stack_deltas = self.current_tanda._edit_stack_deltas
-            self.edit_stack_pos = self.current_tanda._edit_stack_pos
-        self.edit_stack_changed()
 
     def renderer_editing_started_cb(self, renderer, editable, path, name):
         editable.connect('editing-done', self.editing_done_cb, path, name)
@@ -480,13 +502,6 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
         dialog.destroy()
         if reply == Gtk.ResponseType.OK:
             self.unit.db.delete_tanda(tanda.tandaid)
-
-    def get_filenames(self, selection=True):
-        if selection:
-            return super().get_filenames(True)
-        else:
-            store, paths = self.tanda_view.get_selection().get_selected_rows()
-            return sum(([song['file'] for song in store.get_record(store.get_iter(path))._songs] + [self.unit.unit_server.SEPARATOR_FILE] for path in paths), [self.unit.unit_server.SEPARATOR_FILE])
 
     def action_save_cb(self, action, parameter):
         if self.current_tanda:
@@ -839,7 +854,7 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.UnitCssMixin, unit.Unit):
         self.fields.register_field(column.Field('Last_Played', _("Last played")))
         self.fields.register_field(column.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=get_last_played_weeks))
         self.fields.register_field(column.Field('n_songs', _("Number of songs"), min_width=30, get_value=lambda tanda: 0 if not tanda.get('_records') else None if (len(tanda.get('_records')) == 4 and tanda.get('Genre').startswith('Tango')) or (len(tanda.get('_records')) == 3 and tanda.get('Genre') in {'Vals', 'Milonga'}) else len(tanda.get('_records'))))
-        self.fields.register_field(column.Field('Duration', _("Duration"), get_value=lambda tanda: format_time(sum((int(song['Time'])) for song in tanda.get('_records', [])))))
+        self.fields.register_field(column.Field('Duration', _("Duration"), get_value=lambda tanda: misc.format_time(sum((int(song['Time'])) for song in tanda.get('_records', [])))))
 
         self.db = TandaDatabase(self.fields, self)
 

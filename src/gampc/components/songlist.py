@@ -42,7 +42,7 @@ class SongList(songlistbase.SongListBase):
         self.fields = unit.unit_songlist.fields
         super().__init__(unit, *args, **kwargs)
         self.songlist_actions = self.add_actions_provider('songlist')
-        self.songlist_actions.add_action(resource.Action('delete-file', self.action_delete_file_cb))
+        # self.songlist_actions.add_action(resource.Action('delete-file', self.action_delete_file_cb))
 
     def shutdown(self):
         del self.songlist_actions
@@ -65,6 +65,9 @@ class SongList(songlistbase.SongListBase):
         self.set_extra_fields(songs)
         return list(map(record.Record, songs))
 
+    def get_filenames(self, selection):
+        return self.view.get_filenames(selection)
+
     # def records_set_fields(self, songs):
     #     for song in songs:
     #         gfile = Gio.File.new_for_path(GLib.build_filenamev([self.unit.unit_songlist.config.music_dir._get(), song['file']]))
@@ -74,22 +77,22 @@ class SongList(songlistbase.SongListBase):
     #             song['_status'] = self.RECORD_MODIFIED
     #     super().records_set_fields(songs)
 
-    def action_delete_file_cb(self, action, parameter):
-        store, paths = self.treeview.get_selection().get_selected_rows()
-        deleted = [self.store.get_record(self.store.get_iter(p)) for p in paths]
-        if deleted:
-            dialog = Gtk.Dialog(parent=self.get_window(), title=_("Move to trash"))
-            dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
-            dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
-            dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash bin?")] + [song.file for song in deleted])))
-            reply = dialog.run()
-            dialog.destroy()
-            if reply != Gtk.ResponseType.OK:
-                return
-            for song in deleted:
-                if song._gfile is not None:
-                    song._gfile.trash()
-                    song._status = self.RECORD_MODIFIED
+    # def action_delete_file_cb(self, action, parameter):
+    #     store, paths = self.treeview.get_selection().get_selected_rows()
+    #     deleted = [self.store.get_record(self.store.get_iter(p)) for p in paths]
+    #     if deleted:
+    #         dialog = Gtk.Dialog(parent=self.get_window(), title=_("Move to trash"))
+    #         dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
+    #         dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
+    #         dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash bin?")] + [song.file for song in deleted])))
+    #         reply = dialog.run()
+    #         dialog.destroy()
+    #         if reply != Gtk.ResponseType.OK:
+    #             return
+    #         for song in deleted:
+    #             if song._gfile is not None:
+    #                 song._gfile.trash()
+    #                 song._status = self.RECORD_MODIFIED
 
 
 class SongListTotalsMixin:

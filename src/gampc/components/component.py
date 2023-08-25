@@ -197,11 +197,7 @@ class ComponentPaneMixin:
         config.pane_separator._set(paned.get_position())
 
     def left_selection_changed_cb(self, selection, position, n_items):
-        self.left_selection = []
-        found, i, pos = Gtk.BitsetIter.init_first(selection.get_selection())
-        while found:
-            self.left_selection.append(pos)
-            found, pos = i.next()
+        self.left_selection = list(misc.get_selection(selection))
 
 
 class ComponentPaneTreeMixin(ComponentPaneMixin):
