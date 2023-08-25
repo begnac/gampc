@@ -142,9 +142,9 @@ class Tanda(component.ComponentPaneMixin, component.Component):
         self.read_db()
 
     def shutdown(self):
-        # self.change_subcomponent_actions(False)
-        # self.edit.shutdown()
-        # self.view.shutdown()
+        self.change_subcomponent_actions(False)
+        self.edit.shutdown()
+        self.view.shutdown()
         super().shutdown()
 
     @staticmethod
@@ -303,20 +303,18 @@ RGBA_YELLOW.parse('yellow')
 
 
 class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, songlist.SongList):
-    duplicate_field = '_duplicate_edit'
-
     def __init__(self, unit):
         super().__init__(unit, name='tanda-edit')
 
         self.current_tanda = None
-        self.current_tanda_path = None
+        self.current_tanda_pos = None
 
         self.actions.add_action(resource.Action('delete', self.action_tanda_delete_cb))
         self.actions.add_action(resource.Action('reset', self.action_tanda_reset_cb))
         self.actions.add_action(resource.Action('reset-field', self.action_tanda_field_cb))
         self.actions.add_action(resource.Action('fill-field', self.action_tanda_field_cb))
 
-        self.tanda_view = view.View(self.unit.db.fields, self.tanda_data_func, True)
+        self.tanda_view = view.View(self.unit.db.fields, True, unit.unit_misc, selection_model=Gtk.SingleSelection)
         self.tanda_view.set_name('tanda-view')
         # self.tanda_view.connect('button-press-event', self.tanda_view_button_press_event_cb)
         self.setup_context_menu(f'{self.name}.left-context', self.tanda_view)
@@ -327,15 +325,15 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
         #     col.renderer.set_property('editable', True)
         #     col.renderer.connect('editing-started', self.renderer_editing_started_cb, name)
         self.tanda_store = self.tanda_view.record_store
-        # self.tanda_view.connect('cursor-changed', self.tanda_view_cursor_changed_cb)
+        self.signal_handler_connect(self.tanda_view.record_selection, 'selection-changed', self.tanda_selection_changed_cb)
         # self.tanda_filter = data.ViewFilter(self.unit.unit_misc, self.tanda_view)
 
-        # Ugly hack but works
+        # Ugly hack but works  ?????????????????XXXXXXXXXXXXXXXXXX
         self.songlistbase_actions.remove('filter')
         self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_view, property_name='filtering'))
 
         self.view.set_vexpand(False)
-        # self.view_filter.scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
+        self.view.scrolled_record_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
 
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.box.append(self.tanda_view)
@@ -348,10 +346,10 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
     @ampd.task
     async def client_connected_cb(self, client):
         while True:
-            self.queue = await self.ampd.playlistinfo()
+            self.queue = list(map(record.Record, await self.ampd.playlistinfo()))
             if self.current_tanda:
-                self.find_duplicates(self.queue + self.current_tanda._songs, ['Title'])
-                self.view.queue_draw()
+                self.find_duplicates(self.queue + self.current_tanda._records, ['Title'])
+                self.view.record_view.rebind_columns()
             await self.ampd.idle(ampd.PLAYLIST)
 
     def tanda_data_func(self, column, renderer, store, i, j):
@@ -397,23 +395,31 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
 
     def set_tandas(self, tandas):
         self.tanda_store[:] = map(record.Record, tandas)
+        for tanda in self.tanda_store:
+            tanda._edit_stack_deltas = []
+            tanda._edit_stack_pos = 0
         self.current_tanda = None
+        self.current_tanda_pos = 0 if tandas else None
         self.set_current_tanda()
 
-    def tanda_view_cursor_changed_cb(self, *args):
-        self.current_tanda_path, column = self.tanda_view.get_cursor()
+    def tanda_selection_changed_cb(self, *args):
+        self.current_tanda_pos = self.tanda_view.get_current_position()
         self.set_current_tanda()
 
     def set_current_tanda(self):
-        if self.current_tanda:
-            self.current_tanda._songs = [song.get_data() for i, p, song in self.store]
-        if self.current_tanda_path is None:
+        if self.current_tanda is not None:
+            self.current_tanda._edit_stack_pos = self.edit_stack_pos
+            self.current_tanda._records = list(self.view.record_store)
+        if self.current_tanda_pos is None:
             self.current_tanda = None
-            self.set_songs([])
+            self.view.record_store.remove_all()
         else:
-            self.current_tanda = self.tanda_store.get_record(self.tanda_store.get_iter(self.current_tanda_path))
-            self.find_duplicates(self.queue + self.current_tanda._songs, ['Title'])
-            self.set_songs(self.current_tanda._songs)
+            self.current_tanda = self.tanda_store[self.current_tanda_pos]
+            self.find_duplicates(self.queue + self.current_tanda._records, ['Title'])
+            self.view.record_store[:] = self.current_tanda._records
+            self.edit_stack_deltas = self.current_tanda._edit_stack_deltas
+            self.edit_stack_pos = self.current_tanda._edit_stack_pos
+        self.edit_stack_changed()
 
     def renderer_editing_started_cb(self, renderer, editable, path, name):
         editable.connect('editing-done', self.editing_done_cb, path, name)
@@ -580,14 +586,16 @@ class TandaView(TandaSubComponent, songlist.SongList):
         self.init_tandaid_view(self.view)
 
     def set_tandas(self, tandas):
-        songs = [self.unit.unit_server.separator_song]
-        songs[0]['tandaid'] = None
+        separator = record.Record(self.unit.unit_server.separator_song)
+        # separator.tandaid = None
+        records = [separator]
         for tanda in tandas:
             tandaid = tanda['tandaid']
-            for song in tanda['_songs'] + [self.unit.unit_server.separator_song]:
-                song['tandaid'] = tandaid
-                songs.append(song)
-        self.set_songs(songs)
+            for record_ in tanda['_records']:
+                record_.tandaid = tandaid
+                records.append(record_)
+            records.append(separator)
+        self.view.record_store[:] = records
 
 
 class TandaDatabase(GObject.Object, db.Database):
@@ -679,7 +687,7 @@ class TandaDatabase(GObject.Object, db.Database):
     def _get_tanda_from_tuple(self, t):
         tanda = self._tuple_to_dict(t, ['tandaid'] + self.fields.basic_names)
         query = self.connection.cursor().execute('SELECT {} FROM tanda_songs,songs USING(file) WHERE tanda_songs.tandaid=?'.format(', songs.'.join(['tanda_songs.position'] + self.unit.unit_songlist.fields.basic_names)), (tanda['tandaid'],))
-        tanda['_songs'] = [self._tuple_to_dict(s, ['_position'] + self.unit.unit_songlist.fields.basic_names) for s in query]
+        tanda['_records'] = [record.Record(self._tuple_to_dict(s, ['_position'] + self.unit.unit_songlist.fields.basic_names)) for s in query]
         self.fields.set_derived_fields(tanda)
         return tanda
 
@@ -810,10 +818,10 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.UnitCssMixin, unit.Unit):
         self.fields = column.FieldFamily(self.config.fields)
         self.fields.register_field(column.Field('Artist', _("Artist")))
         self.fields.register_field(column.Field('Genre', _("Genre")))
-        self.fields.register_field(column.Field('Years_Min', visible=False, get_value=lambda tanda: min(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
-        self.fields.register_field(column.Field('Years_Max', visible=False, get_value=lambda tanda: max(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
+        self.fields.register_field(column.Field('Years_Min', visible=False, get_value=lambda tanda: min(song.get('Date', '').split('-', 1)[0] for song in tanda['_records']) or '????' if tanda.get('_records') else None))
+        self.fields.register_field(column.Field('Years_Max', visible=False, get_value=lambda tanda: max(song.get('Date', '').split('-', 1)[0] for song in tanda['_records']) or '????' if tanda.get('_records') else None))
         self.fields.register_field(column.Field('Years', _("Years"), get_value=lambda tanda: ('\'{}'.format(tanda['Years_Min'][2:]) if tanda['Years_Min'] == tanda['Years_Max'] else '\'{}-\'{}'.format(tanda['Years_Min'][2:], tanda['Years_Max'][2:])) if 'Years_Min' in tanda and 'Years_Max' in tanda else '????'))
-        self.fields.register_field(column.Field('First_Song', _("First song"), get_value=lambda tanda: tanda['_songs'][0]['Title'] if '_songs' in tanda else '???'))
+        self.fields.register_field(column.Field('First_Song', _("First song"), get_value=lambda tanda: tanda['_records'][0]['Title'] if '_records' in tanda else '???'))
         self.fields.register_field(column.Field('Performer', _("Performer")))
         self.fields.register_field(column.Field('Comment', _("Comment")))
         self.fields.register_field(column.Field('Description', _("Description")))
@@ -830,8 +838,8 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.UnitCssMixin, unit.Unit):
         self.fields.register_field(column.Field('Last_Modified', _("Last modified")))
         self.fields.register_field(column.Field('Last_Played', _("Last played")))
         self.fields.register_field(column.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=get_last_played_weeks))
-        self.fields.register_field(column.Field('n_songs', _("Number of songs"), min_width=30, get_value=lambda tanda: 0 if not tanda.get('_songs') else None if (len(tanda.get('_songs')) == 4 and tanda.get('Genre').startswith('Tango')) or (len(tanda.get('_songs')) == 3 and tanda.get('Genre') in {'Vals', 'Milonga'}) else len(tanda.get('_songs'))))
-        self.fields.register_field(column.Field('Duration', _("Duration"), get_value=lambda tanda: format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
+        self.fields.register_field(column.Field('n_songs', _("Number of songs"), min_width=30, get_value=lambda tanda: 0 if not tanda.get('_records') else None if (len(tanda.get('_records')) == 4 and tanda.get('Genre').startswith('Tango')) or (len(tanda.get('_records')) == 3 and tanda.get('Genre') in {'Vals', 'Milonga'}) else len(tanda.get('_records'))))
+        self.fields.register_field(column.Field('Duration', _("Duration"), get_value=lambda tanda: format_time(sum((int(song['Time'])) for song in tanda.get('_records', [])))))
 
         self.db = TandaDatabase(self.fields, self)
 

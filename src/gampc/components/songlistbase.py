@@ -72,15 +72,6 @@ class SongListBase(component.Component):
         self.view.cleanup()
         super().shutdown()
 
-    def get_current_position(self):
-        if (row := self.view.record_view_rows.get_focus_child()) is not None:
-            return row.get_first_child()._pos
-        found, i, pos = Gtk.BitsetIter.init_first(self.view.record_selection.get_selection())
-        if found and not i.next()[0]:
-            return pos
-        else:
-            return None
-
     @ampd.task
     async def view_activate_cb(self, view, position):
         if self.unit.unit_persistent.protect_active:
@@ -113,16 +104,16 @@ class SongListBase(component.Component):
             self.fields.set_derived_fields(song)
 
     def mark_duplicates(self, *args):
-        self.find_duplicates(self.view.record_store)
+        self.find_duplicates(self.view.record_store, self.duplicate_test_columns)
         self.view.record_view.rebind_columns()
 
-    def find_duplicates(self, records):
+    def find_duplicates(self, records, test_columns):
         marker = 0
         firsts = {}
         for i, record_ in enumerate(records):
             if record_.file == self.unit.unit_server.SEPARATOR_FILE:
                 continue
-            test = tuple(record_[field] for field in self.duplicate_test_columns)
+            test = tuple(record_[field] for field in test_columns)
             first = firsts.get(test)
             if first is None:
                 firsts[test] = i

@@ -190,6 +190,15 @@ class View(Gtk.Box):
                 return False
         return True
 
+    def get_current_position(self):
+        if (row := self.record_view_rows.get_focus_child()) is not None:
+            return row.get_first_child()._pos
+        found, i, pos = Gtk.BitsetIter.init_first(self.record_selection.get_selection())
+        if found and not i.next()[0]:
+            return pos
+        else:
+            return None
+
     def _get_selection(self):
         return filter(lambda i: self.record_selection.is_selected(i), range(len(self.record_selection)))
 

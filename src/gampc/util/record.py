@@ -36,6 +36,9 @@ class Record(GObject.Object):
     def get_data_clean(self):
         return {key: value for key, value in self._data.items() if key[0] != '_'}
 
+    def get(self, *args):
+        return self._data.get(*args)
+
     def __getattr__(self, name):
         return self._data.get(name)
 
