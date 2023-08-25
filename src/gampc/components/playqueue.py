@@ -90,7 +90,7 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
 
     def _set_songs(self, songs):  # If not we may lose the cursor and it's hell to get it right.
         n = len(self.view.record_store)
-        self.view.record_store.handler_block_by_func(self.find_duplicates)
+        self.view.record_store.handler_block_by_func(self.mark_duplicates)
         for i, song in enumerate(songs):
             if i < n:
                 self.view.record_store[i].set_data(song)
@@ -99,8 +99,8 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
                 break
         else:
             self.view.record_store[len(songs):] = []
-        self.view.record_store.handler_unblock_by_func(self.find_duplicates)
-        self.find_duplicates()
+        self.view.record_store.handler_unblock_by_func(self.mark_duplicates)
+        self.mark_duplicates()
 
     def action_go_to_current_cb(self, action, parameter):
         Id = self.unit.unit_server.ampd_server_properties.current_song.get('Id')

@@ -125,8 +125,8 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
             for song in songs:
                 self.unit_songlist.fields.set_derived_fields(song)
             node.records = list(map(record.Record, songs))
-            node.deltas = []
-            node.delta_pos = 0
+            node.edit_stack_deltas = []
+            node.edit_stack_pos = 0
         else:
             folders, playlists = self.get_pseudo_folder_contents(node.path, playlists)
             node.sub_nodes = \

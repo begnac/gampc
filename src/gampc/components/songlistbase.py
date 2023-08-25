@@ -63,7 +63,7 @@ class SongListBase(component.Component):
         self.setup_context_menu(f'{self.name}.context', self.view)
         self.signal_handler_connect(self.view.record_view, 'activate', self.view_activate_cb)
         if self.duplicate_test_columns:
-            self.signal_handler_connect(self.view.record_store, 'items-changed', self.find_duplicates)
+            self.signal_handler_connect(self.view.record_store, 'items-changed', self.mark_duplicates)
 
         self.view.bind_hooks.append(self.duplicate_bind_hook)
 
@@ -112,11 +112,14 @@ class SongListBase(component.Component):
         for song in songs:
             self.fields.set_derived_fields(song)
 
-    def find_duplicates(self, *args):
-        model = self.view.record_store
+    def mark_duplicates(self, *args):
+        self.find_duplicates(self.view.record_store)
+        self.view.record_view.rebind_columns()
+
+    def find_duplicates(self, records):
         marker = 0
         firsts = {}
-        for i, record_ in enumerate(model):
+        for i, record_ in enumerate(records):
             if record_.file == self.unit.unit_server.SEPARATOR_FILE:
                 continue
             test = tuple(record_[field] for field in self.duplicate_test_columns)
@@ -126,11 +129,10 @@ class SongListBase(component.Component):
                 if record_._duplicate is not None:
                     del record_._duplicate
             else:
-                if model[first]._duplicate is None:
-                    model[first]._duplicate = marker
+                if records[first]._duplicate is None:
+                    records[first]._duplicate = marker
                     marker += 1
-                record_._duplicate = model[first]._duplicate
-        self.view.record_view.rebind_columns()
+                record_._duplicate = records[first]._duplicate
 
     def action_reset_cb(self, action, parameter):
         self.view.filter_record.set_data({})
@@ -345,9 +347,9 @@ class SimpleDelta(GObject.Object):
 
 
 class MetaDelta(GObject.Object):
-    def __init__(self, deltas, push):
+    def __init__(self, edit_stack_deltas, push):
         super().__init__()
-        self.deltas = deltas
+        self.edit_stack_deltas = edit_stack_deltas
         self.push = push
 
     def apply(self, view, push):
@@ -355,10 +357,10 @@ class MetaDelta(GObject.Object):
             push = not push
         view.get_model().unselect_all()
         if push:
-            for delta in self.deltas:
+            for delta in self.edit_stack_deltas:
                 delta.apply(view, True, False)
         else:
-            for delta in reversed(self.deltas):
+            for delta in reversed(self.edit_stack_deltas):
                 delta.apply(view, False, False)
 
 
@@ -370,17 +372,17 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
         self.songlistbase_actions.add_action(resource.Action('undo', self.action_do_cb))
         self.songlistbase_actions.add_action(resource.Action('redo', self.action_do_cb))
 
-        self.deltas = []
-        self.delta_pos = 0
+        self.edit_stack_deltas = []
+        self.edit_stack_pos = 0
 
     def delta_push(self):
-        self.deltas[self.delta_pos].apply(self.view.record_view, True)
-        self.delta_pos += 1
+        self.edit_stack_deltas[self.edit_stack_pos].apply(self.view.record_view, True)
+        self.edit_stack_pos += 1
         self.edit_stack_changed()
 
     def delta_pop(self):
-        self.delta_pos -= 1
-        self.deltas[self.delta_pos].apply(self.view.record_view, False)
+        self.edit_stack_pos -= 1
+        self.edit_stack_deltas[self.edit_stack_pos].apply(self.view.record_view, False)
         self.edit_stack_changed()
 
     def remove_records(self, records):
@@ -393,20 +395,20 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
                 records.remove(record_)
         if records:
             raise RuntimeError
-        deltas = []
+        edit_stack_deltas = []
         i = j = indices[0]
         for k in indices[1:] + [0]:
             j += 1
             if j != k:
-                deltas.append(SimpleDelta(self.view.record_selection[i:j], i, True))
+                edit_stack_deltas.append(SimpleDelta(self.view.record_selection[i:j], i, True))
                 i = j = k
-        self.deltas[self.delta_pos:] = [MetaDelta(deltas, False)]
+        self.edit_stack_deltas[self.edit_stack_pos:] = [MetaDelta(edit_stack_deltas, False)]
         self.delta_push()
 
     def add_records(self, records, position):
         if not records:
             return
-        self.deltas[self.delta_pos:] = [SimpleDelta(records, position, True)]
+        self.edit_stack_deltas[self.edit_stack_pos:] = [SimpleDelta(records, position, True)]
         self.delta_push()
 
     @ampd.task
@@ -415,8 +417,8 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
 
     def edit_stack_changed(self):
         self.songlistbase_actions.lookup_action('save').set_enabled(True)
-        self.songlistbase_actions.lookup_action('undo').set_enabled(self.delta_pos > 0)
-        self.songlistbase_actions.lookup_action('redo').set_enabled(self.delta_pos < len(self.deltas))
+        self.songlistbase_actions.lookup_action('undo').set_enabled(self.edit_stack_pos > 0)
+        self.songlistbase_actions.lookup_action('redo').set_enabled(self.edit_stack_pos < len(self.edit_stack_deltas))
 
     def action_do_cb(self, action, parameter):
         if action.get_name() == 'redo':
@@ -429,13 +431,13 @@ class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Mu
 
     @ampd.task
     async def action_reset_cb(self, action, parameter):
-        if not self.deltas:
+        if not self.edit_stack_deltas:
             return
         if not await dialog.AsyncMessageDialog(transient_for=self.widget.get_root(), message=_("Reset and lose all modifications?")).run():
             return
-        while self.delta_pos:
+        while self.edit_stack_pos:
             self.delta_pop()
-        self.deltas[:] = []
+        self.edit_stack_deltas[:] = []
         self.edit_stack_changed()
 
 

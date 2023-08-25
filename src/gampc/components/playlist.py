@@ -54,9 +54,9 @@ class Playlist(songlistbase.SongListBasePaneMixin, songlistbase.SongListBaseEdit
         super().edit_stack_changed()
         if not self.editable:
             return
-        if self.deltas and not self.left_selected_item.modified:
+        if self.edit_stack_deltas and not self.left_selected_item.modified:
             self.left_selected_item.modified = True
-        elif not self.deltas and self.left_selected_item.modified:
+        elif not self.edit_stack_deltas and self.left_selected_item.modified:
             self.left_selected_item.modified = False
         else:
             return
@@ -65,17 +65,17 @@ class Playlist(songlistbase.SongListBasePaneMixin, songlistbase.SongListBaseEdit
 
     def left_selection_changed_cb(self, selection, position, n_items):
         if self.editable:
-            self.left_selected_item.delta_pos = self.delta_pos
+            self.left_selected_item.edit_stack_pos = self.edit_stack_pos
             self.left_selected_item.records = list(self.view.record_store)
         super().left_selection_changed_cb(selection, position, n_items)
         self.view.record_store[:] = sum((selection[pos].get_item().records for pos in self.left_selection), [])
         if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
-            self.deltas = self.left_selected_item.deltas
-            self.delta_pos = self.left_selected_item.delta_pos
+            self.edit_stack_deltas = self.left_selected_item.edit_stack_deltas
+            self.edit_stack_pos = self.left_selected_item.edit_stack_pos
             self.editable = True
         else:
-            self.deltas = []
-            self.delta_pos = 0
+            self.edit_stack_deltas = []
+            self.edit_stack_pos = 0
             self.editable = False
         self.edit_stack_changed()
 
@@ -89,11 +89,11 @@ class Playlist(songlistbase.SongListBasePaneMixin, songlistbase.SongListBaseEdit
 
     @ampd.task
     async def action_save_cb(self, action, parameter):
-        if not self.deltas:
+        if not self.edit_stack_deltas:
             return
         if await self.unit.save_playlist(self.left_selected_item.joined_path, [record.file for record in self.view.record_store], self.widget.get_root()):
-            self.deltas[:] = []
-            self.delta_pos = 0
+            self.edit_stack_deltas[:] = []
+            self.edit_stack_pos = 0
             self.edit_stack_changed()
 
     @ampd.task
