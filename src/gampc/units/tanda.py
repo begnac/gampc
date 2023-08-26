@@ -103,7 +103,7 @@ class Tanda(component.ComponentPaneMixin, component.Component):
         self.button_box.append(Gtk.Label(hexpand=True))
 
         self.problem_button = Gtk.ToggleButton(icon_name='object-select-symbolic', can_focus=False, active=unit.unit_persistent.protect_requested, tooltip_text=_("Filter zero note"))
-        self.problem_button.connect('toggled', lambda *args: self.filter_tandas(False))
+        self.signal_handler_connect(self.problem_button, 'toggled', lambda *args: self.filter_tandas(False))
 
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
         self.switcher = Gtk.StackSwitcher(stack=self.stack)
@@ -274,12 +274,12 @@ class TandaSubComponent(component.Component):
 
     def __init__(self, unit, *, name):
         super().__init__(unit, name=name)
-        self.widget.connect('map', lambda widget: self.set_cursor_tandaid(self.current_tandaid))
+        self.signal_handler_connect(self.widget, 'map', lambda widget: self.set_cursor_tandaid(self.current_tandaid))
         self.color = Gdk.RGBA()
 
     def init_tandaid_view(self, view):
         self.tandaid_view = view
-        self.tandaid_view.record_selection.connect('selection-changed', self.tandaid_selection_changed_cb)
+        self.signal_handler_connect(self.tandaid_view.record_selection, 'selection-changed', self.tandaid_selection_changed_cb)
 
     def set_cursor_tandaid(self, tandaid):
         if tandaid is None:
@@ -335,6 +335,10 @@ class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, song
         self.widget = self.box
 
         self.queue = []
+
+    def shutdown(self):
+        self.tanda_view.cleanup()
+        super().shutdown()
 
     @ampd.task
     async def client_connected_cb(self, client):
