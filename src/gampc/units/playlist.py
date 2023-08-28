@@ -30,6 +30,7 @@ from ..util import resource
 from ..ui import treelist
 from ..components import songlist
 from ..components import playlist
+from ..components import editstack
 
 
 class ChoosePathDialog(dialog.AsyncTextDialog):
@@ -124,9 +125,7 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
             songs = await self.ampd.listplaylistinfo(playlist.PSEUDO_SEPARATOR.join(node.path))
             for song in songs:
                 self.unit_songlist.fields.set_derived_fields(song)
-            node.records = list(map(record.Record, songs))
-            node.edit_stack_deltas = []
-            node.edit_stack_pos = 0
+            node.edit_stack = editstack.EditStack(map(record.Record, songs))
         else:
             folders, playlists = self.get_pseudo_folder_contents(node.path, playlists)
             node.sub_nodes = \

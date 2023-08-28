@@ -25,6 +25,7 @@ from ..util import dialog
 
 from . import songlistbase
 from . import songlist
+from . import editstack
 
 
 NODE_FOLDER = 0
@@ -38,7 +39,7 @@ ICONS = {
 }
 
 
-class Playlist(songlistbase.SongListBasePaneMixin, songlistbase.SongListBaseEditStackMixin, songlist.SongListTotalsMixin, songlist.SongList):
+class Playlist(songlistbase.SongListBasePaneMixin, editstack.SongListBaseEditStackMixin, songlist.SongListTotalsMixin, songlist.SongList):
     duplicate_test_columns = ['file']
 
     left_title = _("Playlists")
@@ -54,9 +55,9 @@ class Playlist(songlistbase.SongListBasePaneMixin, songlistbase.SongListBaseEdit
         super().edit_stack_changed()
         if not self.editable:
             return
-        if self.edit_stack_deltas and not self.left_selected_item.modified:
+        if self.edit_stack.deltas and not self.left_selected_item.modified:
             self.left_selected_item.modified = True
-        elif not self.edit_stack_deltas and self.left_selected_item.modified:
+        elif not self.edit_stack.deltas and self.left_selected_item.modified:
             self.left_selected_item.modified = False
         else:
             return
@@ -64,18 +65,13 @@ class Playlist(songlistbase.SongListBasePaneMixin, songlistbase.SongListBaseEdit
         self.left_selected_item.parent_model.emit('items-changed', pos, 1, 1)
 
     def left_selection_changed_cb(self, selection, position, n_items):
-        if self.editable:
-            self.left_selected_item.edit_stack_pos = self.edit_stack_pos
-            self.left_selected_item.records = list(self.view.record_store)
         super().left_selection_changed_cb(selection, position, n_items)
-        self.view.record_store[:] = sum((selection[pos].get_item().records for pos in self.left_selection), [])
         if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
-            self.edit_stack_deltas = self.left_selected_item.edit_stack_deltas
-            self.edit_stack_pos = self.left_selected_item.edit_stack_pos
+            self.set_edit_stack(self.left_selected_item.edit_stack)
             self.editable = True
         else:
-            self.edit_stack_deltas = []
-            self.edit_stack_pos = 0
+            self.set_edit_stack(None)
+            self.view.record_store[:] = sum((selection[pos].get_item().records for pos in self.left_selection), [])
             self.editable = False
         self.edit_stack_changed()
 
@@ -89,11 +85,10 @@ class Playlist(songlistbase.SongListBasePaneMixin, songlistbase.SongListBaseEdit
 
     @ampd.task
     async def action_save_cb(self, action, parameter):
-        if not self.edit_stack_deltas:
+        if not self.edit_stack.deltas:
             return
         if await self.unit.save_playlist(self.left_selected_item.joined_path, [record.file for record in self.view.record_store], self.widget.get_root()):
-            self.edit_stack_deltas[:] = []
-            self.edit_stack_pos = 0
+            self.edit_stack.reset()
             self.edit_stack_changed()
 
     @ampd.task

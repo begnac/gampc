@@ -42,8 +42,8 @@ from ..ui import column
 from ..ui import view
 
 from ..components import component
-from ..components import songlistbase
 from ..components import songlist
+from ..components import editstack
 
 from . import search
 
@@ -294,7 +294,7 @@ class TandaSubComponent(component.Component):
         self.current_tandaid = model[selection[0]].tandaid if selection else None
 
 
-class TandaEdit(TandaSubComponent, songlistbase.SongListBaseEditStackMixin, songlist.SongList):
+class TandaEdit(TandaSubComponent, editstack.SongListBaseEditStackMixin, songlist.SongList):
     def __init__(self, unit):
         super().__init__(unit, name='tanda-edit')
 

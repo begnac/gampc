@@ -29,9 +29,7 @@ import ampd
 from ..util import record
 from ..util import misc
 from ..util import resource
-from ..util import dialog
 from ..ui import view
-from ..ui import treelist
 from . import component
 
 
@@ -302,133 +300,6 @@ class SongListBaseEditableMixin(SongListBase):
     def drop_modifiers_cb(controller, modifiers, target):
         if target.get_actions() & Gdk.DragAction.MOVE and misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
             pass
-
-
-class SimpleDelta(GObject.Object):
-    def __init__(self, records, position, push):
-        super().__init__()
-        self.records = records
-        self.position = position
-        self.push = push
-
-    def apply(self, view, push, deselect=True):
-        if not self.push:
-            push = not push
-        selection_model = view.get_model()
-        model = selection_model.get_model()
-        if isinstance(model, Gtk.FilterListModel):
-            if model.get_filter() is not None:
-                raise RuntimeError
-            else:
-                model = model.get_model()
-        if push:
-            model[self.position:self.position] = self.records
-            selection_model.select_range(self.position, len(self.records), deselect)
-        else:
-            if model[self.position:self.position + len(self.records)] != self.records:
-                raise RuntimeError
-            model[self.position:self.position + len(self.records)] = []
-            # selection_model.select_item(self.position, deselect)
-            pos = self.position
-            if pos == len(model):
-                pos -= 1
-            if pos >= 0:
-                view.scroll_to(pos, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
-
-
-class MetaDelta(GObject.Object):
-    def __init__(self, edit_stack_deltas, push):
-        super().__init__()
-        self.edit_stack_deltas = edit_stack_deltas
-        self.push = push
-
-    def apply(self, view, push):
-        if not self.push:
-            push = not push
-        view.get_model().unselect_all()
-        if push:
-            for delta in self.edit_stack_deltas:
-                delta.apply(view, True, False)
-        else:
-            for delta in reversed(self.edit_stack_deltas):
-                delta.apply(view, False, False)
-
-
-class SongListBaseEditStackMixin(SongListBaseEditableMixin, SongListBase):  # Must take in SongListBase or GObject property doesn't work
-    def __init__(self, unit, *args, **kwargs):
-        super().__init__(unit, *args, **kwargs)
-        self.songlistbase_actions.add_action(resource.Action('save', self.action_save_cb))
-        # self.songlistbase_actions.add_action(resource.Action('reset', self.action_reset_cb))
-        self.songlistbase_actions.add_action(resource.Action('undo', self.action_do_cb))
-        self.songlistbase_actions.add_action(resource.Action('redo', self.action_do_cb))
-
-        self.edit_stack_deltas = []
-        self.edit_stack_pos = 0
-
-    def delta_push(self):
-        self.edit_stack_deltas[self.edit_stack_pos].apply(self.view.record_view, True)
-        self.edit_stack_pos += 1
-        self.edit_stack_changed()
-
-    def delta_pop(self):
-        self.edit_stack_pos -= 1
-        self.edit_stack_deltas[self.edit_stack_pos].apply(self.view.record_view, False)
-        self.edit_stack_changed()
-
-    def remove_records(self, records):
-        if not records:
-            return
-        indices = []
-        for i, record_ in enumerate(self.view.record_selection):
-            if record_ in records:
-                indices.append(i)
-                records.remove(record_)
-        if records:
-            raise RuntimeError
-        edit_stack_deltas = []
-        i = j = indices[0]
-        for k in indices[1:] + [0]:
-            j += 1
-            if j != k:
-                edit_stack_deltas.append(SimpleDelta(self.view.record_selection[i:j], i, True))
-                i = j = k
-        self.edit_stack_deltas[self.edit_stack_pos:] = [MetaDelta(edit_stack_deltas, False)]
-        self.delta_push()
-
-    def add_records(self, records, position):
-        if not records:
-            return
-        self.edit_stack_deltas[self.edit_stack_pos:] = [SimpleDelta(records, position, True)]
-        self.delta_push()
-
-    @ampd.task
-    async def add_records_from_data(self, data, position):
-        self.add_records(self.records_from_data(data), position)
-
-    def edit_stack_changed(self):
-        self.songlistbase_actions.lookup_action('save').set_enabled(True)
-        self.songlistbase_actions.lookup_action('undo').set_enabled(self.edit_stack_pos > 0)
-        self.songlistbase_actions.lookup_action('redo').set_enabled(self.edit_stack_pos < len(self.edit_stack_deltas))
-
-    def action_do_cb(self, action, parameter):
-        if action.get_name() == 'redo':
-            self.delta_push()
-        elif action.get_name() == 'undo':
-            self.delta_pop()
-        else:
-            raise RuntimeError
-        self.edit_stack_changed()
-
-    @ampd.task
-    async def action_reset_cb(self, action, parameter):
-        if not self.edit_stack_deltas:
-            return
-        if not await dialog.AsyncMessageDialog(transient_for=self.widget.get_root(), message=_("Reset and lose all modifications?")).run():
-            return
-        while self.edit_stack_pos:
-            self.delta_pop()
-        self.edit_stack_deltas[:] = []
-        self.edit_stack_changed()
 
 
 class SongListBasePaneMixin(component.ComponentPaneTreeMixin):
