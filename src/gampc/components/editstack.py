@@ -44,7 +44,7 @@ class SimpleDelta(GObject.Object):
             push = not push
         if push:
             model[self.position:self.position] = self.records
-            return self.position, list(range(self.position, + len(self.records)))
+            return self.position, list(range(self.position, self.position + len(self.records)))
         else:
             if model[self.position:self.position + len(self.records)] != self.records:
                 raise RuntimeError
@@ -56,6 +56,14 @@ class SimpleDelta(GObject.Object):
                 return pos, [pos]
             else:
                 return None, []
+
+    def translate_positions(self, positions, push):
+        if not self.push:
+            push = not push
+        if push:
+            return [pos + len(self.records) if pos >= self.position else pos for pos in positions]
+        else:
+            return [pos - len(self.records) if pos >= self.position else pos for pos in positions]
 
 
 class MetaDelta(GObject.Object):
@@ -69,8 +77,19 @@ class MetaDelta(GObject.Object):
     def apply(self, model, push):
         if not self.push:
             push = not push
-        focuses, selections = zip(*(delta.apply(model, push) for delta in (self.deltas if push else reversed(self.deltas))))
-        return focuses[-1], sum(selections, [])
+        focus = None
+        selection = []
+        for delta in self.deltas if push else reversed(self.deltas):
+            focus, new_selection = delta.apply(model, push)
+            selection = delta.translate_positions(selection, push) + new_selection
+        return focus, selection
+
+    def translate_positions(self, positions, push):
+        if not self.push:
+            push = not push
+        for delta in self.deltas if push else reversed(self.deltas):
+            positions = delta.translate_pos(positions, push)
+        return positions
 
 
 class EditStack:
@@ -119,7 +138,6 @@ class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin, songlis
 
     def set_edit_stack(self, edit_stack):
         if self.edit_stack is not None:
-            # self.view.record_store.disconnect_by_func(self.sync_records)
             self.edit_stack.records.disconnect_by_func(self.sync_records)
         self.edit_stack = edit_stack
         if edit_stack is not None:
