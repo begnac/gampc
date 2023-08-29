@@ -62,7 +62,7 @@ class Playlist(songlistbase.SongListBasePaneMixin, editstack.SongListBaseEditSta
         else:
             return
         pos = self.left_selected_item.parent_model.find(self.left_selected_item).position
-        self.left_selected_item.parent_model.emit('items-changed', pos, 1, 1)
+        self.left_selected_item.parent_model.items_changed(pos, 1, 1)
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)

@@ -71,7 +71,7 @@ class TreeNode(GObject.Object):
         try:
             await filler(self, *args)
         except ampd.ConnectionError:
-            pass
+            return
         self.updated = True
         if not self.sub_nodes:
             self.state = self.STATE_EMPTY

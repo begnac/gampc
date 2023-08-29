@@ -107,8 +107,6 @@ class Component(GObject.Object):
         controller = Gtk.GestureClick(button=3)
         self.signal_handler_connect(controller, 'pressed', self.context_menu_pressed_cb, name)
         widget.add_controller(controller)
-        # for signal in ('pressed', 'released', 'stopped', 'unpaired-release', 'begin', 'cancel', 'end', 'sequence-state-changed', 'update'):
-        #     controller.connect(signal, lambda *args: print(args[-1], args[:-1]), signal)
 
     def context_menu_pressed_cb(self, controller, n_press, x, y, name):
         if name not in self.unit.menu_aggregators:
@@ -175,7 +173,7 @@ class ComponentPaneMixin:
         self.left_scrolled = Gtk.ScrolledWindow()
         self.left_scrolled.set_child(self.left_view)
         self.left_view_search = listviewsearch.ListViewSearch()
-        self.left_view_search.setup(self.left_view, lambda text, node: text.lower() in node.name.lower())
+        self.left_view_search.setup(self.left_view, lambda text, row: text.lower() in row.get_item().name.lower())
 
         self.left_selection = []
         self.signal_handler_connect(self.left_store, 'selection_changed', self.left_selection_changed_cb)
