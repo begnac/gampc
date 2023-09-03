@@ -41,6 +41,7 @@ class SongListBase(component.Component):
     sortable = True
 
     duplicate_test_columns = []
+    duplicate_extra_records = None
 
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
@@ -101,14 +102,17 @@ class SongListBase(component.Component):
             self.fields.set_derived_fields(song)
 
     def mark_duplicates(self, *args):
-        self.find_duplicates(self.view.record_store, self.duplicate_test_columns)
+        records = list(self.view.record_store)
+        if self.duplicate_extra_records:
+            records += list(self.duplicate_extra_records)
+        self.find_duplicates(records, self.duplicate_test_columns)
         self.view.record_view.rebind_columns()
 
     def find_duplicates(self, records, test_columns):
         marker = 0
         firsts = {}
         for i, record_ in enumerate(records):
-            if record_.file == self.unit.unit_server.SEPARATOR_FILE:
+            if record_.file == self.unit.unit_server.SEPARATOR_FILE:  # Only place where self is used here ...
                 continue
             test = tuple(record_[field] for field in test_columns)
             first = firsts.get(test)
