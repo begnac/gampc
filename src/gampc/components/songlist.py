@@ -118,36 +118,6 @@ class SongListAddSpecialMixin: #####  Not ready
             self.add_record(dict(file=url))
 
 
-# class SongListWithEditDelFile(SongListWithEditDel):
-#     def action_save_cb(self, action, parameter):
-#         self.save_files(song for i, p, song in self.store)
-
-#     def action_save_selected_cb(self, action, parameter):
-#         songs, refs = self.treeview.get_selection_rows()
-
-#     def save_files(self, songs):
-#         deleted = [song for song in songs if song._status == self.RECORD_DELETED]
-#         if deleted:
-#             dialog = Gtk.Dialog(parent=self.widget.get_root(), title=_("Move to trash"))
-#             dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
-#             dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
-#             dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash?")] + [song.file for song in deleted])))
-#             reply = dialog.run()
-#             dialog.destroy()
-#             if reply != Gtk.ResponseType.OK:
-#                 return
-#             for song in deleted:
-#                 song._gfile.trash()
-#                 song._status = self.RECORD_UNDEFINED
-
-#     def set_modified(self):
-#         self.status = _("modified")
-
-#     def set_records(self, songs, set_fields=True):
-#         self.status = None
-#         super().set_records(songs, set_fields)
-
-
 class UnitSongListMixin(songlistbase.UnitSongListBaseMixin):
     def __init__(self, name, manager, *, menus=[]):
         self.REQUIRED_UNITS = ['songlist'] + self.REQUIRED_UNITS

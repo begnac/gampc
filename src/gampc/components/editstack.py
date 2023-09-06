@@ -117,7 +117,7 @@ class EditStack:
         self.pos = 0
 
 
-class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin, songlistbase.SongListBase):  # Must take in SongListBase or GObject property doesn't work
+class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
         self.songlistbase_actions.add_action(resource.Action('save', self.action_save_cb))

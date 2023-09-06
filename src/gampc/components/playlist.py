@@ -53,7 +53,7 @@ class Playlist(songlistbase.SongListBasePaneMixin, editstack.SongListBaseEditSta
 
     def edit_stack_changed(self):
         super().edit_stack_changed()
-        if not self.editable:
+        if not self.get_editable():
             return
         if self.edit_stack.deltas and not self.left_selected_item.modified:
             self.left_selected_item.modified = True
@@ -68,11 +68,11 @@ class Playlist(songlistbase.SongListBasePaneMixin, editstack.SongListBaseEditSta
         super().left_selection_changed_cb(selection, position, n_items)
         if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
             self.set_edit_stack(self.left_selected_item.edit_stack)
-            self.editable = True
+            self.set_editable(True)
         else:
             self.set_edit_stack(None)
+            self.set_editable(False)
             self.view.record_store[:] = sum((selection[pos].get_item().records for pos in self.left_selection), [])
-            self.editable = False
         self.edit_stack_changed()
 
     def left_view_activate_cb(self, view, position):

@@ -61,9 +61,10 @@ class Stream(editstack.SongListBaseEditStackMixin, songlistbase.SongListBase):
         self.set_songs(streams)
 
     def action_save_cb(self, action, parameter):
-        streams = [stream.get_data() for i, p, stream in self.view.record_store if stream._status != self.RECORD_DELETED]
-        self.unit.db.save_streams(streams)
-        self.load_streams()
+        raise NotImplementedError
+    #     streams = [stream.get_data() for i, p, stream in self.view.record_store if stream._status != self.RECORD_DELETED]
+    #     self.unit.db.save_streams(streams)
+    #     self.load_streams()
 
     def action_reset_cb(self, action, parameter):
         self.load_streams()

@@ -213,24 +213,30 @@ class SongListBase(component.Component):
         return False
 
 
-class SongListBaseEditableMixin(SongListBase):
-    editable = GObject.Property(type=bool, default=True)
-
+class SongListBaseEditableMixin:
     sortable = False
 
-    def __init__(self, unit, *args, **kwargs):
+    def __init__(self, unit, *args, editable=True, **kwargs):
         super().__init__(unit, *args, **kwargs)
+        self._editable = editable
+
         self.songlistbase_actions.add_action(resource.Action('paste', self.action_paste_cb))
         self.songlistbase_actions.add_action(resource.Action('paste-before', self.action_paste_cb))
         self.songlistbase_actions.add_action(resource.Action('delete', self.action_copy_delete_cb))
         self.songlistbase_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
-        self.signal_handler_connect(self, 'notify::editable', self.check_editable)
         self.signal_handler_connect(self.view, 'notify::filtering', self.check_editable)
 
         self.setup_drop()
 
+    def get_editable(self):
+        return self._editable
+
+    def set_editable(self, editable):
+        self._editable = editable
+        self.check_editable()
+
     def check_editable(self, *args):
-        editable = self.editable and not self.view.filtering
+        editable = self._editable and not self.view.filtering
         for name in ['paste', 'paste-before', 'delete', 'cut']:
             self.songlistbase_actions.lookup(name).set_enabled(editable)
         if TRY_DND:

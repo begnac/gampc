@@ -391,7 +391,8 @@ class TandaEdit(TandaSubComponent, editstack.SongListBaseEditStackMixin, songlis
         elif name in ('Genre',):
             cell.add_css_class(f'genre-{tanda[name].lower()}')
 
-
+    def edit_stack_changed(self):
+        super().edit_stack_changed()
 
 
 
@@ -872,8 +873,8 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.UnitCssMixin, unit.Unit):
 
         self.add_resources(
             'app.menu',
-            resource.MenuAction('edit/component', 'tanda-edit.fill-field', _("Fill tanda field"), ['<Control>z']),
-            resource.MenuAction('edit/component', 'tanda-edit.reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
+            # resource.MenuAction('edit/component', 'tanda-edit.fill-field', _("Fill tanda field"), ['<Control>z']),
+            # resource.MenuAction('edit/component', 'tanda-edit.reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
             resource.MenuAction('edit/component', 'tanda-edit.reset', _("Reset tanda"), ['<Control><Shift>r']),
             resource.MenuAction('edit/component', 'tanda-edit.delete', _("Delete tanda"), ['<Control>Delete']),
             resource.MenuAction('edit/component', 'tanda.switch-subcomponent', _("Switch tanda view mode"), ['<Control>Tab']),
