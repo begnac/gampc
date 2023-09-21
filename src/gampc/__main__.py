@@ -1,6 +1,6 @@
 # coding: utf-8
 #
-# Graphical Asynchronous Music Player Client
+# Generic Gtk application launcher script
 #
 # Copyright (C) Itaï BEN YAACOV
 #
@@ -18,10 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import sys
+from gi.repository import Gdk
 
 from . import app
-from . import __application__
 
-
-app.App().run([__application__] + sys.argv[1:])
+if Gdk.Display.get_default() is None:
+    print(_("Cannot open display"))
+else:
+    app.App().run()
