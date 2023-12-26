@@ -106,19 +106,13 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
     def zeroconf_profiles_setup(self):
         self.zc_menu_actions = {}
         self.azc = zeroconf.asyncio.AsyncZeroconf()
-        self.asb = zeroconf.asyncio.AsyncServiceBrowser(self.azc.zeroconf, ZEROCONF_MPD_TYPE, handlers=[lambda **kwargs: asyncio.ensure_future(self.zeroconf_profiles_handler(**kwargs))])
+        self.asb = zeroconf.asyncio.AsyncServiceBrowser(self.azc.zeroconf, ZEROCONF_MPD_TYPE, handlers=[lambda **kwargs: asyncio.create_task(self.zeroconf_profiles_handler(**kwargs))])
 
     async def zeroconf_profiles_cleanup(self):
         await self.asb.async_cancel()
-        await self.azc.async_close()
-
-        del self.azc.zeroconf.engine
-        del self.azc.zeroconf.record_manager
-        del self.azc.zeroconf._out_queue
-        del self.azc.zeroconf._out_delay_queue
         del self.asb
 
-    async def zeroconf_profiles_handler(self, service_type, name, state_change, **kwargs):
+    async def zeroconf_profiles_handler(self, *, service_type, name, state_change, **kwargs):
         match = re.fullmatch(ZEROCONF_NAME_REGEXP, name)
         short_name = match.group('name')
         if state_change in (zeroconf.ServiceStateChange.Removed, zeroconf.ServiceStateChange.Updated) and short_name in self.zc_menu_actions:
