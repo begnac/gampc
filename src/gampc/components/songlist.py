@@ -18,17 +18,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GLib
-from gi.repository import Gio
 from gi.repository import Gdk
-from gi.repository import Gtk
 
 import ast
 
-from ..util import ssde
 from ..util import record
 from ..util import resource
 from ..util.misc import format_time
+from ..ui import ssde
 
 from . import songlistbase
 from . import component

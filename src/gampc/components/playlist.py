@@ -21,7 +21,7 @@
 import ampd
 
 from ..util import resource
-from ..util import dialog
+from ..ui import dialog
 
 from . import songlistbase
 from . import songlist

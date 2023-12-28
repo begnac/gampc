@@ -23,9 +23,9 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import ssde
 from ..util import record
 from ..util import resource
+from ..ui import ssde
 
 from . import songlistbase
 from . import songlist

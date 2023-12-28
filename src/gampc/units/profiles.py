@@ -25,9 +25,9 @@ import zeroconf.asyncio
 import re
 import asyncio
 
-from ..util import ssde
 from ..util import resource
 from ..util import unit
+from ..ui import ssde
 
 
 ZEROCONF_MPD_TYPE = '_mpd._tcp.local.'
