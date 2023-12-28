@@ -21,6 +21,7 @@
 from ..util import db
 from ..util import resource
 from ..util import unit
+from ..util import field
 from ..util.logger import logger
 
 from ..ui import column
@@ -80,10 +81,10 @@ class __unit__(songlistbase.UnitSongListBaseMixin, unit.UnitCssMixin, unit.Unit)
             resource.MenuAction('edit/component/stream', 'stream.modify', _("Modify stream"), ['F2']),
         )
 
-        self.fields = column.FieldFamily(self.config.fields)
-        self.fields.register_field(column.Field('Name', _("Name")))
-        self.fields.register_field(column.Field('file', _("URL")))
-        self.fields.register_field(column.Field('Comment', _("Comment")))
+        self.fields = field.FieldFamily(self.config.fields)
+        self.fields.register_field(field.Field('Name', _("Name")))
+        self.fields.register_field(field.Field('file', _("URL")))
+        self.fields.register_field(field.Field('Comment', _("Comment")))
 
         self.db = StreamDatabase(self.name, self.fields)
 
