@@ -40,6 +40,7 @@ class RecordView(Gtk.ColumnView):
         self.sortable = sortable
 
         super().__init__(**kwargs)
+        print(self.get_header_factory())
 
         self.columns = self.get_columns()
         self.columns_by_name = {}

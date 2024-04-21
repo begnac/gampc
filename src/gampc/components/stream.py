@@ -22,6 +22,7 @@ import ampd
 
 from ..util import resource
 from ..ui import ssde
+
 from . import songlistbase
 from . import editstack
 
