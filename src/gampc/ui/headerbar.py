@@ -49,8 +49,8 @@ class OptionButtons(Gtk.Box):
 
         self.add(Gtk.ToggleButton(visible=True, can_focus=False, action_name='app.random', image=Gtk.Image(visible=True, icon_name='media-playlist-shuffle-symbolic')))
         self.add(Gtk.ToggleButton(visible=True, can_focus=False, action_name='app.repeat', image=Gtk.Image(visible=True, icon_name='media-playlist-repeat-symbolic')))
+        self.add(Gtk.ToggleButton(visible=True, can_focus=False, action_name='app.single', image=Gtk.Image(visible=True, icon_name='zoom-original-symbolic')))
         # self.consume.set_image(Gtk.Image(visible=True, icon_name='media-skip-backward-symbolic'))
-        # self.single.set_image(Gtk.Image(visible=True, icon_name='zoom-original-symbolic'))
 
 
 class TimeScale(Gtk.Box):
