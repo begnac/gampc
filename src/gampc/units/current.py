@@ -18,12 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import GdkPixbuf
 from gi.repository import Pango
 from gi.repository import Gtk
 
-import xdg
+import os
 # import time
 # import asyncio
 # import ampd
@@ -42,8 +43,9 @@ class PixbufCache(dict):
 
     def find_image(self, key):
         for extension in ('.jpg', '.png', '.gif'):
-            for name in xdg.BaseDirectory.load_data_paths(__application__, 'photos', key + extension):
-                return GdkPixbuf.Pixbuf.new_from_file(name)
+            path = os.path.join(GLib.get_user_data_dir(), __application__, 'photos', key + extension)
+            if os.path.isfile(path):
+                return GdkPixbuf.Pixbuf.new_from_file(path)
 
         for sep in (', ', ' y '):
             if sep in key:

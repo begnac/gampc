@@ -18,7 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import xdg.BaseDirectory
+from gi.repository import GLib
+
 import json
 import os
 
@@ -91,29 +92,24 @@ class ConfigNode(object):
 class LoadedConfigNode(ConfigNode):
     def __init__(self, name):
         super().__init__(name)
+        self._path = os.path.join(GLib.get_user_config_dir(), __application__, self._name + '.json')
         self._load()
         self._is_leaf = False
         self._value = {}
 
     def _load(self):
-        self._filename = self._name + '.json'
-
-        for path in xdg.BaseDirectory.load_config_paths(__application__):
-            fullpath = os.path.join(path, self._filename)
-            if os.path.exists(fullpath):
-                self._base = json.loads(open(fullpath, 'rb').read().decode('utf-8'))
-                break
+        if os.path.exists(self._path):
+            self._base = json.loads(open(self._path, 'rb').read().decode('utf-8'))
         else:
             self._base = {}
 
     def _save(self):
-        path = os.path.join(xdg.BaseDirectory.save_config_path(__application__), self._filename)
         tree = self._get_tree()
         if tree:
             s = json.dumps(tree, sort_keys=True, indent=2, ensure_ascii=False) + '\n'
-            open(path, 'wb').write(s.encode('utf-8'))
-        elif os.path.exists(path):
-            os.remove(path)
+            open(self._path, 'wb').write(s.encode('utf-8'))
+        elif os.path.exists(self._path):
+            os.remove(self._path)
 
 
 class __unit__(unit.Unit):

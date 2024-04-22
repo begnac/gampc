@@ -18,7 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import xdg.BaseDirectory
+from gi.repository import GLib
+
 import os
 import apsw
 
@@ -76,8 +77,8 @@ class Database(object):
         self.setup_database()
 
     def get_connection(self):
-        base_path = xdg.BaseDirectory.save_cache_path(__application__) if self.cache else xdg.BaseDirectory.save_data_path('gampc')
-        self.connection = Connection(os.path.join(base_path, self.name + '.sqlite'))
+        base_dir = GLib.get_user_cache_dir() if self.cache else GLib.get_user_data_dir()
+        self.connection = Connection(os.path.join(base_dir, __application__, self.name + '.sqlite'))
         self.connection.cursor().execute('PRAGMA foreign_keys=ON')
 
     def setup_table(self, table, definition, columns=[]):
