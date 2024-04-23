@@ -355,7 +355,9 @@ class TandaEdit(TandaSubComponent, editstack.SongListBaseEditStackMixin, songlis
             tanda._tandaid = tanda.tandaid
         self.current_tanda = None
         self.tanda_selection_changed_cb()
-        self.tanda_view.record_view.rebind_columns()
+        # XXXXXXXXXXXXXXXXXXXX CHECK
+        for record_ in self.tanda_view.record_store:
+            record_.emit('changed')
 
     def tanda_selection_changed_cb(self, *args):
         selection = self.tanda_view.get_selection()
@@ -378,7 +380,7 @@ class TandaEdit(TandaSubComponent, editstack.SongListBaseEditStackMixin, songlis
             tanda_selection = self.tanda_view.get_selection()
             return sum(([record_.file for record_ in self.tanda_view.record_selection[i]._records] + [self.unit.unit_server.SEPARATOR_FILE] for i in tanda_selection), [self.unit.unit_server.SEPARATOR_FILE])
 
-    def tanda_bind_hook(self, label, tanda, name):
+    def tanda_bind_hook(self, label, tanda):
         if tanda[name] is None:
             return
         cell = label.get_parent()

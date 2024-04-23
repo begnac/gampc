@@ -64,7 +64,7 @@ class SongListBase(component.Component):
         if self.duplicate_test_columns:
             self.signal_handler_connect(self.view.record_store, 'items-changed', self.mark_duplicates)
 
-        self.view.bind_hooks.append(self.duplicate_bind_hook)
+        self.view.record_changed_hooks.append(self.record_duplicate_hook)
 
     def shutdown(self):
         del self.songlistbase_actions
@@ -83,8 +83,8 @@ class SongListBase(component.Component):
             record_id = await self.ampd.addid(filename)
         await self.ampd.playid(record_id)
 
-    def duplicate_bind_hook(self, label, item, name):
-        duplicate = item._duplicate
+    def record_duplicate_hook(self, label, record):
+        duplicate = record._duplicate
         if duplicate is not None:
             label.get_parent().add_css_class(f'duplicate{duplicate % 64}')
 
@@ -106,7 +106,6 @@ class SongListBase(component.Component):
         if self.duplicate_extra_records:
             records += list(self.duplicate_extra_records)
         self.find_duplicates(records, self.duplicate_test_columns)
-        self.view.record_view.rebind_columns()
 
     def find_duplicates(self, records, test_columns):
         marker = 0
@@ -120,11 +119,14 @@ class SongListBase(component.Component):
                 firsts[test] = i
                 if record_._duplicate is not None:
                     del record_._duplicate
+                    record_.emit('changed')
             else:
                 if records[first]._duplicate is None:
                     records[first]._duplicate = marker
+                    records[first].emit('changed')
                     marker += 1
                 record_._duplicate = records[first]._duplicate
+                record_.emit('changed')
 
     def action_reset_cb(self, action, parameter):
         self.view.filter_record.set_data({})
@@ -226,7 +228,7 @@ class SongListBaseEditableMixin:
         self.songlistbase_actions.add_action(resource.Action('cut', self.action_copy_delete_cb))
         self.signal_handler_connect(self.view, 'notify::filtering', self.check_editable)
 
-        self.setup_drop()
+        # self.setup_drop()
 
     def get_editable(self):
         return self._editable

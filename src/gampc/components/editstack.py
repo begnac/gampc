@@ -24,8 +24,7 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import record
-from ..util import resource
+from .. import util
 from ..ui import dialog
 from . import songlistbase
 
@@ -77,11 +76,17 @@ class MetaDelta(GObject.Object):
         if not self.push:
             push = not push
         focus = None
-        selection = []
+        add_selection = []
+        remove_selection = []
         for delta in self.deltas if push else reversed(self.deltas):
             focus, new_selection = delta.apply(model, push)
-            selection = delta.translate_positions(selection, push) + new_selection
-        return focus, selection
+            add_selection = delta.translate_positions(add_selection, push)
+            remove_selection = delta.translate_positions(remove_selection, push)
+            if push == delta.push:
+                add_selection += new_selection
+            else:
+                remove_selection += new_selection
+        return focus, add_selection or remove_selection
 
     def translate_positions(self, positions, push):
         if not self.push:
@@ -93,7 +98,7 @@ class MetaDelta(GObject.Object):
 
 class EditStack:
     def __init__(self, records):
-        self.records = Gio.ListStore(item_type=record.Record)
+        self.records = Gio.ListStore(item_type=util.record.Record)
         self.records[:] = records
         self.reset()
 
@@ -120,16 +125,28 @@ class EditStack:
 class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
-        self.songlistbase_actions.add_action(resource.Action('save', self.action_save_cb))
-        # self.songlistbase_actions.add_action(resource.Action('reset', self.action_reset_cb))
-        self.songlistbase_actions.add_action(resource.Action('undo', self.action_do_cb))
-        self.songlistbase_actions.add_action(resource.Action('redo', self.action_do_cb))
+        self.songlistbase_actions.add_action(util.resource.Action('save', self.action_save_cb))
+        # self.songlistbase_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
+        self.songlistbase_actions.add_action(util.resource.Action('undo', self.action_do_cb))
+        self.songlistbase_actions.add_action(util.resource.Action('redo', self.action_do_cb))
 
         self.edit_stack = None
 
+        self.view.record_edited_hooks.append(self.record_edited_hook)
+
     def shutdown(self):
         super().shutdown()
+        self.view.record_edited_hooks.remove(self.record_edited_hook)
         self.set_edit_stack(None)
+
+    def record_edited_hook(self, record, key, value):
+        new_record = util.record.Record(record.get_data())
+        new_record[key] = value
+        position = list(self.view.record_selection).index(record)
+        delta1 = SimpleDelta([record], position, False)
+        delta2 = SimpleDelta([new_record], position, True)
+        self.edit_stack.set_from_here([MetaDelta([delta1, delta2], True)])
+        self.step_edit_stack(True)
 
     @staticmethod
     def sync_records(source, p, r, a, target):
@@ -157,10 +174,10 @@ class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
         if not records:
             return
         indices = []
-        for i, record_ in enumerate(self.view.record_selection):
-            if record_ in records:
+        for i, record in enumerate(self.view.record_selection):
+            if record in records:
                 indices.append(i)
-                records.remove(record_)
+                records.remove(record)
         if records:
             raise RuntimeError
         deltas = []

@@ -22,12 +22,17 @@ from gi.repository import GObject
 
 
 class Record(GObject.Object):
+    __gsignals__ = {
+        'changed': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
+
     def __init__(self, data=None):
         super().__init__()
         self.set_data(data or {})
 
     def set_data(self, data):
         super().__setattr__('_data', data)
+        self.emit('changed')
 
     def get_data(self):
         return self._data
@@ -53,3 +58,6 @@ class Record(GObject.Object):
 
     def items(self):
         return self._data.items()
+
+    def do_changed(self):
+        pass

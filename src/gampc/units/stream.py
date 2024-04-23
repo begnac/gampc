@@ -83,7 +83,7 @@ class __unit__(songlistbase.UnitSongListBaseMixin, unit.UnitCssMixin, unit.Unit)
 
         self.fields = field.FieldFamily(self.config.fields)
         self.fields.register_field(field.Field('Name', _("Name")))
-        self.fields.register_field(field.Field('file', _("URL")))
+        self.fields.register_field(field.Field('file', _("URL"), editable=True))
         self.fields.register_field(field.Field('Comment', _("Comment")))
 
         self.db = StreamDatabase(self.name, self.fields)

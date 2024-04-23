@@ -34,6 +34,7 @@ class Field(GObject.Object):
     width = GObject.Property(type=int)
     visible = GObject.Property(type=bool, default=True)
     xalign = GObject.Property(type=float, default=0.0)
+    editable = GObject.Property(type=bool, default=False)
 
     get_value = None
 

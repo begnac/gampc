@@ -37,35 +37,37 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
 
     def __init__(self, unit):
         super().__init__(unit)
+        self.current_song_record = None
         self.widget.record_view.add_css_class('playqueue')
 
         self.actions.add_action(resource.Action('priority', self.action_priority_cb, parameter_type=GLib.VariantType.new('i')))
         self.actions.add_action(resource.Action('shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
         self.actions.add_action(resource.Action('go-to-current', self.action_go_to_current_cb))
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
+
         for name in self.songlistbase_actions.list_actions():
             if name.startswith('playqueue-ext-'):
                 self.songlistbase_actions.remove(name)
         self.cursor_by_profile = {}
         # self.set_cursor = False
 
-        self.view.bind_hooks.append(self.current_song_bind_hook)
+        self.view.record_changed_hooks.append(self.record_current_song_hook)
 
     @ampd.task
     async def client_connected_cb(self, client):
         # self.set_cursor = True
         while True:
             self.set_songs(await self.ampd.playlistinfo())
-            self.widget.record_view.rebind_columns()
+            self.notify_current_song_cb(self.unit.unit_server.ampd_server_properties, None)
             # if self.set_cursor:
             #     self.widget.record_view.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
             #     self.set_cursor = False
             await self.ampd.idle(ampd.PLAYLIST)
 
-    def current_song_bind_hook(self, label, item, name):
+    def record_current_song_hook(self, label, item):
         if self.unit.unit_server.ampd_server_properties.state != 'stop' and item.Id == self.unit.unit_server.ampd_server_properties.current_song.get('Id'):
             label.get_parent().add_css_class('playing')
-        if name == 'FormattedTime' and item.Prio is not None:
+        if label.name == 'FormattedTime' and item.Prio is not None:
             label.get_parent().add_css_class('high-priority')
 
     @ampd.task
@@ -113,8 +115,15 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
                 # row_height = self.view.record_view_rows.get_focus_child().get_allocation().height
                 self.view.scrolled_record_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
 
-    def notify_current_song_cb(self, *args):
-        self.widget.record_view.rebind_columns()
+    def notify_current_song_cb(self, server_properties, pspec):
+        if self.current_song_record is not None:
+            self.current_song_record.emit('changed')
+        pos = server_properties.current_song.get('Pos')
+        if pos is not None:
+            self.current_song_record = self.widget.record_store[int(pos)]
+            self.current_song_record.emit('changed')
+        else:
+            self.current_song_record = None
 
     @ampd.task
     async def remove_records(self, records):

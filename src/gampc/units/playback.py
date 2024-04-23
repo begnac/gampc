@@ -44,7 +44,7 @@ class __unit__(unit.UnitServerMixin, unit.Unit):
             'app.menu',
             resource.MenuPath('playback/play'),
             resource.MenuAction('playback/play', 'app.play-or-pause', _("_Play/pause"), ['<Control>Up', 'AudioPlay', 'space'], accels_fragile=True),
-            resource.MenuAction('playback/play', 'app.stop', _("_Stop"), ['<Control>Down', 'AudioStop'], accels_fragile=True),
+            resource.MenuAction('playback/play', 'app.stop', _("_Stop"), ['<Control>Down', 'AudioStop']),
             resource.MenuAction('playback/play', 'app.fadeout-then(true)', _("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], accels_fragile=True),
             resource.MenuPath('playback/move'),
             resource.MenuAction('playback/move', 'app.previous', _("_Previous"), ['<Control>Left', 'AudioPrev'], accels_fragile=True),

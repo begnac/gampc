@@ -24,12 +24,8 @@ from gi.repository import Gtk
 
 import types
 
-from ..util import resource
-from ..util import unit
-from ..util import misc
-from ..util.logger import logger
-from ..ui import entry
-from ..ui import listviewsearch
+from .. import util
+from .. import ui
 
 
 class Component(GObject.Object):
@@ -60,7 +56,7 @@ class Component(GObject.Object):
             self.client_connected_cb(unit.unit_server.ampd_client)
 
     def __del__(self):
-        logger.debug('Deleting {}'.format(self))
+        util.logger.logger.debug('Deleting {}'.format(self))
 
     def shutdown(self):
         if self.get_window() is not None:
@@ -82,7 +78,7 @@ class Component(GObject.Object):
 
     def add_actions_provider(self, name):
         actions = self.actions_dict[name] = Gio.SimpleActionGroup()
-        action_aggregator = self.action_aggregator_dict[name] = resource.ActionAggregator([name + '.action'], actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
+        action_aggregator = self.action_aggregator_dict[name] = util.resource.ActionAggregator([name + '.action'], actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
         self.unit.manager.add_aggregator(action_aggregator)
         return actions
 
@@ -114,7 +110,7 @@ class Component(GObject.Object):
         menu_model = self.unit.menu_aggregators[name].menu
         if menu_model.get_n_items() == 0:
             return
-        menu = Gtk.PopoverMenu(menu_model=menu_model, has_arrow=False, pointing_to=misc.Rectangle(x, y), halign=Gtk.Align.START)
+        menu = Gtk.PopoverMenu(menu_model=menu_model, has_arrow=False, pointing_to=util.misc.Rectangle(x, y), halign=Gtk.Align.START)
         menu.set_parent(controller.get_widget())
         menu.popup()
 
@@ -172,7 +168,7 @@ class ComponentPaneMixin:
         self.focus_widget = self.left_view = Gtk.ListView(model=self.left_store, factory=self.get_left_factory())
         self.left_scrolled = Gtk.ScrolledWindow()
         self.left_scrolled.set_child(self.left_view)
-        self.left_view_search = listviewsearch.ListViewSearch()
+        self.left_view_search = ui.listviewsearch.ListViewSearch()
         self.left_view_search.setup(self.left_view, lambda text, row: text.lower() in row.get_item().name.lower())
 
         self.left_selection = []
@@ -195,7 +191,7 @@ class ComponentPaneMixin:
         config.pane_separator._set(paned.get_position())
 
     def left_selection_changed_cb(self, selection, position, n_items):
-        self.left_selection = list(misc.get_selection(selection))
+        self.left_selection = list(util.misc.get_selection(selection))
 
 
 class ComponentPaneTreeMixin(ComponentPaneMixin):
@@ -219,7 +215,7 @@ class ComponentEntryMixin:
     def __init__(self, unit):
         super().__init__(unit)
 
-        self.focus_widget = self.entry = entry.Entry(unit_misc=unit.unit_misc)
+        self.focus_widget = self.entry = ui.misc.Entry(unit_misc=unit.unit_misc)
         self.signal_handler_connect(self.entry, 'activate', self.entry_activate_cb)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -228,17 +224,17 @@ class ComponentEntryMixin:
         self.widget = box
 
 
-class UnitComponentMixin(unit.UnitConfigMixin, unit.UnitServerMixin):
+class UnitComponentMixin(util.unit.UnitConfigMixin, util.unit.UnitServerMixin):
     def __init__(self, name, manager, *, menus=[]):
         self.REQUIRED_UNITS = ['component', 'persistent'] + self.REQUIRED_UNITS
         super().__init__(name, manager)
         self.menu_aggregators = {}
 
         self.unit_component.register_component_factory(self.name, self.new_component)
-        self.add_resource('app.menu', resource.MenuAction('components/components',
-                                                          f'app.component-start("{self.name}")',
-                                                          self.title,
-                                                          ['<Alt>' + self.key, '<Control><Alt>' + self.key]))
+        self.add_resource('app.menu', util.resource.MenuAction('components/components',
+                                                               f'app.component-start("{self.name}")',
+                                                               self.title,
+                                                               ['<Alt>' + self.key, '<Control><Alt>' + self.key]))
 
         for menu in menus:
             self.setup_menu(self.name, menu, self.COMPONENT_CLASS.use_resources)
@@ -254,12 +250,12 @@ class UnitComponentMixin(unit.UnitConfigMixin, unit.UnitServerMixin):
         return self.COMPONENT_CLASS(self)
 
     def setup_menu(self, name, kind, providers=[]):
-        aggregator = resource.MenuAggregator([f'{provider}.{kind}.menu' for provider in [name] + providers])
+        aggregator = util.resource.MenuAggregator([f'{provider}.{kind}.menu' for provider in [name] + providers])
         self.manager.add_aggregator(aggregator)
         self.menu_aggregators[f'{name}.{kind}'] = aggregator
 
 
-class UnitPanedComponentMixin(UnitComponentMixin, unit.UnitConfigMixin):
+class UnitPanedComponentMixin(UnitComponentMixin, util.unit.UnitConfigMixin):
     def __init__(self, name, manager, **kwargs):
         super().__init__(name, manager, **kwargs)
         self.config.pane_separator._get(default=100)

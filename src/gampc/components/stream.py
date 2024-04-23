@@ -20,8 +20,8 @@
 
 import ampd
 
-from ..util import resource
-from ..ui import ssde
+from .. import util
+# from ..ui import ssde
 
 from . import songlistbase
 from . import editstack
@@ -37,29 +37,30 @@ class Stream(editstack.SongListBaseEditStackMixin, songlistbase.SongListBase):
         super().__init__(unit)
         self.widget.record_view.add_css_class('stream')
 
-        self.actions.add_action(resource.Action('add', self.action_add_cb))
-        self.actions.add_action(resource.Action('modify', self.action_modify_cb))
+        self.actions.add_action(util.resource.Action('add', self.action_add_cb))
+        self.actions.add_action(util.resource.Action('modify', self.action_modify_cb))
 
-        self.ssde_struct = ssde.Dict(
-            label=_("Internet stream"),
-            substructs=[
-                ssde.Text(label=_("Name"), name='Name', validator=bool),
-                ssde.Text(label=_("URL"), name='file', default='http://'),
-                ssde.Text(label=_("Comment"), name='Comment'),
-            ])
+        # self.ssde_struct = ssde.Dict(
+        #     label=_("Internet stream"),
+        #     substructs=[
+        #         ssde.Text(label=_("Name"), name='Name', validator=bool),
+        #         ssde.Text(label=_("URL"), name='file', default='http://'),
+        #         ssde.Text(label=_("Comment"), name='Comment'),
+        #     ])
 
         self.signal_handler_connect(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
-        self.widget.bind_hooks.append(self.current_song_bind_hook)
+        self.widget.record_changed_hooks.append(self.record_current_song_hook)
 
         self.load_streams()
 
-    def current_song_bind_hook(self, label, item, name):
-        if self.unit.unit_server.ampd_server_properties.state != 'stop' and item.file == self.unit.unit_server.ampd_server_properties.current_song.get('file'):
+    def record_current_song_hook(self, label, record):
+        if self.unit.unit_server.ampd_server_properties.state != 'stop' and record.file == self.unit.unit_server.ampd_server_properties.current_song.get('file'):
             label.get_parent().add_css_class('playing')
 
     def load_streams(self):
         streams = self.unit.db.get_streams()
-        self.set_songs(streams)
+        # self.set_songs(streams)
+        self.set_edit_stack(editstack.EditStack(map(lambda stream: util.record.Record(stream), streams)))
 
     def action_save_cb(self, action, parameter):
         raise NotImplementedError
@@ -86,7 +87,8 @@ class Stream(editstack.SongListBaseEditStackMixin, songlistbase.SongListBase):
             return
         record.set_data(value)
         record._modified = True
-        self.view.record_view.rebind_columns()
+        record.emit('changed')
 
     def notify_current_song_cb(self, *args):
-        self.view.record_view.rebind_columns()
+        for record in self.view.record_store:
+            record.emit('changed')
