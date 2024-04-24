@@ -64,7 +64,7 @@ class TreeNode(GObject.Object):
     def update(self, *filler, model=None):
         self.filler = filler
         if self.updated is False:
-            self.updated = asyncio.ensure_future(self._update(model))
+            self.updated = asyncio.create_task(self._update(model))
 
     async def _update(self, model):
         filler, *args = self.filler

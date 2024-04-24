@@ -112,12 +112,12 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
 
     def ampd_connect(self, *args):
         self.want_to_connect = True
-        asyncio.ensure_future(self.ampd_client.connect_to_server(self.profile.address))
+        asyncio.create_task(self.ampd_client.connect_to_server(self.profile.address))
         self.set_server_label()
 
     def ampd_disconnect(self, *args):
         self.want_to_connect = False
-        asyncio.ensure_future(self.ampd_client.disconnect_from_server())
+        asyncio.create_task(self.ampd_client.disconnect_from_server())
         self.set_server_label()
 
     @ampd.task
