@@ -47,26 +47,30 @@ class TreeNode(GObject.Object):
         self.modified = False
         self.updated = False
         self.state = self.STATE_UNEXPOSED
-        self.sub_nodes = []
         self.model.remove_all()
+        self.sub_nodes = []
+
+    def append_sub_node(self, node):
+        self.sub_nodes.append(node)
+        node.parent_model = self.model
 
     def expose(self):
         if self.state == self.STATE_EMPTY:
             return None
         elif self.state == self.STATE_UNEXPOSED:
-            self.state = self.STATE_EXPOSED
             assert self.updated is not False
+            self.state = self.STATE_EXPOSED
             if self.updated is True:
                 for node in self.sub_nodes:
-                    node.update(*self.filler, model=self.model)
+                    node.update(*self.filler)
         return self.model
 
-    def update(self, *filler, model=None):
+    def update(self, *filler):
         self.filler = filler
         if self.updated is False:
-            self.updated = asyncio.create_task(self._update(model))
+            self.updated = asyncio.create_task(self._update())
 
-    async def _update(self, model):
+    async def _update(self):
         filler, *args = self.filler
         try:
             await filler(self, *args)
@@ -77,10 +81,9 @@ class TreeNode(GObject.Object):
             self.state = self.STATE_EMPTY
         elif self.state == self.STATE_EXPOSED:
             for node in self.sub_nodes:
-                node.update(*self.filler, model=self.model)
-        if model is not None:
-            model.append(self)
-        self.parent_model = model
+                node.update(*self.filler)
+        if self.parent_model is not None:
+            self.parent_model.append(self)
 
 
 # class TreeListIconColumn(Gtk.TreeViewColumn):

@@ -114,7 +114,7 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
 
     @staticmethod
     def new_root():
-        return treelist.TreeNode(kind=playlist.NODE_FOLDER)
+        return treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None)
 
     async def fill_node(self, node, playlists):
         if node.kind == playlist.NODE_PLAYLIST:
@@ -124,9 +124,10 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
             node.edit_stack = editstack.EditStack(map(record.Record, songs))
         else:
             folders, playlists = self.get_pseudo_folder_contents(node.path, playlists)
-            node.sub_nodes = \
-                [treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER) for name in sorted(folders)] + \
-                [treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_PLAYLIST], kind=playlist.NODE_PLAYLIST) for name in sorted(playlists)]
+            for name in sorted(folders):
+                node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER))
+            for name in sorted(playlists):
+                node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_PLAYLIST], kind=playlist.NODE_PLAYLIST))
 
     @staticmethod
     def get_pseudo_folder_contents(path, pseudo_names):

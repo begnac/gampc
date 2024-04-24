@@ -60,13 +60,13 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
 
     @staticmethod
     def new_root():
-        return treelist.TreeNode()
+        return treelist.TreeNode(parent_model=None)
 
     async def fill_node(self, node):
         if node.path:
             contents = await self.ampd.lsinfo('/'.join(node.path[1:]))
         else:
             contents = {DIRECTORY: [{DIRECTORY: _("Music")}]}
-        folders = sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, []))
-        node.sub_nodes = [treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic') for folder in folders]
+        for folder in sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, [])):
+            node.append_sub_node(treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic'))
         node.songs = contents.get('file', [])
