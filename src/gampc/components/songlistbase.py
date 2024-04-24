@@ -64,7 +64,7 @@ class SongListBase(component.Component):
         if self.duplicate_test_columns:
             self.signal_handler_connect(self.view.record_store, 'items-changed', self.mark_duplicates)
 
-        self.view.record_changed_hooks.append(self.record_duplicate_hook)
+        self.view.record_display_hooks.append(self.record_duplicate_hook)
 
     def shutdown(self):
         del self.songlistbase_actions

@@ -49,7 +49,7 @@ class Stream(editstack.SongListBaseEditStackMixin, songlistbase.SongListBase):
         #     ])
 
         self.signal_handler_connect(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
-        self.widget.record_changed_hooks.append(self.record_current_song_hook)
+        self.widget.record_display_hooks.append(self.record_current_song_hook)
 
         self.load_streams()
 

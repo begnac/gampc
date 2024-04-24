@@ -141,7 +141,10 @@ class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
 
     def record_edited_hook(self, record, key, value):
         new_record = util.record.Record(record.get_data())
-        new_record[key] = value
+        if value:
+            new_record[key] = value
+        else:
+            del new_record[key]
         position = list(self.view.record_selection).index(record)
         delta1 = SimpleDelta([record], position, False)
         delta2 = SimpleDelta([new_record], position, True)

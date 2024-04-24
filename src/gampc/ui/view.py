@@ -68,9 +68,9 @@ class RecordView(Gtk.ColumnView):
         'record-changed': (GObject.SIGNAL_RUN_FIRST, None, (GObject.Object, str, str)),
     }
 
-    def __init__(self, fields, record_changed_hooks, record_edited_hooks, unit_misc, *, force_editable=False, **kwargs):
+    def __init__(self, fields, record_display_hooks, record_edited_hooks, unit_misc, *, force_editable=False, **kwargs):
         self.fields = fields
-        self.record_changed_hooks = record_changed_hooks
+        self.record_display_hooks = record_display_hooks
         self.record_edited_hooks = record_edited_hooks
 
         super().__init__(**kwargs)
@@ -91,7 +91,8 @@ class RecordView(Gtk.ColumnView):
     def cleanup(self):
         self.fields.order.disconnect_by_func(self.fields_order_changed_cb)
         self.columns.disconnect_by_func(self.columns_changed_cb)
-        del self.record_changed_hooks
+        del self.record_display_hooks
+        del self.record_edited_hooks
         for col in self.columns_by_name.values():
             col.set_factory(None)
         del self.columns_by_name
@@ -103,7 +104,7 @@ class RecordView(Gtk.ColumnView):
             return lambda: RecordItemLabel(name, self.record_changed_cb, None)
 
     def record_changed_cb(self, record, widget):
-        for hook in self.record_changed_hooks:
+        for hook in self.record_display_hooks:
             hook(widget, record)
 
     def record_edited_cb(self, record, name, value):
@@ -128,7 +129,7 @@ class View(Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
     def __init__(self, fields, sortable, unit_misc, *, selection_model=Gtk.MultiSelection):
-        self.record_changed_hooks = [self.record_changed_hook]
+        self.record_display_hooks = [self.record_bind_hook]
         self.record_edited_hooks = []
         # self.sortable = sortable
         self.unit_misc = unit_misc
@@ -140,9 +141,8 @@ class View(Gtk.Box):
 
         self.filter_record = util.record.Record()
         self.filter_store = Gio.ListStore(item_type=util.record.Record)
-        self.filter_store.append(self.filter_record)
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = RecordView(fields, [self.filter_entry_bind], [], self.unit_misc, model=self.filter_selection, show_column_separators=True, visible=False)
+        self.filter_view = RecordView(fields, [self.record_bind_hook], [self.filter_record_edited_hook], self.unit_misc, model=self.filter_selection, show_column_separators=True, force_editable=True)
         self.filter_view.add_css_class('filter')
         self.filter_view.add_css_class('data-table')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
@@ -150,7 +150,7 @@ class View(Gtk.Box):
         self.append(self.scrolled_filter_view)
 
         self.record_selection = selection_model()
-        self.record_view = RecordView(fields, self.record_changed_hooks, self.record_edited_hooks, self.unit_misc, sortable=sortable, model=self.record_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True)
+        self.record_view = RecordView(fields, self.record_display_hooks, self.record_edited_hooks, self.unit_misc, sortable=sortable, model=self.record_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True, visible_titles=False)
         self.record_view.add_css_class('records')
         self.record_view.add_css_class('data-table')
         self.record_view_rows = self.record_view.get_last_child()
@@ -178,41 +178,30 @@ class View(Gtk.Box):
         self.filter_filter.set_filter_func(None)
         self.filter_view.cleanup()
         self.record_view.cleanup()
-        del self.record_changed_hooks
+        del self.record_display_hooks
         self.view_search.cleanup()
 
-    def make_filter_entry(self):
-        filter_entry = misc.Entry(unit_misc=self.unit_misc)
-        filter_entry.connect('changed', self.filter_entry_changed_cb, self.filter_record, self.filter_filter)
-        return filter_entry
-
     @staticmethod
-    def filter_entry_bind(entry, record_, name):
-        entry.name = name
-        entry.get_buffer().set_text(record_[name] or '', -1)
-
-    @staticmethod
-    def filter_entry_changed_cb(entry, record, filter_):
-        new = entry.get_buffer().get_text()
-        if not new:
-            del record[entry.name]
-            filter_.changed(Gtk.FilterChange.LESS_STRICT)
-        else:
-            record[entry.name] = new
-            filter_.changed(Gtk.FilterChange.DIFFERENT)
-
-    @staticmethod
-    def record_changed_hook(widget, record):
+    def record_bind_hook(widget, record):
         value = record[widget.name]
         widget.props.label = '' if value is None else str(value)
         widget.get_parent().set_css_classes([])
 
+    def filter_record_edited_hook(self, record, key, value):
+        if not value:
+            del record[key]
+            self.filter_filter.changed(Gtk.FilterChange.LESS_STRICT)
+        else:
+            record[key] = value
+            self.filter_filter.changed(Gtk.FilterChange.DIFFERENT)
+
     @staticmethod
     def notify_filtering_cb(self, param):
-        self.filter_view.set_visible(self.filtering)
         if self.filtering:
+            self.filter_store.append(self.filter_record)
             self.record_store_filter.set_filter(self.filter_filter)
         else:
+            self.filter_store.remove(0)
             self.record_store_filter.set_filter(None)
 
     def filter_func(self, record):

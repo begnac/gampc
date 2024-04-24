@@ -51,7 +51,7 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
         self.cursor_by_profile = {}
         # self.set_cursor = False
 
-        self.view.record_changed_hooks.append(self.record_current_song_hook)
+        self.view.record_display_hooks.append(self.record_current_song_hook)
 
     @ampd.task
     async def client_connected_cb(self, client):
