@@ -316,8 +316,7 @@ class SongListBaseEditableMixin:
 
 class SongListBaseTreeListMixin(component.ComponentPaneTreeMixin):
     def __init__(self, unit, **kwargs):
-        self.root = unit.new_root()
-        self.left_store = Gtk.TreeListModel.new(self.root.model, False, False, lambda node: node.expose())
+        self.left_store = Gtk.TreeListModel.new(unit.root.model, False, False, lambda node: node.expose())
         self.left_selection = Gtk.MultiSelection(model=self.left_store)
 
         super().__init__(unit, **kwargs)
@@ -333,6 +332,6 @@ class SongListBaseTreeListMixin(component.ComponentPaneTreeMixin):
 
 
 class UnitSongListBaseMixin(component.UnitComponentMixin):
-    def __init__(self, name, manager, *, menus=[]):
+    def __init__(self, *args, menus=[]):
         self.REQUIRED_UNITS = ['misc', 'songlistbase'] + self.REQUIRED_UNITS
-        super().__init__(name, manager, menus=menus + ['context'])
+        super().__init__(*args, menus=menus + ['context'])

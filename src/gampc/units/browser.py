@@ -36,20 +36,19 @@ DIRECTORY = 'directory'
 class Browser(songlistbase.SongListBaseTreeListMixin, songlist.SongList):
     sortable = True
 
-    @ampd.task
-    async def client_connected_cb(self, client):
-        while True:
-            self.root.update(self.unit.fill_node)
-            self.root.expose()
-            await self.root.updated
-            await self.root.sub_nodes[0].updated
+    def __init__(self, unit, **kwargs):
+        super().__init__(unit, **kwargs)
+        self.signal_handler_connect(self.unit.root.model, 'items-changed', self.root_items_changed_cb)
+        if len(self.left_selection) > 0:
             self.left_selection[0].set_expanded(True)
-            await self.ampd.idle(ampd.DATABASE)
-            self.root.reset()
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
         self.set_songs(sum((selection[pos].get_item().songs for pos in self.left_selection_pos), []))
+
+    def root_items_changed_cb(self, model, p, r, a):
+        if a:
+            self.left_selection[0].set_expanded(True)
 
 
 class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
@@ -58,11 +57,23 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
 
     COMPONENT_CLASS = Browser
 
-    @staticmethod
-    def new_root():
-        return treelist.TreeNode(parent_model=None)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)
 
-    async def fill_node(self, node):
+    def shutdown(self):
+        super().shutdown()
+        del self.root
+
+    @ampd.task
+    async def client_connected_cb(self, client):
+        while True:
+            self.root.reset()
+            await self.root.fill_sub_nodes()
+            self.root.expose()
+            await self.ampd.idle(ampd.DATABASE)
+
+    async def fill_sub_nodes_cb(self, node):
         if node.path:
             contents = await self.ampd.lsinfo('/'.join(node.path[1:]))
         else:
@@ -70,3 +81,6 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
         for folder in sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, [])):
             node.append_sub_node(treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic'))
         node.songs = contents.get('file', [])
+
+    async def fill_contents_cb(self, node):
+        pass

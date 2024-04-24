@@ -29,7 +29,6 @@ import ampd
 class TreeNode(GObject.Object):
     STATE_UNEXPOSED = 0
     STATE_EXPOSED = 1
-    STATE_EMPTY = 2
 
     def __init__(self, name=None, path=None, **kwargs):
         super().__init__()
@@ -45,7 +44,8 @@ class TreeNode(GObject.Object):
 
     def reset(self):
         self.modified = False
-        self.updated = False
+        self.filled_sub_nodes = False
+        self.filled_contents = False
         self.state = self.STATE_UNEXPOSED
         self.model.remove_all()
         self.sub_nodes = []
@@ -53,37 +53,47 @@ class TreeNode(GObject.Object):
     def append_sub_node(self, node):
         self.sub_nodes.append(node)
         node.parent_model = self.model
+        node.fill_sub_nodes_cb = self.fill_sub_nodes_cb
+        node.fill_contents_cb = self.fill_contents_cb
 
     def expose(self):
-        if self.state == self.STATE_EMPTY:
-            return None
-        elif self.state == self.STATE_UNEXPOSED:
-            assert self.updated is not False
+        if self.state == self.STATE_UNEXPOSED:
+            assert self.filled_sub_nodes is True
             self.state = self.STATE_EXPOSED
-            if self.updated is True:
-                for node in self.sub_nodes:
-                    node.update(*self.filler)
-        return self.model
+            for node in self.sub_nodes:
+                node.fill_sub_nodes()
+            self.fill_contents()
+        return self.model if self.sub_nodes else None
 
-    def update(self, *filler):
-        self.filler = filler
-        if self.updated is False:
-            self.updated = asyncio.create_task(self._update())
+    def fill_sub_nodes(self):
+        if self.filled_sub_nodes is False:
+            self.filled_sub_nodes = asyncio.create_task(self._fill_sub_nodes())
+            return self.filled_sub_nodes
 
-    async def _update(self):
-        filler, *args = self.filler
+    async def _fill_sub_nodes(self):
         try:
-            await filler(self, *args)
+            await self.fill_sub_nodes_cb(self)
         except ampd.ConnectionError:
             return
-        self.updated = True
-        if not self.sub_nodes:
-            self.state = self.STATE_EMPTY
-        elif self.state == self.STATE_EXPOSED:
+        self.filled_sub_nodes = True
+        if self.state == self.STATE_EXPOSED:
             for node in self.sub_nodes:
-                node.update(*self.filler)
+                node.fill_sub_nodes()
         if self.parent_model is not None:
             self.parent_model.append(self)
+
+    def fill_contents(self):
+        if self.filled_contents is False:
+            self.filled_contents = asyncio.create_task(self._fill_contents())
+
+    async def _fill_contents(self):
+        if self.filled_sub_nodes is not True:
+            await self.filled_sub_nodes
+        try:
+            await self.fill_contents_cb(self)
+        except ampd.ConnectionError:
+            return
+        self.filled_contents = True
 
 
 # class TreeListIconColumn(Gtk.TreeViewColumn):

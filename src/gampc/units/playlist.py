@@ -82,6 +82,9 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
     COMPONENT_CLASS = playlist.Playlist
 
     def __init__(self, name, manager):
+        self.playlists = []
+        self.root = treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node, self.playlists), fill_contents_cb=self.fill_contents_cb)
+
         super().__init__(name, manager)
 
         self.add_resources(
@@ -112,22 +115,32 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
             resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
         )
 
-    @staticmethod
-    def new_root():
-        return treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None)
+    @ampd.task
+    async def client_connected_cb(self, client):
+        try:
+            while True:
+                self.playlists[:] = sorted(map(lambda entry: entry['playlist'], await self.ampd.listplaylists()))
+                self.root.reset()
+                await self.root.fill_sub_nodes()
+                self.root.expose()
+                await self.ampd.idle(ampd.STORED_PLAYLIST)
+        finally:
+            self.playlists[:] = []
 
-    async def fill_node(self, node, playlists):
-        if node.kind == playlist.NODE_PLAYLIST:
-            songs = await self.ampd.listplaylistinfo(playlist.PSEUDO_SEPARATOR.join(node.path))
-            for song in songs:
-                self.unit_songlist.fields.set_derived_fields(song)
-            node.edit_stack = editstack.EditStack(map(record.Record, songs))
-        else:
+    async def fill_sub_nodes_cb(self, node, playlists):
+        if node.kind == playlist.NODE_FOLDER:
             folders, playlists = self.get_pseudo_folder_contents(node.path, playlists)
             for name in sorted(folders):
                 node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER))
             for name in sorted(playlists):
                 node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_PLAYLIST], kind=playlist.NODE_PLAYLIST))
+
+    async def fill_contents_cb(self, node):
+        if node.kind == playlist.NODE_PLAYLIST:
+            songs = await self.ampd.listplaylistinfo(playlist.PSEUDO_SEPARATOR.join(node.path))
+            for song in songs:
+                self.unit_songlist.fields.set_derived_fields(song)
+            node.edit_stack = editstack.EditStack(map(record.Record, songs))
 
     @staticmethod
     def get_pseudo_folder_contents(path, pseudo_names):

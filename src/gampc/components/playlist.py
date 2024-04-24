@@ -51,20 +51,6 @@ class Playlist(songlistbase.SongListBaseTreeListMixin, editstack.SongListBaseEdi
         self.actions.add_action(resource.Action('delete', self.action_playlist_delete_cb))
         self.actions.add_action(resource.Action('update-from-queue', self.action_playlist_update_from_queue_cb))
 
-        self.playlists = []
-
-    @ampd.task
-    async def client_connected_cb(self, client):
-        try:
-            while True:
-                self.playlists = sorted(map(lambda entry: entry['playlist'], await self.ampd.listplaylists()))
-                self.root.update(self.unit.fill_node, self.playlists)
-                self.root.expose()
-                await self.ampd.idle(ampd.STORED_PLAYLIST)
-                self.root.reset()
-        finally:
-            self.playlists = []
-
     def edit_stack_changed(self):
         super().edit_stack_changed()
         if not self.get_editable():
