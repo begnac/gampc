@@ -115,6 +115,10 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
             resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
         )
 
+    def shutdown(self):
+        super().shutdown()
+        del self.root
+
     @ampd.task
     async def client_connected_cb(self, client):
         try:
