@@ -132,7 +132,6 @@ class View(Gtk.Box):
         self.record_display_hooks = [self.record_bind_hook]
         self.record_edited_hooks = []
         # self.sortable = sortable
-        self.unit_misc = unit_misc
 
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
@@ -142,7 +141,7 @@ class View(Gtk.Box):
         self.filter_record = util.record.Record()
         self.filter_store = Gio.ListStore(item_type=util.record.Record)
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = RecordView(fields, [self.record_bind_hook], [self.filter_record_edited_hook], self.unit_misc, model=self.filter_selection, show_column_separators=True, force_editable=True)
+        self.filter_view = RecordView(fields, [self.record_bind_hook], [self.filter_record_edited_hook], unit_misc, model=self.filter_selection, show_column_separators=True, force_editable=True)
         self.filter_view.add_css_class('filter')
         self.filter_view.add_css_class('data-table')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
@@ -150,7 +149,7 @@ class View(Gtk.Box):
         self.append(self.scrolled_filter_view)
 
         self.record_selection = selection_model()
-        self.record_view = RecordView(fields, self.record_display_hooks, self.record_edited_hooks, self.unit_misc, sortable=sortable, model=self.record_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True, visible_titles=False)
+        self.record_view = RecordView(fields, self.record_display_hooks, self.record_edited_hooks, unit_misc, sortable=sortable, model=self.record_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True, visible_titles=False)
         self.record_view.add_css_class('records')
         self.record_view.add_css_class('data-table')
         self.record_view_rows = self.record_view.get_last_child()
