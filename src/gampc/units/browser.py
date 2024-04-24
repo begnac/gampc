@@ -33,12 +33,23 @@ from ..components import songlist
 DIRECTORY = 'directory'
 
 
-class Browser(songlistbase.SongListBasePaneMixin, songlist.SongList):
+class Browser(songlistbase.SongListBaseTreeListMixin, songlist.SongList):
     sortable = True
+
+    @ampd.task
+    async def client_connected_cb(self, client):
+        while True:
+            self.root.update(self.unit.fill_node)
+            self.root.expose()
+            await self.root.updated
+            await self.root.sub_nodes[0].updated
+            self.left_selection[0].set_expanded(True)
+            await self.ampd.idle(ampd.DATABASE)
+            self.root.reset()
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
-        self.set_songs(sum((selection[pos].get_item().songs for pos in self.left_selection), []))
+        self.set_songs(sum((selection[pos].get_item().songs for pos in self.left_selection_pos), []))
 
 
 class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
@@ -47,22 +58,9 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
 
     COMPONENT_CLASS = Browser
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.root = treelist.TreeNode()
-        self.left_store = Gtk.TreeListModel.new(self.root.model, False, False, lambda node: node.expose())
-
-    def shutdown(self):
-        super().shutdown()
-        del self.root
-
-    @ampd.task
-    async def client_connected_cb(self, client):
-        while True:
-            self.root.update(self.fill_node)
-            self.root.expose()
-            await self.ampd.idle(ampd.DATABASE)
-            self.root.reset()
+    @staticmethod
+    def new_root():
+        return treelist.TreeNode()
 
     async def fill_node(self, node):
         if node.path:

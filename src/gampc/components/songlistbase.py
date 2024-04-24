@@ -314,14 +314,16 @@ class SongListBaseEditableMixin:
             pass
 
 
-class SongListBasePaneMixin(component.ComponentPaneTreeMixin):
+class SongListBaseTreeListMixin(component.ComponentPaneTreeMixin):
     def __init__(self, unit, **kwargs):
-        self.left_store = Gtk.MultiSelection(model=unit.left_store)
+        self.root = unit.new_root()
+        self.left_store = Gtk.TreeListModel.new(self.root.model, False, False, lambda node: node.expose())
+        self.left_selection = Gtk.MultiSelection(model=self.left_store)
 
         super().__init__(unit, **kwargs)
 
         self.signal_handler_connect(self.left_view, 'activate', self.left_view_activate_cb)
-        self.left_store.select_item(0, True)
+        self.left_selection.select_item(0, True)
 
     @staticmethod
     def left_view_activate_cb(view, position):

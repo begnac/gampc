@@ -39,7 +39,7 @@ ICONS = {
 }
 
 
-class Playlist(songlistbase.SongListBasePaneMixin, editstack.SongListBaseEditStackMixin, songlist.SongListTotalsMixin, songlist.SongList):
+class Playlist(songlistbase.SongListBaseTreeListMixin, editstack.SongListBaseEditStackMixin, songlist.SongListTotalsMixin, songlist.SongList):
     duplicate_test_columns = ['file']
 
     left_title = _("Playlists")
@@ -50,6 +50,20 @@ class Playlist(songlistbase.SongListBasePaneMixin, editstack.SongListBaseEditSta
         self.actions.add_action(resource.Action('rename', self.action_playlist_rename_cb))
         self.actions.add_action(resource.Action('delete', self.action_playlist_delete_cb))
         self.actions.add_action(resource.Action('update-from-queue', self.action_playlist_update_from_queue_cb))
+
+        self.playlists = []
+
+    @ampd.task
+    async def client_connected_cb(self, client):
+        try:
+            while True:
+                self.playlists = sorted(map(lambda entry: entry['playlist'], await self.ampd.listplaylists()))
+                self.root.update(self.unit.fill_node, self.playlists)
+                self.root.expose()
+                await self.ampd.idle(ampd.STORED_PLAYLIST)
+                self.root.reset()
+        finally:
+            self.playlists = []
 
     def edit_stack_changed(self):
         super().edit_stack_changed()
@@ -72,7 +86,10 @@ class Playlist(songlistbase.SongListBasePaneMixin, editstack.SongListBaseEditSta
         else:
             self.set_edit_stack(None)
             self.set_editable(False)
-            self.view.record_store[:] = sum((selection[pos].get_item().records for pos in self.left_selection), [])
+            self.view.record_store[:] = sum(map(lambda node: list(node.edit_stack.records),
+                                                filter(lambda node: node.kind == NODE_PLAYLIST,
+                                                       map(lambda pos: selection[pos].get_item(),
+                                                           self.left_selection_pos))), [])
         self.edit_stack_changed()
 
     def left_view_activate_cb(self, view, position):

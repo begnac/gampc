@@ -165,14 +165,14 @@ class TreeItemFactory(Gtk.SignalListItemFactory):
 class ComponentPaneMixin:
     def __init__(self, unit, **kwargs):
         super().__init__(unit, **kwargs)
-        self.focus_widget = self.left_view = Gtk.ListView(model=self.left_store, factory=self.get_left_factory())
+        self.focus_widget = self.left_view = Gtk.ListView(model=self.left_selection, factory=self.get_left_factory())
         self.left_scrolled = Gtk.ScrolledWindow()
         self.left_scrolled.set_child(self.left_view)
         self.left_view_search = ui.listviewsearch.ListViewSearch()
         self.left_view_search.setup(self.left_view, lambda text, row: text.lower() in row.get_item().name.lower())
 
-        self.left_selection = []
-        self.signal_handler_connect(self.left_store, 'selection_changed', self.left_selection_changed_cb)
+        self.left_selection_pos = []
+        self.signal_handler_connect(self.left_selection, 'selection_changed', self.left_selection_changed_cb)
 
         self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, position=self.config.pane_separator._get())
         self.paned.connect('notify::position', self.paned_notify_position_cb, self.config)
@@ -191,7 +191,7 @@ class ComponentPaneMixin:
         config.pane_separator._set(paned.get_position())
 
     def left_selection_changed_cb(self, selection, position, n_items):
-        self.left_selection = list(util.misc.get_selection(selection))
+        self.left_selection_pos = list(util.misc.get_selection(selection))
 
 
 class ComponentPaneTreeMixin(ComponentPaneMixin):
@@ -205,8 +205,8 @@ class ComponentPaneTreeMixin(ComponentPaneMixin):
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
-        if len(self.left_selection) == 1:
-            self.left_selected_item = selection[self.left_selection[0]].get_item()
+        if len(self.left_selection_pos) == 1:
+            self.left_selected_item = selection[self.left_selection_pos[0]].get_item()
         else:
             self.left_selected_item = None
 
