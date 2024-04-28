@@ -163,11 +163,8 @@ class Window(Gtk.ApplicationWindow):
             self.volume_button.emit('popdown')
 
 
+@unit.require_units('persistent')
 class __unit__(unit.UnitConfigMixin, unit.UnitServerMixin, unit.Unit):
-    def required_units(self):
-        yield from super().required_units()
-        yield 'persistent'
-
     def __init__(self, manager, name):
         super().__init__(manager, name)
         self.config.message_timeout._get(default=5)

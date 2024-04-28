@@ -36,12 +36,10 @@ class __unit__(unit.UnitServerMixin, unit.Unit):
     protect_active = GObject.Property(type=bool, default=False)
     dark = GObject.Property(type=bool, default=False)
 
-    def required_units(self):
-        yield from super().required_units()
-        yield 'menubar'
-
     def __init__(self, name, manager):
         super().__init__(name, manager)
+
+        self.require('menubar')
 
         self.unit_server.ampd_server_properties.connect('notify::state', self.notify_protect_requested_cb)
         self.connect('notify::protect-requested', self.notify_protect_requested_cb)

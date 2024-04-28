@@ -59,12 +59,11 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
     LOCAL_HOST_NAME = _("Local host")
     LOCAL_HOST_ADDRESS = 'localhost:6600'
 
-    def required_units(self):
-        yield from super().required_units()
-        yield 'menubar'
-
     def __init__(self, name, manager):
         super().__init__(name, manager)
+
+        self.require('menubar')
+
         default_profiles = [
             {
                 'name': self.LOCAL_HOST_NAME,

@@ -18,21 +18,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from ..util import resource
-from ..util import unit
+from .. import util
 
 
-class __unit__(unit.UnitCssMixin, unit.Unit):
+@util.unit.require_units('menubar')
+class __unit__(util.unit.UnitCssMixin, util.unit.Unit):
     CSS = """
     listview > row > treeexpander > box > label.modified {
       font-style: italic;
       font-weight: bold;
     }
     """
-
-    def required_units(self):
-        yield from super().required_units()
-        yield 'menubar'
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
@@ -41,9 +37,9 @@ class __unit__(unit.UnitCssMixin, unit.Unit):
 
         self.add_resources(
             'app.menu',
-            resource.MenuPath('components/components', _("Press <Ctrl> for a new instance")),
-            resource.MenuPath('components/current'),
-            resource.MenuAction('components/current', 'app.component-stop', _("Stop component"), ['<Control><Shift>w'])
+            util.resource.MenuPath('components/components', _("Press <Ctrl> for a new instance")),
+            util.resource.MenuPath('components/current'),
+            util.resource.MenuAction('components/current', 'app.component-stop', _("Stop component"), ['<Control><Shift>w'])
         )
 
     def shutdown(self):

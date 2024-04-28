@@ -227,6 +227,9 @@ class ComponentEntryMixin:
 class UnitComponentMixin(util.unit.UnitConfigMixin, util.unit.UnitServerMixin):
     def __init__(self, name, manager, *, menus=[]):
         super().__init__(name, manager)
+        self.require('component')
+        self.require('persistent')
+
         self.menu_aggregators = {}
 
         self.unit_component.register_component_factory(self.name, self.new_component)
@@ -244,11 +247,6 @@ class UnitComponentMixin(util.unit.UnitConfigMixin, util.unit.UnitServerMixin):
         del self.menu_aggregators
         self.unit_component.unregister_component_factory(self.name)
         super().shutdown()
-
-    def required_units(self):
-        yield 'component'
-        yield 'persistent'
-        yield from super().required_units()
 
     def new_component(self):
         return self.COMPONENT_CLASS(self)

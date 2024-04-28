@@ -331,11 +331,7 @@ class SongListBaseTreeListMixin(component.ComponentPaneTreeMixin):
             row.set_expanded(not row.get_expanded())
 
 
+@util.unit.require_units('misc', 'songlistbase')
 class UnitSongListBaseMixin(component.UnitComponentMixin):
     def __init__(self, *args, menus=[]):
         super().__init__(*args, menus=menus + ['context'])
-
-    def required_units(self):
-        yield 'misc'
-        yield 'songlistbase'
-        yield from super().required_units()

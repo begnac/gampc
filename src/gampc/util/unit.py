@@ -40,14 +40,6 @@ class Unit(resource.ResourceProvider):
         self.manager = manager
 
         self.loaded_required = []
-        try:
-            for required in self.required_units():
-                setattr(self, 'unit_' + required, manager._use_unit(required))
-                self.loaded_required.append(required)
-        except UnitLoadError:
-            while self.loaded_required:
-                self.manager._free_unit(self.loaded_required.pop())
-            raise
 
     def shutdown(self):
         logger.debug(f"Shutting down unit {self}")
@@ -59,8 +51,20 @@ class Unit(resource.ResourceProvider):
     def __del__(self):
         logger.debug("Deleting {self}".format(self=self))
 
-    def required_units(self):
-        yield from ()
+    def require(self, name):
+        setattr(self, 'unit_' + name, self.manager._use_unit(name))
+        self.loaded_required.append(name)
+
+
+def require_units(*names):
+    def decorator(unit_cls):
+        class NewUnit(unit_cls):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                for name in names:
+                    self.require(name)
+        return NewUnit
+    return decorator
 
 
 class UnitCssMixin:
@@ -78,18 +82,16 @@ class UnitCssMixin:
 class UnitConfigMixin:
     def __init__(self, name, manager):
         super().__init__(name, manager)
+        self.require('config')
         self.config = self.unit_config.load_config(name)
-
-    def required_units(self):
-        yield 'config'
-        yield from super().required_units()
 
 
 class UnitServerMixin:
     def __init__(self, name, manager):
         super().__init__(name, manager)
-        self.ampd = self.unit_server.ampd_client.executor.sub_executor()
 
+        self.require('server')
+        self.ampd = self.unit_server.ampd_client.executor.sub_executor()
         self.unit_server.ampd_client.connect('client-connected', self.client_connected_cb)
         if self.ampd.get_is_connected():
             self.client_connected_cb(self.unit_server.ampd_client)
@@ -99,23 +101,9 @@ class UnitServerMixin:
         self.ampd.close()
         super().shutdown()
 
-    def required_units(self):
-        yield 'server'
-        yield from super().required_units()
-
     @staticmethod
     def client_connected_cb(client):
         pass
-
-
-class UnitDatabaseMixin:
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
-        self.database = manager.get_unit('database')
-
-    def required_units(self):
-        yield 'database'
-        yield from super().required_units()
 
 
 class UnitManager(GObject.Object):

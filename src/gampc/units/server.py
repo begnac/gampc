@@ -42,14 +42,13 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
 
     current_song = GObject.Property()
 
-    def required_units(self):
-        yield from super().required_units()
-        yield 'menubar'
-        yield 'profiles'
-        yield 'songlist'
-
     def __init__(self, name, manager):
         super().__init__(name, manager)
+
+        self.require('menubar')
+        self.require('profiles')
+        self.require('songlist')
+
         self.current_song_hooks = []
         self.ampd_client = ampd.ClientGLib()
         self.ampd_client.connect('client-connected', self.client_connected_cb)

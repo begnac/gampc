@@ -101,15 +101,12 @@ class Search(component.ComponentEntryMixin, songlist.SongList):
             yield token
 
 
+@unit.require_units('misc')
 class __unit__(songlist.UnitSongListMixin, unit.Unit):
     title = _("Search")
     key = '3'
 
     COMPONENT_CLASS = Search
-
-    def required_units(self):
-        yield from super().required_units()
-        yield 'misc'
 
     def __init__(self, name, manager):
         super().__init__(name, manager)

@@ -22,9 +22,7 @@ from gi.repository import Gdk
 
 import ast
 
-from ..util import record
-from ..util import resource
-from ..util.misc import format_time
+from .. import util
 from ..ui import ssde
 
 from . import songlistbase
@@ -60,7 +58,7 @@ class SongList(songlistbase.SongListBase):
 
     def records_from_data(self, songs):
         self.set_extra_fields(songs)
-        return list(map(record.Record, songs))
+        return list(map(util.record.Record, songs))
 
     def get_filenames(self, selection):
         return self.view.get_filenames(selection)
@@ -96,14 +94,14 @@ class SongListTotalsMixin:
     def set_songs(self, songs, **kwargs):
         super().set_songs(songs, **kwargs)
         time = sum(int(song.get('Time', '0')) for song in songs)
-        self.status = '{} / {}'.format(len(songs), format_time(time))
+        self.status = '{} / {}'.format(len(songs), util.misc.format_time(time))
 
 
-class SongListAddSpecialMixin: #####  Not ready
+class SongListAddSpecialMixin:  #####  Not ready
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
-        self.actions_dict['songlist'].add_action(resource.Action('add-separator', self.action_add_separator_cb))
-        self.actions_dict['songlist'].add_action(resource.Action('add-url', self.action_add_url_cb))
+        self.actions_dict['songlist'].add_action(util.resource.Action('add-separator', self.action_add_separator_cb))
+        self.actions_dict['songlist'].add_action(util.resource.Action('add-url', self.action_add_url_cb))
 
     def action_add_separator_cb(self, action, parameter):
         self.add_record(dict(self.unit.unit_server.separator_song))
@@ -115,10 +113,9 @@ class SongListAddSpecialMixin: #####  Not ready
             self.add_record(dict(file=url))
 
 
+@util.unit.require_units('songlist')
 class UnitSongListMixin(songlistbase.UnitSongListBaseMixin):
-    def required_units(self):
-        yield 'songlist'
-        yield from super().required_units()
+    pass
 
 
 class UnitPanedSongListMixin(UnitSongListMixin, component.UnitPanedComponentMixin):

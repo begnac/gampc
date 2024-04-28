@@ -31,10 +31,6 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     @ampd.task
     async def client_connected_cb(self, client):
         while True:
-            self.cac
-            self.root.reset()
-            await self.root.fill_sub_nodes()
-            self.root.expose()
             await self.ampd.idle(ampd.DATABASE)
             self.cache.clear()
 

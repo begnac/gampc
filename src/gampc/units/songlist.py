@@ -30,12 +30,9 @@ from ..util.misc import format_time
 
 
 class __unit__(unit.UnitConfigMixin, unit.Unit):
-    def required_units(self):
-        yield 'songlistbase'
-        yield from super().required_units()
-
     def __init__(self, name, manager):
         super().__init__(name, manager)
+        self.require('songlistbase')
 
         menu = [
             resource.MenuPath('edit/songlist/special'),
