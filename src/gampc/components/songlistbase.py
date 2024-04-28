@@ -333,5 +333,9 @@ class SongListBaseTreeListMixin(component.ComponentPaneTreeMixin):
 
 class UnitSongListBaseMixin(component.UnitComponentMixin):
     def __init__(self, *args, menus=[]):
-        self.REQUIRED_UNITS = ['misc', 'songlistbase'] + self.REQUIRED_UNITS
         super().__init__(*args, menus=menus + ['context'])
+
+    def required_units(self):
+        yield 'misc'
+        yield 'songlistbase'
+        yield from super().required_units()

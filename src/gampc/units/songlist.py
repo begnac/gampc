@@ -27,11 +27,12 @@ from ..util import resource
 from ..util import unit
 from ..util import field
 from ..util.misc import format_time
-from ..ui import column
 
 
 class __unit__(unit.UnitConfigMixin, unit.Unit):
-    REQUIRED_UNITS = ['songlistbase']
+    def required_units(self):
+        yield 'songlistbase'
+        yield from super().required_units()
 
     def __init__(self, name, manager):
         super().__init__(name, manager)

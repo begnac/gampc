@@ -31,6 +31,12 @@ from ..components import playlist
 from ..components import editstack
 
 
+class PlaylistCacheItem:
+    def __init__(self, files, last_modified):
+        self.files = files
+        self.last_modified = last_modified
+
+
 class ChoosePathDialog(dialog.AsyncTextDialog):
     def __init__(self, *args, paths, init=None, path_ok=False, **kwargs):
         super().__init__(*args, text=init, **kwargs)
@@ -79,10 +85,12 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
 
     COMPONENT_CLASS = playlist.Playlist
 
+    TEMPNAME = '$$TEMP$$'
+
     def __init__(self, name, manager):
         self.cache = util.cache.AsyncCache(self.playlist_retrieve)
-        self.playlists = []
-        self.root = treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node, self.playlists), fill_contents_cb=self.fill_contents_cb)
+        self.playlists = {}
+        self.root = treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node), fill_contents_cb=self.fill_contents_cb)
 
         super().__init__(name, manager)
 
@@ -122,20 +130,25 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
     async def client_connected_cb(self, client):
         try:
             while True:
-                self.playlists[:] = sorted(map(lambda entry: entry['playlist'], await self.ampd.listplaylists()))
+                self.playlists = {entry['playlist']: entry['Last_Modified'] for entry in await self.ampd.listplaylists() if entry['playlist'] != self.TEMPNAME}
+                for name, value in list(self.cache.items()):
+                    if value.last_modified != self.playlists.get(name):
+                        self.cache.remove(name)
                 self.root.reset()
                 await self.root.fill_sub_nodes()
                 self.root.expose()
                 await self.ampd.idle(ampd.STORED_PLAYLIST)
         finally:
-            self.playlists[:] = []
+            self.playlists = {}
 
-    async def playlist_retrieve(self, key):
-        return await self.ampd.listplaylist(key)
+    async def playlist_retrieve(self, name):
+        print(f'getting {name}')
+        files = await self.ampd.listplaylist(name)
+        return PlaylistCacheItem(files, self.playlists[name])
 
-    async def fill_sub_nodes_cb(self, node, playlists):
+    async def fill_sub_nodes_cb(self, node):
         if node.kind == playlist.NODE_FOLDER:
-            folders, playlists = self.get_pseudo_folder_contents(node.path, playlists)
+            folders, playlists = self.get_pseudo_folder_contents(node.path)
             for name in sorted(folders):
                 node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER))
             for name in sorted(playlists):
@@ -143,21 +156,20 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
 
     async def fill_contents_cb(self, node):
         if node.kind == playlist.NODE_PLAYLIST:
-            print(node.name, await self.cache.get(playlist.PSEUDO_SEPARATOR.join(node.path)))
+            await self.cache.get(playlist.PSEUDO_SEPARATOR.join(node.path))
             songs = await self.ampd.listplaylistinfo(playlist.PSEUDO_SEPARATOR.join(node.path))
             for song in songs:
                 self.unit_songlist.fields.set_derived_fields(song)
             node.edit_stack = editstack.EditStack(map(util.record.Record, songs))
 
-    @staticmethod
-    def get_pseudo_folder_contents(path, pseudo_names):
+    def get_pseudo_folder_contents(self, path):
         prefix = ''.join(folder + playlist.PSEUDO_SEPARATOR for folder in path)
         folders = []
         names = []
 
         last_folder = None
 
-        for name in pseudo_names:
+        for name in sorted(self.playlists.keys()):
             if not name.startswith(prefix):
                 continue
             name = name[len(prefix):]
@@ -173,7 +185,7 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
 
     def playlist_paths(self):
         last_path = []
-        for playlist_name in self.playlists:
+        for playlist_name in sorted(self.playlists):
             playlist_path = playlist_name.split(playlist.PSEUDO_SEPARATOR)
             common = min(len(last_path), len(playlist_path) - 1)
             for i in range(common):
@@ -192,19 +204,18 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
         if playlist_name in self.playlists and not await dialog.AsyncMessageDialog(transient_for=win, message=_("Replace existing playlist {name}?").format(name=playlist_path)).run():
             return False
 
-        tempname = '$$TEMP$$'
         try:
-            await self.ampd.rm(tempname)
+            await self.ampd.rm(self.TEMPNAME)
         except ampd.ReplyError:
             pass
         try:
-            await self.ampd.command_list([self.ampd.playlistadd(tempname, name) for name in filenames])
+            await self.ampd.command_list([self.ampd.playlistadd(self.TEMPNAME, name) for name in filenames])
             if playlist_name in self.playlists:
                 await self.ampd.rm(playlist_name)
-            await self.ampd.rename(tempname, playlist_name)
+            await self.ampd.rename(self.TEMPNAME, playlist_name)
         except Exception:
             try:
-                await self.ampd.rm(tempname)
+                await self.ampd.rm(self.TEMPNAME)
             except ampd.ReplyError:
                 pass
             raise

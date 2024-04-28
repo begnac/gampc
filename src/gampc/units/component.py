@@ -23,14 +23,16 @@ from ..util import unit
 
 
 class __unit__(unit.UnitCssMixin, unit.Unit):
-    REQUIRED_UNITS = ['menubar']
-
     CSS = """
     listview > row > treeexpander > box > label.modified {
       font-style: italic;
       font-weight: bold;
     }
     """
+
+    def required_units(self):
+        yield from super().required_units()
+        yield 'menubar'
 
     def __init__(self, name, manager):
         super().__init__(name, manager)

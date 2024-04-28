@@ -116,9 +116,9 @@ class SongListAddSpecialMixin: #####  Not ready
 
 
 class UnitSongListMixin(songlistbase.UnitSongListBaseMixin):
-    def __init__(self, name, manager, *, menus=[]):
-        self.REQUIRED_UNITS = ['songlist'] + self.REQUIRED_UNITS
-        super().__init__(name, manager, menus=menus)
+    def required_units(self):
+        yield 'songlist'
+        yield from super().required_units()
 
 
 class UnitPanedSongListMixin(UnitSongListMixin, component.UnitPanedComponentMixin):

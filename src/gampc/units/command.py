@@ -47,5 +47,8 @@ class __unit__(component.UnitComponentMixin, unit.Unit):
     title = _("Execute MPD commands")
     key = '7'
 
-    REQUIRED_UNITS = ['misc']
     COMPONENT_CLASS = Command
+
+    def required_units(self):
+        yield from super().required_units()
+        yield 'misc'

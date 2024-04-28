@@ -30,12 +30,15 @@ from ..util.logger import logger
 
 
 class __unit__(unit.UnitServerMixin, unit.Unit):
-    REQUIRED_UNITS = ['menubar']
     STICKER_PROPERTIES = ('protect-requested', 'dark')
 
     protect_requested = GObject.Property(type=bool, default=False)
     protect_active = GObject.Property(type=bool, default=False)
     dark = GObject.Property(type=bool, default=False)
+
+    def required_units(self):
+        yield from super().required_units()
+        yield 'menubar'
 
     def __init__(self, name, manager):
         super().__init__(name, manager)

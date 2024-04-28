@@ -35,14 +35,18 @@ class ServerOption(GObject.Object):
 
 
 class __unit__(unit.UnitConfigMixin, unit.Unit):
-    REQUIRED_UNITS = ['menubar', 'profiles', 'songlist']
-
     SEPARATOR_FILE = 'separator.mp3'
 
     server_label = GObject.Property(type=str, default='')
     server_profile = GObject.Property(type=str)
 
     current_song = GObject.Property()
+
+    def required_units(self):
+        yield from super().required_units()
+        yield 'menubar'
+        yield 'profiles'
+        yield 'songlist'
 
     def __init__(self, name, manager):
         super().__init__(name, manager)

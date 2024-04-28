@@ -18,21 +18,36 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import asyncio
+
+
 class AsyncCache:
     def __init__(self, retrieve):
         self.retrieve = retrieve
         self._cache = {}
+        self._pending = {}
+
+        self.keys = self._cache.keys
+        self.items = self._cache.items
+        self.clear = self._cache.clear
+        self.remove = self._cache.pop
 
     def clear(self):
+        for task in self._pending.values():
+            task.cancel()
         self._cache.clear()
-
-    def remove(self, key):
-        self._cache.pop(key)
+        self._pending.clear()
 
     async def get(self, key):
         if key in self._cache:
             return self._cache[key]
+
+        if key in self._pending:
+            value = await self._pending[key]
         else:
-            value = await self.retrieve(key)
+            task = asyncio.create_task(self.retrieve(key))
+            self._pending[key] = task
+            value = await task
+            del self._pending[key]
             self._cache[key] = value
-            return value
+        return value

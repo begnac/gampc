@@ -164,7 +164,9 @@ class Window(Gtk.ApplicationWindow):
 
 
 class __unit__(unit.UnitConfigMixin, unit.UnitServerMixin, unit.Unit):
-    REQUIRED_UNITS = ['persistent']
+    def required_units(self):
+        yield from super().required_units()
+        yield 'persistent'
 
     def __init__(self, manager, name):
         super().__init__(manager, name)

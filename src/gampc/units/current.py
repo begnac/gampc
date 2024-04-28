@@ -261,5 +261,8 @@ class __unit__(component.UnitComponentMixin, unit.Unit):
     title = _("Current Song")
     key = '0'
 
-    REQUIRED_UNITS = ['persistent']
     COMPONENT_CLASS = Current
+
+    def required_units(self):
+        yield from super().required_units()
+        yield 'persistent'
