@@ -23,9 +23,7 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import record
-from ..util import unit
-from ..util import resource
+from .. import util
 from ..ui import dialog
 from ..ui import treelist
 from ..components import songlist
@@ -75,13 +73,14 @@ class ChoosePathDialog(dialog.AsyncTextDialog):
         return True
 
 
-class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
+class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
     title = _("Playlists")
     key = '5'
 
     COMPONENT_CLASS = playlist.Playlist
 
     def __init__(self, name, manager):
+        self.cache = util.cache.AsyncCache(self.playlist_retrieve)
         self.playlists = []
         self.root = treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node, self.playlists), fill_contents_cb=self.fill_contents_cb)
 
@@ -89,30 +88,30 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
 
         self.add_resources(
             'app.menu',
-            resource.MenuAction('edit/component', 'songlist.playlist-saveas(false)', _("Save as playlist")),
+            util.resource.MenuAction('edit/component', 'songlist.playlist-saveas(false)', _("Save as playlist")),
         )
 
         self.add_resources(
             'songlist.action',
-            resource.ActionModel('playlist-add', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b')),
-            resource.ActionModel('playlist-saveas', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b'))
+            util.resource.ActionModel('playlist-add', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b')),
+            util.resource.ActionModel('playlist-saveas', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b'))
         )
 
         self.add_resources(
             'songlist.context.menu',
-            resource.MenuAction('other', 'songlist.playlist-add(true)', _("Add to playlist")),
+            util.resource.MenuAction('other', 'songlist.playlist-add(true)', _("Add to playlist")),
         )
 
         self.add_resources(
             'songlist.left-context.menu',
-            resource.MenuAction('other', 'songlist.playlist-add(false)', _("Add to playlist")),
+            util.resource.MenuAction('other', 'songlist.playlist-add(false)', _("Add to playlist")),
         )
 
         self.add_resources(
             self.name + '.left-context.menu',
-            resource.MenuAction('action', 'playlist.rename', _("Rename")),
-            resource.MenuAction('action', 'playlist.delete', _("Delete")),
-            resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
+            util.resource.MenuAction('action', 'playlist.rename', _("Rename")),
+            util.resource.MenuAction('action', 'playlist.delete', _("Delete")),
+            util.resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
         )
 
     def shutdown(self):
@@ -131,6 +130,9 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
         finally:
             self.playlists[:] = []
 
+    async def playlist_retrieve(self, key):
+        return await self.ampd.listplaylist(key)
+
     async def fill_sub_nodes_cb(self, node, playlists):
         if node.kind == playlist.NODE_FOLDER:
             folders, playlists = self.get_pseudo_folder_contents(node.path, playlists)
@@ -141,10 +143,11 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
 
     async def fill_contents_cb(self, node):
         if node.kind == playlist.NODE_PLAYLIST:
+            print(node.name, await self.cache.get(playlist.PSEUDO_SEPARATOR.join(node.path)))
             songs = await self.ampd.listplaylistinfo(playlist.PSEUDO_SEPARATOR.join(node.path))
             for song in songs:
                 self.unit_songlist.fields.set_derived_fields(song)
-            node.edit_stack = editstack.EditStack(map(record.Record, songs))
+            node.edit_stack = editstack.EditStack(map(util.record.Record, songs))
 
     @staticmethod
     def get_pseudo_folder_contents(path, pseudo_names):

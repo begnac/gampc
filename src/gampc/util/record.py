@@ -19,6 +19,7 @@
 
 
 from gi.repository import GObject
+from gi.repository import Gio
 
 
 class Record(GObject.Object):
@@ -61,3 +62,22 @@ class Record(GObject.Object):
 
     def do_changed(self):
         pass
+
+
+class RecordListStore(Gio.ListStore):
+    def __init__(self):
+        super().__init__(item_type=Record)
+
+    def set_records(self, records):
+        if not records:
+            self.remove_all()
+            return
+        n = self.get_n_items()
+        for i, record in enumerate(records):
+            if i < n:
+                self[i] = record
+            else:
+                self.append(record)
+        i += 1
+        if n > i:
+            self[i:] = []

@@ -98,8 +98,8 @@ class MetaDelta(GObject.Object):
 
 class EditStack:
     def __init__(self, records):
-        self.records = Gio.ListStore(item_type=util.record.Record)
-        self.records[:] = records
+        self.records = util.record.RecordListStore()
+        self.records.set_records(records)
         self.reset()
 
     def step(self, push):
@@ -160,7 +160,7 @@ class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
             self.edit_stack.records.disconnect_by_func(self.sync_records)
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.view.record_store[:] = edit_stack.records
+            self.view.record_store.set_records(edit_stack.records)
             edit_stack.records.connect('items-changed', self.sync_records, self.view.record_store)
 
     def step_edit_stack(self, push):

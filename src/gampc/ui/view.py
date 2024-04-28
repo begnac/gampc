@@ -32,19 +32,19 @@ from . import misc
 
 
 class RecordItemWidget:
-    def __init__(self, name, record_changed_cb, record_edited_cb, **kwargs):
+    def __init__(self, name, record_display_cb, record_edited_cb, **kwargs):
         super().__init__(**kwargs)
         self.name = name
-        self.record_changed_cb = record_changed_cb
+        self.record_display_cb = record_display_cb
         self.record_edited_cb = record_edited_cb
 
     def bind(self, record):
         self.record = record
-        self.record_changed_cb(record, self)
-        record.connect('changed', self.record_changed_cb, self)
+        self.record_display_cb(record, self)
+        record.connect('changed', self.record_display_cb, self)
 
     def unbind(self):
-        self.record.disconnect_by_func(self.record_changed_cb)
+        self.record.disconnect_by_func(self.record_display_cb)
         del self.record
 
 
@@ -99,11 +99,11 @@ class RecordView(Gtk.ColumnView):
 
     def get_widget_factory(self, name, editable, unit_misc):
         if editable:
-            return lambda: RecordItemEditableLabel(name, self.record_changed_cb, self.record_edited_cb, unit_misc=unit_misc)
+            return lambda: RecordItemEditableLabel(name, self.record_display_cb, self.record_edited_cb, unit_misc=unit_misc)
         else:
-            return lambda: RecordItemLabel(name, self.record_changed_cb, None)
+            return lambda: RecordItemLabel(name, self.record_display_cb, None)
 
-    def record_changed_cb(self, record, widget):
+    def record_display_cb(self, record, widget):
         for hook in self.record_display_hooks:
             hook(widget, record)
 
@@ -139,7 +139,7 @@ class View(Gtk.Box):
         self.filter_filter.set_filter_func(self.filter_func)
 
         self.filter_record = util.record.Record()
-        self.filter_store = Gio.ListStore(item_type=util.record.Record)
+        self.filter_store = util.record.RecordListStore()
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
         self.filter_view = RecordView(fields, [self.record_bind_hook], [self.filter_record_edited_hook], unit_misc, model=self.filter_selection, show_column_separators=True, force_editable=True)
         self.filter_view.add_css_class('filter')
@@ -157,7 +157,8 @@ class View(Gtk.Box):
         self.scrolled_record_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_record_view)
 
-        self.record_store = Gio.ListStore(item_type=util.record.Record)
+        self.record_store = util.record.RecordListStore()
+        # self.record_selection.set_model(self.record_store)
 
         self.record_store_filter = Gtk.FilterListModel(model=self.record_store)
 
