@@ -74,7 +74,7 @@ class App(Gtk.Application):
             'menubar', 'help', 'misc', 'profiles', 'server',
             'output', 'persistent',
             'playback', 'window',
-            'current', 'playqueue', 'browser', 'search', 'stream', 'playlist', 'tanda',
+            'current', 'queue', 'browser', 'search', 'stream', 'playlist', 'tanda',
             'command', 'log'
         ]
 

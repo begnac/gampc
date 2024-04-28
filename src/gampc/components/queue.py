@@ -31,14 +31,14 @@ from . import songlistbase
 from . import songlist
 
 
-class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, songlistbase.SongListBaseEditableMixin, songlist.SongList):
+class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, songlistbase.SongListBaseEditableMixin, songlist.SongList):
     editable = True
     duplicate_test_columns = ['Title']
 
     def __init__(self, unit):
         super().__init__(unit)
         self.current_song_record = None
-        self.widget.record_view.add_css_class('playqueue')
+        self.widget.record_view.add_css_class('queue')
 
         self.actions.add_action(resource.Action('priority', self.action_priority_cb, parameter_type=GLib.VariantType.new('i')))
         self.actions.add_action(resource.Action('shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
@@ -46,7 +46,7 @@ class PlayQueue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, 
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
 
         for name in self.songlistbase_actions.list_actions():
-            if name.startswith('playqueue-ext-'):
+            if name.startswith('queue-ext-'):
                 self.songlistbase_actions.remove(name)
         self.cursor_by_profile = {}
         # self.set_cursor = False

@@ -25,11 +25,11 @@ import ampd
 from ..util import resource
 from ..util import unit
 from ..components import songlist
-from ..components import playqueue
+from ..components import queue
 
 
 @ampd.task
-async def action_playqueue_add_replace_cb(songlist_, action, parameter):
+async def action_queue_add_replace_cb(songlist_, action, parameter):
     filenames = songlist_.get_filenames(parameter.get_boolean())
     replace = '-replace' in action.get_name()
     if replace:
@@ -40,7 +40,7 @@ async def action_playqueue_add_replace_cb(songlist_, action, parameter):
 
 
 @ampd.task
-async def action_playqueue_add_high_priority_cb(songlist_, action, parameter):
+async def action_queue_add_high_priority_cb(songlist_, action, parameter):
     filenames = songlist_.get_filenames(parameter.get_boolean())
     queue = {song['file']: song for song in await songlist_.ampd.playlistinfo()}
     Ids = []
@@ -55,14 +55,14 @@ class __unit__(songlist.UnitSongListMixin, unit.UnitCssMixin, unit.Unit):
 
     ##############################    TODO : merge playing CSS with stream
 
-    COMPONENT_CLASS = playqueue.PlayQueue
+    COMPONENT_CLASS = queue.Queue
     CSS = '''
-    columnview.playqueue > listview > row > cell.playing {
+    columnview.queue > listview > row > cell.playing {
       background: rgba(128,128,128,0.1);
       font-style: italic;
       font-weight: bold;
     }
-    columnview.playqueue > listview > row > cell.high-priority {
+    columnview.queue > listview > row > cell.high-priority {
       background: rgba(0,255,0,0.5);
     }
     '''
@@ -72,15 +72,15 @@ class __unit__(songlist.UnitSongListMixin, unit.UnitCssMixin, unit.Unit):
 
         self.add_resources(
             'app.menu',
-            resource.MenuAction('edit/component', 'playqueue.shuffle', _("Shuffle")),
-            resource.MenuAction('edit/component', 'playqueue.go-to-current', _("Go to current song"), ['<Control>z'])
+            resource.MenuAction('edit/component', 'queue.shuffle', _("Shuffle")),
+            resource.MenuAction('edit/component', 'queue.go-to-current', _("Go to current song"), ['<Control>z'])
         )
 
         self.add_resources(
             'songlistbase.action',
-            resource.ActionModel('playqueue-ext-add-high-priority', action_playqueue_add_high_priority_cb,
+            resource.ActionModel('queue-ext-add-high-priority', action_queue_add_high_priority_cb,
                                  dangerous=True, parameter_type=GLib.VariantType.new('b')),
-            *(resource.ActionModel('playqueue-ext' + verb, action_playqueue_add_replace_cb,
+            *(resource.ActionModel('queue-ext' + verb, action_queue_add_replace_cb,
                                    dangerous=(verb == '-replace'), parameter_type=GLib.VariantType.new('b'))
               for verb in ('-add', '-replace')),
         )
@@ -88,16 +88,16 @@ class __unit__(songlist.UnitSongListMixin, unit.UnitCssMixin, unit.Unit):
         for name, parameter in (('context', '(true)'), ('left-context', '(false)')):
             self.add_resources(
                 f'songlistbase.{name}.menu',
-                resource.MenuAction('action', 'songlistbase.playqueue-ext-add' + parameter, _("Add to play queue")),
-                resource.MenuAction('action', 'songlistbase.playqueue-ext-replace' + parameter, _("Replace play queue")),
-                resource.MenuAction('action', 'songlistbase.playqueue-ext-add-high-priority' + parameter, _("Add to play queue with high priority")),
+                resource.MenuAction('action', 'songlistbase.queue-ext-add' + parameter, _("Add to play queue")),
+                resource.MenuAction('action', 'songlistbase.queue-ext-replace' + parameter, _("Replace play queue")),
+                resource.MenuAction('action', 'songlistbase.queue-ext-add-high-priority' + parameter, _("Add to play queue with high priority")),
             )
 
         self.add_resources(
             self.name + '.context.menu',
-            resource.MenuPath('other/playqueue-priority', _("Priority for random mode"), is_submenu=True),
-            resource.MenuAction('other/playqueue-priority', 'playqueue.priority(255)', _("High")),
-            resource.MenuAction('other/playqueue-priority', 'playqueue.priority(0)', _("Normal")),
-            resource.MenuAction('other/playqueue-priority', 'playqueue.priority(-1)', _("Choose")),
-            resource.MenuAction('other', 'playqueue.shuffle', _("Shuffle")),
+            resource.MenuPath('other/queue-priority', _("Priority for random mode"), is_submenu=True),
+            resource.MenuAction('other/queue-priority', 'queue.priority(255)', _("High")),
+            resource.MenuAction('other/queue-priority', 'queue.priority(0)', _("Normal")),
+            resource.MenuAction('other/queue-priority', 'queue.priority(-1)', _("Choose")),
+            resource.MenuAction('other', 'queue.shuffle', _("Shuffle")),
         )
