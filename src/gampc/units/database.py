@@ -26,6 +26,7 @@ import ampd
 class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
+        self.require('songlist')
         self.cache = util.cache.AsyncCache(self.database_retrieve)
 
     @ampd.task
@@ -35,7 +36,16 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
             self.cache.clear()
 
     async def database_retrieve(self, key):
-        songs = await self.ampd.find('file', key)
-        if len(songs) != 1:
+        try:
+            songs = await self.ampd.find('file', key)
+        except Exception as e:
+            print(key, e)
+            return {}
+        if len(songs) == 0:
+            song = {'file': key}
+        elif len(songs) == 1:
+            song = songs[0]
+        else:
             raise ValueError
-        return songs[0]
+        self.unit_songlist.fields.set_derived_fields(song)
+        return song

@@ -27,12 +27,22 @@ class Record(GObject.Object):
         'changed': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, data=None):
+    def __init__(self, data={}, **kwargs):
         super().__init__()
-        self.set_data(data or {})
+        super().__setattr__('_data', {})
+        self.update_data(data)
+        self.update_data(kwargs)
+
+    def clear(self):
+        self._data.clear()
+        self.emit('changed')
 
     def set_data(self, data):
-        super().__setattr__('_data', data)
+        self._data.clear()
+        self.update_data(data)
+
+    def update_data(self, data):
+        self._data.update(data)
         self.emit('changed')
 
     def get_data(self):
@@ -75,7 +85,7 @@ class RecordListStore(Gio.ListStore):
         n = self.get_n_items()
         for i, record in enumerate(records):
             if i < n:
-                self[i] = record
+                self[i].set_data(record.get_data())
             else:
                 self.append(record)
         i += 1

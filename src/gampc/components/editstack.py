@@ -19,10 +19,10 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gio
 from gi.repository import Gtk
 
 import ampd
+import asyncio
 
 from .. import util
 from ..ui import dialog
@@ -30,26 +30,26 @@ from . import songlistbase
 
 
 class SimpleDelta(GObject.Object):
-    def __init__(self, records, position, push):
+    def __init__(self, items, position, push):
         super().__init__()
-        self.records = records
+        self.items = items
         self.position = position
         self.push = push
 
-    def apply(self, model, push):
+    def apply(self, push, add_cb, remove_cb):
         "Return value: focus position (or None), selection list."
         if not self.push:
             push = not push
         if push:
-            model[self.position:self.position] = self.records
+            add_cb(self.position, self.items)
             return self.position, list(range(self.position, self.position + len(self.records)))
         else:
-            if model[self.position:self.position + len(self.records)] != self.records:
-                raise RuntimeError
-            model[self.position:self.position + len(self.records)] = []
+            # if model[self.position:self.position + len(self.records)] != self.records:
+            #     raise RuntimeError
+            remove_cb(self.position, len(self.items))
             pos = self.position
-            if pos == len(model):
-                pos -= 1
+            # if pos == len(model):
+            #     pos -= 1
             if pos >= 0:
                 return pos, [pos]
             else:
@@ -72,14 +72,14 @@ class MetaDelta(GObject.Object):
         self.deltas = deltas
         self.push = push
 
-    def apply(self, model, push):
+    def apply(self, push, add_cb, remove_cb):
         if not self.push:
             push = not push
         focus = None
         add_selection = []
         remove_selection = []
         for delta in self.deltas if push else reversed(self.deltas):
-            focus, new_selection = delta.apply(model, push)
+            focus, new_selection = delta.apply(push, add_cb, remove_cb)
             add_selection = delta.translate_positions(add_selection, push)
             remove_selection = delta.translate_positions(remove_selection, push)
             if push == delta.push:
@@ -97,15 +97,14 @@ class MetaDelta(GObject.Object):
 
 
 class EditStack:
-    def __init__(self, records):
-        self.records = util.record.RecordListStore()
-        self.records.set_records(records)
+    def __init__(self):
         self.reset()
+        self.target = None
 
     def step(self, push):
         if not push:
             self.pos -= 1
-        focus, selection = self.deltas[self.pos].apply(self.records, push)
+        focus, selection = self.deltas[self.pos].apply(push, self.add_cb, self.remove_cb)
         if push:
             self.pos += 1
         return focus, selection
@@ -120,6 +119,57 @@ class EditStack:
     def reset(self):
         self.deltas = []
         self.pos = 0
+
+    def set_target(self, target=None):
+        self.target = target
+        if target is not None:
+            target.set_records(self.get_records())
+
+
+class RecordEditStack(EditStack):
+    def __init__(self, records):
+        super().__init__()
+        self.records = util.record.RecordListStore()
+        self.records.set_records(records)
+
+    def add_cb(self, pos, records):
+        self.records[pos:pos] = records
+        if self.target:
+            self.target[pos:pos] = records
+
+    def remove_cb(self, pos, n):
+        self.records[pos:pos + n] = []
+        if self.target:
+            self.target[pos:pos + n] = []
+
+
+class FilenameEditStack(EditStack):
+    def __init__(self, filenames, database):
+        super().__init__()
+        self.filenames = filenames
+        self.database = database
+
+    def add_cb(self, pos, filenames):
+        self.filenames[pos:pos] = filenames
+        if self.target:
+            self.target[pos:pos] = self._get_records(filenames)
+
+    def get_records(self):
+        return self._get_records(self.filenames)
+
+    def _get_records(self, filenames):
+        records = [util.record.Record(file=filename) for filename in filenames]
+        for record in records:
+            asyncio.create_task(self.update_record(record))
+        return records
+
+    async def update_record(self, record):
+        record.update_data(await self.database.get(record.file))
+
+    def remove_cb(self, pos, n):
+        self.records[pos:pos + n] = []
+        if self.target:
+            self.target[pos:pos + n] = []
 
 
 class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
@@ -137,7 +187,6 @@ class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
     def shutdown(self):
         super().shutdown()
         self.view.record_edited_hooks.remove(self.record_edited_hook)
-        self.set_edit_stack(None)
 
     def record_edited_hook(self, record, key, value):
         new_record = util.record.Record(record.get_data())
@@ -151,17 +200,14 @@ class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
         self.edit_stack.set_from_here([MetaDelta([delta1, delta2], True)])
         self.step_edit_stack(True)
 
-    @staticmethod
-    def sync_records(source, p, r, a, target):
-        target[p:p + r] = source[p:p + a]
-
     def set_edit_stack(self, edit_stack):
         if self.edit_stack is not None:
-            self.edit_stack.records.disconnect_by_func(self.sync_records)
+            self.edit_stack.set_target()
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.view.record_store.set_records(edit_stack.records)
-            edit_stack.records.connect('items-changed', self.sync_records, self.view.record_store)
+            self.edit_stack.set_target(self.view.record_store)
+        else:
+            self.view.record_store.remove_all()
 
     def step_edit_stack(self, push):
         focus, selection = self.edit_stack.step(push)

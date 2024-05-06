@@ -183,6 +183,7 @@ class View(Gtk.Box):
 
     @staticmethod
     def record_bind_hook(widget, record):
+        # print(widget, record.file)
         value = record[widget.name]
         widget.props.label = '' if value is None else str(value)
         widget.get_parent().set_css_classes([])
