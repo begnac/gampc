@@ -18,5 +18,27 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from . import cache
-from . import glist
+from gi.repository import GObject
+from gi.repository import Gio
+
+
+class List(GObject.Object, Gio.ListModel):
+    def __init__(self):
+        GObject.Object.__init__(self)
+        self.data = []
+
+    def do_get_item_type(self):
+        return None
+
+    def do_get_item(self, position):
+        try:
+            return self.data[position]
+        except IndexError:
+            return None
+
+    def do_get_n_items(self):
+        return len(self.data)
+
+    def splice(self, pos, r, a):
+        self.data[pos:pos + r] = a
+        self.emit('items-changed', pos, r, len(a))
