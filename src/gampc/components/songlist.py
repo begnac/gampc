@@ -18,12 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gdk
-
-import ast
+from gi.repository import Gtk
 
 from .. import util
-from ..ui import ssde
+from .. import ui
 
 from . import songlistbase
 from . import component
@@ -35,30 +33,13 @@ class SongList(songlistbase.SongListBase):
 
     def __init__(self, unit, *args, **kwargs):
         self.fields = unit.unit_songlist.fields
-        super().__init__(unit, *args, **kwargs)
+        super().__init__(unit, *args, widget_factory=lambda: Gtk.Label(halign=Gtk.Align.START), item_store=util.item.ItemListStore(lambda: util.item.ItemFromCache(self.unit.database)), **kwargs)
         self.songlist_actions = self.add_actions_provider('songlist')
         # self.songlist_actions.add_action(resource.Action('delete-file', self.action_delete_file_cb))
 
     def shutdown(self):
         del self.songlist_actions
         super().shutdown()
-
-    @staticmethod
-    def content_from_records(records):
-        return Gdk.ContentProvider.new_for_value(repr([record.get_data_clean() for record in records]))
-
-    @staticmethod
-    def data_from_raw(raw):
-        try:
-            songs = ast.literal_eval(raw)
-            if isinstance(songs, list) and all(isinstance(song, dict) and all(isinstance(key, str) and isinstance(value, str) for key, value in song.items()) for song in songs):
-                return songs
-        except Exception:
-            pass
-
-    def records_from_data(self, songs):
-        self.set_extra_fields(songs)
-        return list(map(util.record.Record, songs))
 
     def get_filenames(self, selection):
         return self.view.get_filenames(selection)
@@ -107,7 +88,7 @@ class SongListAddSpecialMixin:  #####  Not ready
         self.add_record(dict(self.unit.unit_server.separator_song))
 
     def action_add_url_cb(self, action, parameter):
-        struct = ssde.Text(label=_("URL or filename to add"), default='http://')
+        struct = ui.ssde.Text(label=_("URL or filename to add"), default='http://')
         url = struct.edit(self.get_window())
         if url:
             self.add_record(dict(file=url))

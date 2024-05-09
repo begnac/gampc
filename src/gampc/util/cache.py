@@ -38,16 +38,19 @@ class AsyncCache:
         self._cache.clear()
         self._pending.clear()
 
+    def get_now(self, key, default=None):
+        return self._cache.get(key, default)
+
     async def get(self, key):
         if key in self._cache:
-            print(f'E {key}', self._cache[key])
+            # print(f'E {key}', self._cache[key])
             return self._cache[key]
 
         if key in self._pending:
-            print(f'P {key}')
+            # print(f'P {key}')
             value = await self._pending[key]
         else:
-            print(f'R {key}')
+            # print(f'R {key}')
             task = asyncio.create_task(self.retrieve(key))
             self._pending[key] = task
             value = await task
@@ -55,11 +58,11 @@ class AsyncCache:
             self._cache[key] = value
         return value
 
-    def call(self, cb, key, *args, **kwargs):
+    def call_soon(self, cb, key, *args, **kwargs):
         if key in self._cache:
             cb(self._cache[key], *args, **kwargs)
         else:
-            asyncio.create_task(self._call(cb, key, *args, **kwargs))
+            asyncio.create_task(self.call_async(cb, key, *args, **kwargs))
 
-    async def _call(self, cb, key, *args, **kwargs):
+    async def call_async(self, cb, key, *args, **kwargs):
         cb(await self.get(key), *args, **kwargs)

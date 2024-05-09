@@ -30,9 +30,9 @@ from . import songlistbase
 
 
 class SimpleDelta(GObject.Object):
-    def __init__(self, items, position, push):
+    def __init__(self, strings, position, push):
         super().__init__()
-        self.items = items
+        self.strings = strings
         self.position = position
         self.push = push
 
@@ -41,12 +41,12 @@ class SimpleDelta(GObject.Object):
         if not self.push:
             push = not push
         if push:
-            add_cb(self.position, self.items)
-            return self.position, list(range(self.position, self.position + len(self.records)))
+            add_cb(self.position, self.strings)
+            return self.position, list(range(self.position, self.position + len(self.strings)))
         else:
-            # if model[self.position:self.position + len(self.records)] != self.records:
+            # if model[self.position:self.position + len(self.strings)] != self.strings:
             #     raise RuntimeError
-            remove_cb(self.position, len(self.items))
+            remove_cb(self.position, len(self.strings))
             pos = self.position
             # if pos == len(model):
             #     pos -= 1
@@ -59,9 +59,9 @@ class SimpleDelta(GObject.Object):
         if not self.push:
             push = not push
         if push:
-            return [pos + len(self.records) if pos >= self.position else pos for pos in positions]
+            return [pos + len(self.strings) if pos >= self.position else pos for pos in positions]
         else:
-            return [pos - len(self.records) if pos >= self.position else pos for pos in positions]
+            return [pos - len(self.strings) if pos >= self.position else pos for pos in positions]
 
 
 class MetaDelta(GObject.Object):
@@ -97,9 +97,11 @@ class MetaDelta(GObject.Object):
 
 
 class EditStack:
-    def __init__(self):
+    def __init__(self, strings):
         self.reset()
         self.target = None
+
+        self.strings = strings
 
     def step(self, push):
         if not push:
@@ -123,53 +125,17 @@ class EditStack:
     def set_target(self, target=None):
         self.target = target
         if target is not None:
-            target.set_records(self.get_records())
+            target.set_items(self.strings)
 
-
-class RecordEditStack(EditStack):
-    def __init__(self, records):
-        super().__init__()
-        self.records = util.record.RecordListStore()
-        self.records.set_records(records)
-
-    def add_cb(self, pos, records):
-        self.records[pos:pos] = records
+    def add_cb(self, pos, strings):
+        self.strings[pos:pos] = strings
         if self.target:
-            self.target[pos:pos] = records
+            self.target.splice_items(pos, 0, strings)
 
     def remove_cb(self, pos, n):
-        self.records[pos:pos + n] = []
+        self.strings[pos:pos + n] = []
         if self.target:
-            self.target[pos:pos + n] = []
-
-
-class FilenameEditStack(EditStack):
-    def __init__(self, filenames, database):
-        super().__init__()
-        self.filenames = filenames
-        self.database = database
-
-    def add_cb(self, pos, filenames):
-        self.filenames[pos:pos] = filenames
-        if self.target:
-            self.target[pos:pos] = self._get_records(filenames)
-
-    def get_records(self):
-        return self._get_records(self.filenames)
-
-    def _get_records(self, filenames):
-        records = [util.record.Record(file=filename) for filename in filenames]
-        for record in records:
-            asyncio.create_task(self.update_record(record))
-        return records
-
-    async def update_record(self, record):
-        record.update_data(await self.database.get(record.file))
-
-    def remove_cb(self, pos, n):
-        self.records[pos:pos + n] = []
-        if self.target:
-            self.target[pos:pos + n] = []
+            self.target.splice_items(pos, n, [])
 
 
 class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
@@ -182,71 +148,68 @@ class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
 
         self.edit_stack = None
 
-        self.view.record_edited_hooks.append(self.record_edited_hook)
+        # self.view.item_edited_hooks.append(self.item_edited_hook)
 
-    def shutdown(self):
-        super().shutdown()
-        self.view.record_edited_hooks.remove(self.record_edited_hook)
+    # def shutdown(self):
+    #     super().shutdown()
+    #     self.view.item_edited_hooks.remove(self.item_edited_hook)
 
-    def record_edited_hook(self, record, key, value):
-        new_record = util.record.Record(record.get_data())
-        if value:
-            new_record[key] = value
-        else:
-            del new_record[key]
-        position = list(self.view.record_selection).index(record)
-        delta1 = SimpleDelta([record], position, False)
-        delta2 = SimpleDelta([new_record], position, True)
-        self.edit_stack.set_from_here([MetaDelta([delta1, delta2], True)])
-        self.step_edit_stack(True)
+    # def item_edited_hook(self, item, key, value):
+    #     new_item = util.item.Item(item.get_data())
+    #     if value:
+    #         new_item[key] = value
+    #     else:
+    #         del new_item[key]
+    #     position = list(self.view.item_selection).index(item)
+    #     delta1 = SimpleDelta([item], position, False)
+    #     delta2 = SimpleDelta([new_item], position, True)
+    #     self.edit_stack.set_from_here([MetaDelta([delta1, delta2], True)])
+    #     self.step_edit_stack(True)
 
     def set_edit_stack(self, edit_stack):
         if self.edit_stack is not None:
             self.edit_stack.set_target()
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.edit_stack.set_target(self.view.record_store)
+            self.edit_stack.set_target(self.view.item_store)
         else:
-            self.view.record_store.remove_all()
+            self.view.item_store.remove_all()
 
     def step_edit_stack(self, push):
         focus, selection = self.edit_stack.step(push)
         if focus is not None:
-            self.view.record_view.scroll_to(focus, None, Gtk.ListScrollFlags.FOCUS, None)
+            self.view.item_view.scroll_to(focus, None, Gtk.ListScrollFlags.FOCUS, None)
         if selection is not None:
-            self.view.record_selection.unselect_all()
+            self.view.item_selection.unselect_all()
             for pos in selection:
-                self.view.record_selection.select_item(pos, False)
+                self.view.item_selection.select_item(pos, False)
         self.edit_stack_changed()
 
-    def remove_records(self, records):
-        if not records:
+    def remove_items(self, items):
+        if not items:
             return
         indices = []
-        for i, record in enumerate(self.view.record_selection):
-            if record in records:
+        for i, item in enumerate(self.view.item_selection):
+            if item in items:
                 indices.append(i)
-                records.remove(record)
-        if records:
+                items.remove(item)
+        if items:
             raise RuntimeError
         deltas = []
         i = j = indices[0]
         for k in indices[1:] + [0]:
             j += 1
             if j != k:
-                deltas.append(SimpleDelta(self.view.record_selection[i:j], i, True))
+                deltas.append(SimpleDelta(self.view.item_selection[i:j], i, True))
                 i = j = k
         self.edit_stack.set_from_here([MetaDelta(deltas, False)])
         self.step_edit_stack(True)
 
-    def add_records(self, records, position):
-        if not records:
+    def add_items(self, strings, position):
+        if not strings:
             return
-        self.edit_stack.set_from_here([SimpleDelta(records, position, True)])
+        self.edit_stack.set_from_here([SimpleDelta(strings, position, True)])
         self.step_edit_stack(True)
-
-    def add_records_from_data(self, data, position):
-        self.add_records(self.records_from_data(data), position)
 
     def edit_stack_changed(self):
         self.songlistbase_actions.lookup_action('save').set_enabled(True)

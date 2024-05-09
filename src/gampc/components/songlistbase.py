@@ -23,6 +23,8 @@ from gi.repository import Gio
 from gi.repository import Gdk
 from gi.repository import Gtk
 
+import ast
+
 import ampd
 
 from .. import util
@@ -38,14 +40,14 @@ class SongListBase(component.Component):
     sortable = True
 
     duplicate_test_columns = []
-    duplicate_extra_records = None
+    duplicate_extra_items = None
 
-    def __init__(self, unit, *args, **kwargs):
+    def __init__(self, unit, widget_factory, item_store, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.widget = self.view = ui.view.View(self.fields, self.__class__.sortable, unit.unit_misc)
-        self.view.record_view.add_css_class('songlistbase')
-        self.focus_widget = self.view.record_view
+        self.widget = self.view = ui.view.View(self.fields, widget_factory, item_store, self.__class__.sortable, unit_misc=unit.unit_misc)
+        self.view.item_view.add_css_class('songlistbase')
+        self.focus_widget = self.view.item_view
 
         self.songlistbase_actions = self.add_actions_provider('songlistbase')
         self.songlistbase_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
@@ -57,89 +59,100 @@ class SongListBase(component.Component):
         self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
 
         self.setup_context_menu(f'{self.name}.context', self.view)
-        self.signal_handler_connect(self.view.record_view, 'activate', self.view_activate_cb)
+        self.signal_handler_connect(self.view.item_view, 'activate', self.view_activate_cb)
         if self.duplicate_test_columns:
-            self.signal_handler_connect(self.view.record_store, 'items-changed', self.mark_duplicates)
+            self.signal_handler_connect(self.view.item_store, 'items-changed', self.mark_duplicates)
 
-        self.view.record_display_hooks.append(self.record_duplicate_hook)
+        # self.view.item_display_hooks.append(self.item_duplicate_hook)
 
     def shutdown(self):
         del self.songlistbase_actions
         self.view.cleanup()
         super().shutdown()
 
+    @staticmethod
+    def content_from_items(items):
+        return Gdk.ContentProvider.new_for_value(repr([item.to_string() for item in items]))
+
+    @staticmethod
+    def strings_from_raw(raw):
+        try:
+            strings = ast.literal_eval(raw)
+            if isinstance(strings, list) and all(isinstance(string, str) for string in strings):
+                return strings
+        except Exception:
+            pass
+
+    # def records_from_data(self, songs):
+    #     self.set_extra_fields(songs)
+    #     return list(map(util.record.Record, songs))
+
     @ampd.task
     async def view_activate_cb(self, view, position):
         if self.unit.unit_persistent.protect_active:
             return
-        filename = self.view.record_selection[position].file
-        records = await self.ampd.playlistfind('file', filename)
-        if records:
-            record_id = sorted(records, key=lambda record: record['Pos'])[0]['Id']
+        filename = self.view.item_selection[position].file
+        items = await self.ampd.playlistfind('file', filename)
+        if items:
+            item_id = sorted(items, key=lambda item: item['Pos'])[0]['Id']
         else:
-            record_id = await self.ampd.addid(filename)
-        await self.ampd.playid(record_id)
+            item_id = await self.ampd.addid(filename)
+        await self.ampd.playid(item_id)
 
-    def record_duplicate_hook(self, label, record):
-        duplicate = record._duplicate
+    def item_duplicate_hook(self, label, item):
+        duplicate = item._duplicate
         if duplicate is not None:
             label.get_parent().add_css_class(f'duplicate{duplicate % 64}')
 
-    def set_songs(self, songs, *, set_fields=True):
-        songs = list(songs)
-        if set_fields:
-            self.set_extra_fields(songs)
-        self._set_songs(songs)
+    def set_songs(self, songs):
+        self._set_songs(list(songs))
 
     def _set_songs(self, songs):
-        self._set_records(map(util.record.Record, songs))
+        self.view.item_store.set_items(songs)
 
-    def _set_records(self, records):
-        self.view.record_store.set_records(records)
-
-    def set_extra_fields(self, songs):
-        for song in songs:
-            self.fields.set_derived_fields(song)
+    # def set_extra_fields(self, songs):
+    #     for song in songs:
+    #         self.fields.set_derived_fields(song)
 
     def mark_duplicates(self, *args):
-        records = list(self.view.record_store)
-        if self.duplicate_extra_records:
-            records += list(self.duplicate_extra_records)
-        self.find_duplicates(records, self.duplicate_test_columns)
+        items = list(self.view.item_store)
+        if self.duplicate_extra_items:
+            items += list(self.duplicate_extra_items)
+        # self.find_duplicates(items, self.duplicate_test_columns)
 
-    def find_duplicates(self, records, test_columns):
+    def find_duplicates(self, items, test_columns):
         marker = 0
         firsts = {}
-        for i, record_ in enumerate(records):
-            if record_.file == self.unit.unit_server.SEPARATOR_FILE:  # Only place where self is used here ...
+        for i, item_ in enumerate(items):
+            if item_.file == self.unit.unit_server.SEPARATOR_FILE:  # Only place where self is used here ...
                 continue
-            test = tuple(record_[field] for field in test_columns)
+            test = tuple(item_[field] for field in test_columns)
             first = firsts.get(test)
             if first is None:
                 firsts[test] = i
-                if record_._duplicate is not None:
-                    del record_._duplicate
-                    record_.emit('changed')
+                if item_._duplicate is not None:
+                    del item_._duplicate
+                    item_.emit('changed')
             else:
-                if records[first]._duplicate is None:
-                    records[first]._duplicate = marker
-                    records[first].emit('changed')
+                if items[first]._duplicate is None:
+                    items[first]._duplicate = marker
+                    items[first].emit('changed')
                     marker += 1
-                record_._duplicate = records[first]._duplicate
-                record_.emit('changed')
+                item_._duplicate = items[first]._duplicate
+                item_.emit('changed')
 
     def action_reset_cb(self, action, parameter):
-        self.view.filter_record.set_data({})
+        self.view.filter_item.set_data({})
         self.view.filtering = False
         if self.sortable:
-            self.view.record_view.sort_by_column(None, Gtk.SortType.ASCENDING)
+            self.view.item_view.sort_by_column(None, Gtk.SortType.ASCENDING)
 
     def action_copy_delete_cb(self, action, parameter):
-        records = self.view.get_selection_records()
+        items = self.view.get_selection_items()
         if action.get_name() in ['copy', 'cut']:
-            self.widget.get_clipboard().set_content(self.content_from_records(records))
+            self.widget.get_clipboard().set_content(self.content_from_items(items))
         if action.get_name() in ['delete', 'cut']:
-            self.remove_records(records)
+            self.remove_items(items)
 
     @staticmethod
     def row_get_position(row, *, after=False):
@@ -174,22 +187,22 @@ class SongListBase(component.Component):
         self.signal_handler_connect(self.drag_source, 'drag-begin', self.drag_begin_cb)
         self.signal_handler_connect(self.drag_source, 'drag-cancel', self.drag_cancel_cb)
         self.signal_handler_connect(self.drag_source, 'drag-end', self.drag_end_cb)
-        self.view.record_view_rows.add_controller(self.drag_source)
+        self.view.item_view_rows.add_controller(self.drag_source)
 
         self.drag_key_controller = Gtk.EventControllerKey()
         self.signal_handler_connect(self.drag_key_controller, 'key-pressed', self.drag_key_pressed_cb, self.drag_source)
-        self.view.record_view_rows.add_controller(self.drag_key_controller)
+        self.view.item_view_rows.add_controller(self.drag_key_controller)
 
     def drag_prepare_cb(self, source, x, y):
-        source.records = self.view.get_selection_records()
-        if not source.records:
-            row, x, y = util.misc.find_descendant_at_xy(self.view.record_view_rows, x, y, 1)
+        source.items = self.view.get_selection_items()
+        if not source.items:
+            row, x, y = util.misc.find_descendant_at_xy(self.view.item_view_rows, x, y, 1)
             if row is not None:
-                source.records = [self.view.record_selection[row.get_first_child()._pos]]
+                source.items = [self.view.item_selection[row.get_first_child()._pos]]
             else:
                 return None
-        source.set_content(self.content_from_records(source.records))
-        return self.content_from_records(source.records)
+        source.set_content(self.content_from_items(source.items))
+        return self.content_from_items(source.items)
 
     def drag_begin_cb(self, source, drag):
         print(drag.get_actions())
@@ -205,8 +218,8 @@ class SongListBase(component.Component):
 
     def drag_end_cb(self, source, drag, delete):
         if delete:
-            self.remove_records(source.records)
-        del source.records
+            self.remove_items(source.items)
+        del source.items
 
     @staticmethod
     def drag_key_pressed_cb(controller, keyval, keycode, modifiers, source):
@@ -249,13 +262,13 @@ class SongListBaseEditableMixin:
 
     def action_paste_finish_cb(self, clipboard, result, before):
         try:
-            data = self.data_from_raw(clipboard.read_text_finish(result))
+            strings = self.strings_from_raw(clipboard.read_text_finish(result))
         except GLib.GError as error:
             print(error)
             return
-        row = self.view.record_view_rows.get_focus_child()
-        if data is not None and row is not None:
-            self.add_records_from_data(data, self.row_get_position(row, after=not before))
+        row = self.view.item_view_rows.get_focus_child()
+        if strings is not None and row is not None:
+            self.add_items(strings, self.row_get_position(row, after=not before))
 
     def setup_drop(self):
         self.drop_target = Gtk.DropTarget(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=Gdk.ContentFormats.parse('gchararray'))
@@ -264,12 +277,12 @@ class SongListBaseEditableMixin:
         self.signal_handler_connect(self.drop_target, 'drop', self.drop_cb)
         # self.signal_handler_connect(self.drop_target, 'notify::value', misc.AutoWeakMethod(self.drop_notify_value_cb))
         # self.drop_target.set_preload(True)
-        self.view.record_view_rows.add_controller(self.drop_target)
+        self.view.item_view_rows.add_controller(self.drop_target)
 
         self.drop_key_controller = Gtk.EventControllerKey()
         self.signal_handler_connect(self.drop_key_controller, 'key-pressed', self.drop_key_pressed_cb, self.drop_target)
         self.signal_handler_connect(self.drop_key_controller, 'modifiers', self.drop_modifiers_cb, self.drop_target)
-        self.view.record_view_rows.add_controller(self.drop_key_controller)
+        self.view.item_view_rows.add_controller(self.drop_key_controller)
 
     def drop_action_cb(self, target, x, y):
         row, x, y = util.misc.find_descendant_at_xy(target.get_widget(), x, y, 1)
@@ -286,13 +299,13 @@ class SongListBaseEditableMixin:
         data = self.data_from_raw(value)
         if data is None:
             return
-        row, x, y = util.misc.find_descendant_at_xy(self.view.record_view_rows, x, y, 1)
+        row, x, y = util.misc.find_descendant_at_xy(self.view.item_view_rows, x, y, 1)
         if row is not None:
             if y < row.get_allocation().height / 2:
                 before = True
             else:
                 before = False
-            self.add_records_from_data(data, self.row_get_position(row, after=not before))
+            self.add_items_from_data(data, self.row_get_position(row, after=not before))
 
     # def drop_notify_value_cb(self, target, param):
     #     drop = target.get_current_drop()

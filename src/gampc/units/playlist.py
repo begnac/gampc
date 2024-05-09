@@ -156,31 +156,8 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.UnitDatabaseMixin, uti
 
     async def fill_contents_cb(self, node):
         if node.kind == playlist.NODE_PLAYLIST:
-            await self.cache.get(playlist.PSEUDO_SEPARATOR.join(node.path))
-            songs = await self.ampd.listplaylistinfo(playlist.PSEUDO_SEPARATOR.join(node.path))
-            for song in songs:
-                self.unit_songlist.fields.set_derived_fields(song)
-            node.edit_stack = editstack.RecordEditStack(map(util.record.Record, songs))
-
-    async def fill_contents_cb(self, node):
-        if node.kind == playlist.NODE_PLAYLIST:
             item = await self.cache.get(playlist.PSEUDO_SEPARATOR.join(node.path))
-            node.edit_stack = editstack.FilenameEditStack(item.files, self.database)
-            # for record in node.edit_stack.records:
-            #     asyncio.create_task(self.update_record(record))
-                # record.update_data(await self.database.get(record.file))
-            # node.edit_stack = editstack.EditStack()
-            # edit_stack.set_reco
-            # files = item.files
-            # # songs = await self.ampd.listplaylistinfo(playlist.PSEUDO_SEPARATOR.join(node.path))
-            # # for song in songs:
-            # #     self.unit_songlist.fields.set_derived_fields(song)
-            # print(1, node.name)
-            # songs = [await self.database.get(name) for name in files]
-            # print(2, node.name)
-
-    # async def update_record(self, record):
-    #     record.update_data(await self.database.get(record.file))
+            node.edit_stack = editstack.EditStack(item.files)
 
     def get_pseudo_folder_contents(self, path):
         prefix = ''.join(folder + playlist.PSEUDO_SEPARATOR for folder in path)

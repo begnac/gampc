@@ -49,7 +49,7 @@ class Browser(songlistbase.SongListBaseTreeListMixin, songlist.SongList):
             self.left_selection[0].set_expanded(True)
 
 
-class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
+class __unit__(songlist.UnitPanedSongListMixin, unit.UnitDatabaseMixin, unit.Unit):
     title = _("Database Browser")
     key = '2'
 
@@ -78,7 +78,7 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
             contents = {DIRECTORY: [{DIRECTORY: _("Music")}]}
         for folder in sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, [])):
             node.append_sub_node(treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic'))
-        node.songs = contents.get('file', [])
+        node.songs = [data['file'] for data in contents.get('file', [])]
 
     async def fill_contents_cb(self, node):
         pass
