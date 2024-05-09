@@ -61,6 +61,10 @@ class ItemFromCache(Item):
         self.barrier = {}
         super().__init__(**kwargs)
 
+    def set_value(self, value):
+        self.duplicate = None
+        super().set_value(value)
+
     def move_barrier(self, name):
         barrier = self.barrier.get(name, 0) + 1
         self.barrier[name] = barrier
@@ -68,8 +72,12 @@ class ItemFromCache(Item):
 
     def _set_bound(self, name):
         super()._set_bound(name)
+        label = self.bound[name]
+        label.get_parent().set_css_classes([])
         if self.cache.call_soon(self.set_label, self.value, name, self.move_barrier(name)) is not None:
-            self.bound[name].set_label("")
+            label.set_label("")
+        if self.duplicate is not None:
+            label.get_parent().add_css_class(f'duplicate{self.duplicate % 64}')
 
     def set_label(self, data, name, barrier):
         if barrier == self.barrier[name]:
@@ -77,7 +85,9 @@ class ItemFromCache(Item):
 
     def _unset_bound(self, name):
         self.move_barrier(name)
-        self.bound[name].set_label("")
+        label = self.bound[name]
+        label.set_label("")
+        label.get_parent().set_css_classes([])
         super()._unset_bound(name)
 
     def set_from_string(self, string):
@@ -88,6 +98,9 @@ class ItemFromCache(Item):
 
     def get_data_now(self):
         return self.cache.get_now(self.value, {'file': self.value})
+
+    async def get_data(self):
+        return await self.cache.get(self.value)
 
 
 class ItemWithDict(Item):

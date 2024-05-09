@@ -23,6 +23,7 @@ from gi.repository import Gio
 from gi.repository import Gdk
 from gi.repository import Gtk
 
+import asyncio
 import ast
 
 import ampd
@@ -63,7 +64,7 @@ class ItemList(component.Component):
         if self.duplicate_test_columns:
             self.signal_handler_connect(self.view.item_store, 'items-changed', self.mark_duplicates)
 
-        # self.view.item_display_hooks.append(self.item_duplicate_hook)
+        self.duplicate_job = 0
 
     def shutdown(self):
         del self.itemlist_actions
@@ -99,47 +100,45 @@ class ItemList(component.Component):
             item_id = await self.ampd.addid(filename)
         await self.ampd.playid(item_id)
 
-    def item_duplicate_hook(self, label, item):
-        duplicate = item._duplicate
-        if duplicate is not None:
-            label.get_parent().add_css_class(f'duplicate{duplicate % 64}')
-
     def set_songs(self, songs):
-        self._set_songs(list(songs))
-
-    def _set_songs(self, songs):
-        self.view.item_store.set_items(songs)
-
-    # def set_extra_fields(self, songs):
-    #     for song in songs:
-    #         self.fields.set_derived_fields(song)
+        self.view.item_store.set_items(list(songs))
 
     def mark_duplicates(self, *args):
         items = list(self.view.item_store)
         if self.duplicate_extra_items:
             items += list(self.duplicate_extra_items)
-        # self.find_duplicates(items, self.duplicate_test_columns)
+        self.duplicate_job += 1
+        asyncio.create_task(self._mark_duplicates(items, self.duplicate_job))
 
-    def find_duplicates(self, items, test_columns):
+    async def duplicate_test(self, item):
+        data = await item.get_data()
+        return tuple(data.get(name) for name in self.duplicate_test_columns)
+
+    async def _mark_duplicates(self, items, job):
+        async with asyncio.TaskGroup() as task_group:
+            tests = [task_group.create_task(self.duplicate_test(item)) for item in items]
+        if self.duplicate_job != job:
+            return
         marker = 0
         firsts = {}
-        for i, item_ in enumerate(items):
-            if item_.file == self.unit.unit_server.SEPARATOR_FILE:  # Only place where self is used here ...
-                continue
-            test = tuple(item_[field] for field in test_columns)
-            first = firsts.get(test)
+        for i, item in enumerate(items):
+            test = tests[i].result()
+            if item.value == self.unit.unit_server.SEPARATOR_FILE:  # Only place where self is used here ...
+                first = None
+            else:
+                first = firsts.get(test)
             if first is None:
                 firsts[test] = i
-                if item_._duplicate is not None:
-                    del item_._duplicate
-                    item_.emit('changed')
+                if item.duplicate is not None:
+                    item.duplicate = None
+                    item.rebind()
             else:
-                if items[first]._duplicate is None:
-                    items[first]._duplicate = marker
-                    items[first].emit('changed')
+                if items[first].duplicate is None:
+                    items[first].duplicate = marker
+                    items[first].rebind()
                     marker += 1
-                item_._duplicate = items[first]._duplicate
-                item_.emit('changed')
+                item.duplicate = items[first].duplicate
+                item.rebind()
 
     def action_reset_cb(self, action, parameter):
         self.view.filter_item.set_data({})

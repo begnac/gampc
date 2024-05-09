@@ -40,12 +40,8 @@ class QueueItem(util.item.ItemFromCache):
         parent = self.bound[name].get_parent()
         if self.server_properties.state != 'stop' and self.Id == self.server_properties.current_song.get('Id'):
             parent.add_css_class('playing')
-        else:
-            parent.remove_css_class('playing')
         if name == 'FormattedTime' and self.Prio is not None:
             parent.add_css_class('high-priority')
-        else:
-            parent.remove_css_class('high-priority')
 
     def set_value(self, value):
         self.Id = value['Id']
