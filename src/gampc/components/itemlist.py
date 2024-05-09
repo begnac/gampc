@@ -122,11 +122,10 @@ class ItemList(component.Component):
         marker = 0
         firsts = {}
         for i, item in enumerate(items):
-            test = tests[i].result()
             if item.value == self.unit.unit_server.SEPARATOR_FILE:  # Only place where self is used here ...
-                first = None
-            else:
-                first = firsts.get(test)
+                continue
+            test = tests[i].result()
+            first = firsts.get(test)
             if first is None:
                 firsts[test] = i
                 if item.duplicate is not None:
