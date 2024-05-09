@@ -50,16 +50,9 @@ class Item(GObject.Object):
         for name in self.bound.keys():
             self._set_bound(name)
 
-    @classmethod
-    def new_from_string(cls, string):
-        raise NotImplementedError
-
-    def set_from_string(self, string):
+    def set_value(self, value):
+        self.value = value
         self.rebind()
-
-    @staticmethod
-    def to_string():
-        raise NotImplementedError
 
 
 class ItemFromCache(Item):
@@ -87,13 +80,8 @@ class ItemFromCache(Item):
         self.bound[name].set_label("")
         super()._unset_bound(name)
 
-    @classmethod
-    def new_from_string(cls, string):
-        return cls(value=string)
-
     def set_from_string(self, string):
-        self.value = string
-        super().set_from_string(string)
+        self.set_value(string)
 
     def to_string(self):
         return self.value
@@ -141,19 +129,19 @@ class ItemListStore(Gio.ListStore):
         self.item_factory = item_factory
         super().__init__(item_type=Item)
 
-    def splice_items(self, pos, remove, strings):
-        strings = list(strings)
-        n = len(strings)
+    def splice_items(self, pos, remove, values):
+        values = list(values)
+        n = len(values)
         if n > remove:
-            self[pos:pos] = [self.item_factory() for _ in range(n - remove)]
+            self[pos + remove:pos + remove] = [self.item_factory() for _ in range(n - remove)]
         elif remove > n:
-            self[pos:pos + remove - n] = []
-        for string in strings:
-            self[pos].set_from_string(string)
+            self[pos + n:pos + remove] = []
+        for value in values:
+            self[pos].set_value(value)
             pos += 1
 
-    def set_items(self, strings):
-        self.splice_items(0, self.get_n_items(), strings)
+    def set_items(self, values):
+        self.splice_items(0, self.get_n_items(), values)
 
     def get_strings(self, pos=0, n=None):
         if n is None:

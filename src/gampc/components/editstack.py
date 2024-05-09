@@ -22,7 +22,6 @@ from gi.repository import GObject
 from gi.repository import Gtk
 
 import ampd
-import asyncio
 
 from .. import util
 from ..ui import dialog
@@ -30,9 +29,9 @@ from . import songlistbase
 
 
 class SimpleDelta(GObject.Object):
-    def __init__(self, strings, position, push):
+    def __init__(self, values, position, push):
         super().__init__()
-        self.strings = strings
+        self.values = values
         self.position = position
         self.push = push
 
@@ -41,12 +40,10 @@ class SimpleDelta(GObject.Object):
         if not self.push:
             push = not push
         if push:
-            add_cb(self.position, self.strings)
-            return self.position, list(range(self.position, self.position + len(self.strings)))
+            add_cb(self.position, self.values)
+            return self.position, list(range(self.position, self.position + len(self.values)))
         else:
-            # if model[self.position:self.position + len(self.strings)] != self.strings:
-            #     raise RuntimeError
-            remove_cb(self.position, len(self.strings))
+            remove_cb(self.position, len(self.values))
             pos = self.position
             # if pos == len(model):
             #     pos -= 1
@@ -59,9 +56,9 @@ class SimpleDelta(GObject.Object):
         if not self.push:
             push = not push
         if push:
-            return [pos + len(self.strings) if pos >= self.position else pos for pos in positions]
+            return [pos + len(self.values) if pos >= self.position else pos for pos in positions]
         else:
-            return [pos - len(self.strings) if pos >= self.position else pos for pos in positions]
+            return [pos - len(self.values) if pos >= self.position else pos for pos in positions]
 
 
 class MetaDelta(GObject.Object):
@@ -97,11 +94,11 @@ class MetaDelta(GObject.Object):
 
 
 class EditStack:
-    def __init__(self, strings):
+    def __init__(self, values):
         self.reset()
         self.target = None
 
-        self.strings = strings
+        self.values = values
 
     def step(self, push):
         if not push:
@@ -125,15 +122,15 @@ class EditStack:
     def set_target(self, target=None):
         self.target = target
         if target is not None:
-            target.set_items(self.strings)
+            target.set_items(self.values)
 
-    def add_cb(self, pos, strings):
-        self.strings[pos:pos] = strings
+    def add_cb(self, pos, values):
+        self.values[pos:pos] = values
         if self.target:
-            self.target.splice_items(pos, 0, strings)
+            self.target.splice_items(pos, 0, values)
 
     def remove_cb(self, pos, n):
-        self.strings[pos:pos + n] = []
+        self.values[pos:pos + n] = []
         if self.target:
             self.target.splice_items(pos, n, [])
 
@@ -200,16 +197,16 @@ class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
         for k in indices[1:] + [0]:
             j += 1
             if j != k:
-                strings = [item.to_string() for item in self.view.item_selection[i:j]]
-                deltas.append(SimpleDelta(strings, i, True))
+                values = [item.to_value() for item in self.view.item_selection[i:j]]
+                deltas.append(SimpleDelta(values, i, True))
                 i = j = k
         self.edit_stack.set_from_here([MetaDelta(deltas, False)])
         self.step_edit_stack(True)
 
-    def add_items(self, strings, position):
-        if not strings:
+    def add_items(self, values, position):
+        if not values:
             return
-        self.edit_stack.set_from_here([SimpleDelta(strings, position, True)])
+        self.edit_stack.set_from_here([SimpleDelta(values, position, True)])
         self.step_edit_stack(True)
 
     def edit_stack_changed(self):

@@ -305,7 +305,7 @@ class SongListBaseEditableMixin:
                 before = True
             else:
                 before = False
-            self.add_items_from_data(data, self.row_get_position(row, after=not before))
+            self.add_items(data, self.row_get_position(row, after=not before))
 
     # def drop_notify_value_cb(self, target, param):
     #     drop = target.get_current_drop()

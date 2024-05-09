@@ -33,13 +33,16 @@ class SongList(songlistbase.SongListBase):
 
     def __init__(self, unit, *args, **kwargs):
         self.fields = unit.unit_songlist.fields
-        super().__init__(unit, *args, widget_factory=lambda: Gtk.Label(halign=Gtk.Align.START), item_store=util.item.ItemListStore(lambda: util.item.ItemFromCache(self.unit.database)), **kwargs)
+        super().__init__(unit, *args, widget_factory=lambda: Gtk.Label(halign=Gtk.Align.START), item_store=util.item.ItemListStore(self.item_factory), **kwargs)
         self.songlist_actions = self.add_actions_provider('songlist')
         # self.songlist_actions.add_action(resource.Action('delete-file', self.action_delete_file_cb))
 
     def shutdown(self):
         del self.songlist_actions
         super().shutdown()
+
+    def item_factory(self):
+        return util.item.ItemFromCache(self.unit.database)
 
     def get_filenames(self, selection):
         return self.view.get_filenames(selection)
