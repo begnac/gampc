@@ -36,7 +36,7 @@ from . import component
 TRY_DND = False
 
 
-class SongListBase(component.Component):
+class ItemList(component.Component):
     sortable = True
 
     duplicate_test_columns = []
@@ -46,17 +46,17 @@ class SongListBase(component.Component):
         super().__init__(unit, *args, **kwargs)
 
         self.widget = self.view = ui.view.View(self.fields, widget_factory, item_store, self.__class__.sortable, unit_misc=unit.unit_misc)
-        self.view.item_view.add_css_class('songlistbase')
+        self.view.item_view.add_css_class('itemlist')
         self.focus_widget = self.view.item_view
 
-        self.songlistbase_actions = self.add_actions_provider('songlistbase')
-        self.songlistbase_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
-        self.songlistbase_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
+        self.itemlist_actions = self.add_actions_provider('itemlist')
+        self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
+        self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
 
         if TRY_DND:
             self.setup_drag()
 
-        self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
+        self.itemlist_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
 
         self.setup_context_menu(f'{self.name}.context', self.view)
         self.signal_handler_connect(self.view.item_view, 'activate', self.view_activate_cb)
@@ -66,7 +66,7 @@ class SongListBase(component.Component):
         # self.view.item_display_hooks.append(self.item_duplicate_hook)
 
     def shutdown(self):
-        del self.songlistbase_actions
+        del self.itemlist_actions
         self.view.cleanup()
         super().shutdown()
 
@@ -228,17 +228,17 @@ class SongListBase(component.Component):
         return False
 
 
-class SongListBaseEditableMixin:
+class ItemListEditableMixin:
     sortable = False
 
     def __init__(self, unit, *args, editable=True, **kwargs):
         super().__init__(unit, *args, **kwargs)
         self._editable = editable
 
-        self.songlistbase_actions.add_action(util.resource.Action('paste', self.action_paste_cb))
-        self.songlistbase_actions.add_action(util.resource.Action('paste-before', self.action_paste_cb))
-        self.songlistbase_actions.add_action(util.resource.Action('delete', self.action_copy_delete_cb))
-        self.songlistbase_actions.add_action(util.resource.Action('cut', self.action_copy_delete_cb))
+        self.itemlist_actions.add_action(util.resource.Action('paste', self.action_paste_cb))
+        self.itemlist_actions.add_action(util.resource.Action('paste-before', self.action_paste_cb))
+        self.itemlist_actions.add_action(util.resource.Action('delete', self.action_copy_delete_cb))
+        self.itemlist_actions.add_action(util.resource.Action('cut', self.action_copy_delete_cb))
         self.signal_handler_connect(self.view, 'notify::filtering', self.check_editable)
 
         # self.setup_drop()
@@ -253,7 +253,7 @@ class SongListBaseEditableMixin:
     def check_editable(self, *args):
         editable = self._editable and not self.view.filtering
         for name in ['paste', 'paste-before', 'delete', 'cut']:
-            self.songlistbase_actions.lookup(name).set_enabled(editable)
+            self.itemlist_actions.lookup(name).set_enabled(editable)
         if TRY_DND:
             self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
@@ -327,7 +327,7 @@ class SongListBaseEditableMixin:
             pass
 
 
-class SongListBaseTreeListMixin(component.ComponentPaneTreeMixin):
+class ItemListTreeListMixin(component.ComponentPaneTreeMixin):
     def __init__(self, unit, **kwargs):
         self.left_store = Gtk.TreeListModel.new(unit.root.model, False, False, lambda node: node.expose())
         self.left_selection = Gtk.MultiSelection(model=self.left_store)
@@ -344,7 +344,7 @@ class SongListBaseTreeListMixin(component.ComponentPaneTreeMixin):
             row.set_expanded(not row.get_expanded())
 
 
-@util.unit.require_units('misc', 'songlistbase')
-class UnitSongListBaseMixin(component.UnitComponentMixin):
+@util.unit.require_units('misc', 'itemlist')
+class UnitItemListMixin(component.UnitComponentMixin):
     def __init__(self, *args, menus=[]):
         super().__init__(*args, menus=menus + ['context'])

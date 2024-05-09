@@ -31,16 +31,8 @@ import asyncio
 
 import ampd
 
-from ..util import db
-from ..util import record
-from ..util import resource
-from ..util import unit
-from ..util import misc
-from ..util import field
-from ..util.logger import logger
-
-from ..ui import column
-from ..ui import view
+from .. import util
+from .. import ui
 
 from ..components import component
 from ..components import songlist
@@ -128,12 +120,12 @@ class Tanda(component.ComponentPaneMixin, component.Component):
         self.signal_handler_connect(self.unit.db, 'verify-progress', self.db_verify_progress_cb)
         self.signal_handler_connect(self.unit.db, 'missing-song', self.db_missing_song_cb)
 
-        self.actions.add_action(resource.Action('switch-subcomponent', self.action_subcomponent_next_cb))
-        self.actions.add_action(resource.Action('verify', self.unit.db.action_tanda_verify_cb))
-        self.actions.add_action(resource.Action('cleanup-db', self.unit.db.action_cleanup_db_cb))
+        self.actions.add_action(util.resource.Action('switch-subcomponent', self.action_subcomponent_next_cb))
+        self.actions.add_action(util.resource.Action('verify', self.unit.db.action_tanda_verify_cb))
+        self.actions.add_action(util.resource.Action('cleanup-db', self.unit.db.action_cleanup_db_cb))
 
         self.actions_dict['tanda-edit'] = self.edit.actions
-        self.subcomponent_actions_names = 'songlistbase', 'songlist'
+        self.subcomponent_actions_names = 'itemlist', 'songlist'
         for name in self.subcomponent_actions_names:
             self.actions_dict[name] = Gio.SimpleActionGroup()
         self.change_subcomponent_actions(True)
@@ -292,11 +284,11 @@ class TandaSubComponent(component.Component):
                 return
 
     def tandaid_selection_changed_cb(self, model, *args):
-        selection = list(misc.get_selection(model))
+        selection = list(util.misc.get_selection(model))
         self.current_tandaid = model[selection[0]]._tandaid if selection else None
 
 
-class TandaEdit(TandaSubComponent, editstack.SongListBaseEditStackMixin, songlist.SongList):
+class TandaEdit(TandaSubComponent, editstack.ItemListEditStackMixin, songlist.SongList):
     duplicate_test_columns = ['Title']
 
     def __init__(self, unit):
@@ -305,12 +297,12 @@ class TandaEdit(TandaSubComponent, editstack.SongListBaseEditStackMixin, songlis
         self.current_tanda = None
         self.current_tanda_pos = None
 
-        self.actions.add_action(resource.Action('delete', self.action_tanda_delete_cb))
-        self.actions.add_action(resource.Action('reset', self.action_tanda_reset_cb))
-        self.actions.add_action(resource.Action('reset-field', self.action_tanda_field_cb))
-        self.actions.add_action(resource.Action('fill-field', self.action_tanda_field_cb))
+        self.actions.add_action(util.resource.Action('delete', self.action_tanda_delete_cb))
+        self.actions.add_action(util.resource.Action('reset', self.action_tanda_reset_cb))
+        self.actions.add_action(util.resource.Action('reset-field', self.action_tanda_field_cb))
+        self.actions.add_action(util.resource.Action('fill-field', self.action_tanda_field_cb))
 
-        self.tanda_view = view.View(self.unit.db.fields, True, unit.unit_misc)
+        self.tanda_view = ui.view.View(self.unit.db.fields, True, unit.unit_misc)
         self.tanda_view.record_view.add_css_class('tanda-edit')
         self.tanda_view.bind_hooks.append(self.tanda_bind_hook)
 
@@ -326,8 +318,8 @@ class TandaEdit(TandaSubComponent, editstack.SongListBaseEditStackMixin, songlis
         self.signal_handler_connect(self.tanda_view.record_selection, 'selection-changed', self.tanda_selection_changed_cb)
 
         # Ugly hack but works
-        self.songlistbase_actions.remove('filter')
-        self.songlistbase_actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_view, property_name='filtering'))
+        self.itemlist_actions.remove('filter')
+        self.itemlist_actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_view, property_name='filtering'))
 
         self.view.set_vexpand(False)
         self.view.scrolled_record_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
@@ -577,7 +569,7 @@ class TandaView(TandaSubComponent, songlist.SongList):
         self.view.record_store[:] = records
 
 
-class TandaDatabase(GObject.Object, db.Database):
+class TandaDatabase(GObject.Object, util.db.Database):
     __gsignals__ = {
         'changed': (GObject.SIGNAL_RUN_LAST, None, (int,)),
         'verify-progress': (GObject.SIGNAL_RUN_LAST, None, (float,)),
@@ -589,7 +581,7 @@ class TandaDatabase(GObject.Object, db.Database):
     def __init__(self, fields, unit):
         self.fields = fields
         self.unit = unit
-        db.Database.__init__(self, unit.name)
+        util.db.Database.__init__(self, unit.name)
         super().__init__()
         self.ampd = unit.ampd.sub_executor()
 
@@ -829,7 +821,7 @@ for p in range(5):
     '''
 
 
-class __unit__(songlist.UnitPanedSongListMixin, unit.UnitCssMixin, unit.Unit):
+class __unit__(songlist.UnitPanedSongListMixin, util.unit.UnitCssMixin, util.unit.Unit):
     title = _("Tandas")
     key = '6'
 
@@ -840,69 +832,69 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.UnitCssMixin, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.fields = field.FieldFamily(self.config.fields)
-        self.fields.register_field(field.Field('Artist', _("Artist")))
-        self.fields.register_field(field.Field('Genre', _("Genre")))
-        self.fields.register_field(field.Field('Years_Min', visible=False, get_value=lambda tanda: min(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
-        self.fields.register_field(field.Field('Years_Max', visible=False, get_value=lambda tanda: max(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
-        self.fields.register_field(field.Field('Years', _("Years"), get_value=lambda tanda: ('\'{}'.format(tanda['Years_Min'][2:]) if tanda['Years_Min'] == tanda['Years_Max'] else '\'{}-\'{}'.format(tanda['Years_Min'][2:], tanda['Years_Max'][2:])) if 'Years_Min' in tanda and 'Years_Max' in tanda else '????'))
-        self.fields.register_field(field.Field('First_Song', _("First song"), get_value=lambda tanda: tanda['_songs'][0]['Title'] if '_songs' in tanda else '???'))
-        self.fields.register_field(field.Field('Performer', _("Performer")))
-        self.fields.register_field(field.Field('Comment', _("Comment")))
-        self.fields.register_field(field.Field('Description', _("Description")))
-        self.fields.register_field(field.Field('Note', _("Note"), min_width=30))
-        self.fields.register_field(field.Field('Rhythm', _("Rhythm"), min_width=30))
-        self.fields.register_field(field.Field('Energy', _("Energy"), min_width=30))
-        self.fields.register_field(field.Field('Speed', _("Speed"), min_width=30))
-        self.fields.register_field(field.Field('Emotion', _("Emotion"), min_width=30))
+        self.fields = util.field.FieldFamily(self.config.fields)
+        self.fields.register_field(util.field.Field('Artist', _("Artist")))
+        self.fields.register_field(util.field.Field('Genre', _("Genre")))
+        self.fields.register_field(util.field.Field('Years_Min', visible=False, get_value=lambda tanda: min(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
+        self.fields.register_field(util.field.Field('Years_Max', visible=False, get_value=lambda tanda: max(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
+        self.fields.register_field(util.field.Field('Years', _("Years"), get_value=lambda tanda: ('\'{}'.format(tanda['Years_Min'][2:]) if tanda['Years_Min'] == tanda['Years_Max'] else '\'{}-\'{}'.format(tanda['Years_Min'][2:], tanda['Years_Max'][2:])) if 'Years_Min' in tanda and 'Years_Max' in tanda else '????'))
+        self.fields.register_field(util.field.Field('First_Song', _("First song"), get_value=lambda tanda: tanda['_songs'][0]['Title'] if '_songs' in tanda else '???'))
+        self.fields.register_field(util.field.Field('Performer', _("Performer")))
+        self.fields.register_field(util.field.Field('Comment', _("Comment")))
+        self.fields.register_field(util.field.Field('Description', _("Description")))
+        self.fields.register_field(util.field.Field('Note', _("Note"), min_width=30))
+        self.fields.register_field(util.field.Field('Rhythm', _("Rhythm"), min_width=30))
+        self.fields.register_field(util.field.Field('Energy', _("Energy"), min_width=30))
+        self.fields.register_field(util.field.Field('Speed', _("Speed"), min_width=30))
+        self.fields.register_field(util.field.Field('Emotion', _("Emotion"), min_width=30))
 
-        # self.fields.register_field(field.Field('Drama', _("Drama"), min_width=30))
-        # self.fields.register_field(field.Field('Romance', _("Romance"), min_width=30))
-        self.fields.register_field(field.Field('Level', _("Level"), min_width=30))
+        # self.fields.register_field(util.field.Field('Drama', _("Drama"), min_width=30))
+        # self.fields.register_field(util.field.Field('Romance', _("Romance"), min_width=30))
+        self.fields.register_field(util.field.Field('Level', _("Level"), min_width=30))
 
-        self.fields.register_field(field.Field('Last_Modified', _("Last modified")))
-        self.fields.register_field(field.Field('Last_Played', _("Last played")))
-        self.fields.register_field(field.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=get_last_played_weeks))
-        self.fields.register_field(field.Field('n_songs', _("Number of songs"), min_width=30, get_value=lambda tanda: 0 if not tanda.get('_songs') else None if (len(tanda.get('_songs')) == 4 and tanda.get('Genre').startswith('Tango')) or (len(tanda.get('_songs')) == 3 and tanda.get('Genre') in {'Vals', 'Milonga'}) else len(tanda.get('_songs'))))
-        self.fields.register_field(field.Field('Duration', _("Duration"), get_value=lambda tanda: misc.format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
+        self.fields.register_field(util.field.Field('Last_Modified', _("Last modified")))
+        self.fields.register_field(util.field.Field('Last_Played', _("Last played")))
+        self.fields.register_field(util.field.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=get_last_played_weeks))
+        self.fields.register_field(util.field.Field('n_songs', _("Number of songs"), min_width=30, get_value=lambda tanda: 0 if not tanda.get('_songs') else None if (len(tanda.get('_songs')) == 4 and tanda.get('Genre').startswith('Tango')) or (len(tanda.get('_songs')) == 3 and tanda.get('Genre') in {'Vals', 'Milonga'}) else len(tanda.get('_songs'))))
+        self.fields.register_field(util.field.Field('Duration', _("Duration"), get_value=lambda tanda: util.misc.format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
 
         self.db = TandaDatabase(self.fields, self)
 
         self.add_resources(
             'app.action',
-            resource.ActionModel('tanda-verify', self.db.action_tanda_verify_cb),
-            resource.ActionModel('tanda-cleanup-db', self.db.action_cleanup_db_cb),
+            util.resource.ActionModel('tanda-verify', self.db.action_tanda_verify_cb),
+            util.resource.ActionModel('tanda-cleanup-db', self.db.action_cleanup_db_cb),
         )
 
         self.add_resources(
             'app.menu',
-            # resource.MenuAction('edit/component', 'tanda-edit.fill-field', _("Fill tanda field"), ['<Control>z']),
-            # resource.MenuAction('edit/component', 'tanda-edit.reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
-            resource.MenuAction('edit/component', 'tanda-edit.reset', _("Reset tanda"), ['<Control><Shift>r']),
-            resource.MenuAction('edit/component', 'tanda-edit.delete', _("Delete tanda"), ['<Control>Delete']),
-            resource.MenuAction('edit/component', 'tanda.switch-subcomponent', _("Switch tanda view mode"), ['<Control>Tab']),
-            resource.MenuAction('edit/component', 'tanda.verify', _("Verify tanda database"), ['<Control><Shift>d']),
-            resource.MenuAction('edit/component', 'tanda.cleanup-db', _("Cleanup database")),
+            # util.resource.MenuAction('edit/component', 'tanda-edit.fill-field', _("Fill tanda field"), ['<Control>z']),
+            # util.resource.MenuAction('edit/component', 'tanda-edit.reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
+            util.resource.MenuAction('edit/component', 'tanda-edit.reset', _("Reset tanda"), ['<Control><Shift>r']),
+            util.resource.MenuAction('edit/component', 'tanda-edit.delete', _("Delete tanda"), ['<Control>Delete']),
+            util.resource.MenuAction('edit/component', 'tanda.switch-subcomponent', _("Switch tanda view mode"), ['<Control>Tab']),
+            util.resource.MenuAction('edit/component', 'tanda.verify', _("Verify tanda database"), ['<Control><Shift>d']),
+            util.resource.MenuAction('edit/component', 'tanda.cleanup-db', _("Cleanup database")),
         )
 
         self.add_resources(
             'songlist.action',
-            resource.ActionModel('tanda-define', self.db.action_tanda_define_cb),
+            util.resource.ActionModel('tanda-define', self.db.action_tanda_define_cb),
         )
 
         self.add_resources(
             'songlist.context.menu',
-            resource.MenuAction('other', 'songlist.tanda-define', _("Define tanda")),
+            util.resource.MenuAction('other', 'songlist.tanda-define', _("Define tanda")),
         )
 
         self.add_resources(
             'tanda-edit.left-context.menu',
-            resource.MenuAction('edit', 'tanda-edit.delete', _("Delete tanda")),
+            util.resource.MenuAction('edit', 'tanda-edit.delete', _("Delete tanda")),
         )
 
-        self.setup_menu('tanda-edit', 'context', ['songlistbase', 'songlist'])
-        self.setup_menu('tanda-edit', 'left-context', ['songlistbase', 'songlist'])
-        self.setup_menu('tanda-view', 'context', ['songlistbase', 'songlist'])
+        self.setup_menu('tanda-edit', 'context', ['itemlist', 'songlist'])
+        self.setup_menu('tanda-edit', 'left-context', ['itemlist', 'songlist'])
+        self.setup_menu('tanda-view', 'context', ['itemlist', 'songlist'])
 
     def shutdown(self):
         del self.db

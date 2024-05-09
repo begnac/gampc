@@ -32,7 +32,7 @@ from ..util.misc import format_time
 class __unit__(unit.UnitConfigMixin, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
-        self.require('songlistbase')
+        self.require('itemlist')
 
         menu = [
             resource.MenuPath('edit/songlist/special'),
@@ -42,7 +42,7 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
         ]
 
         self.add_resources('app.menu', *menu)
-        self.add_resources('songlistbase.context.menu', *menu)
+        self.add_resources('itemlist.context.menu', *menu)
 
         self.config.music_dir._get(default=GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC))
 

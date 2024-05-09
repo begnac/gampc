@@ -24,14 +24,14 @@ import ampd
 
 from ..util import unit
 from ..ui import treelist
-from ..components import songlistbase
+from ..components import itemlist
 from ..components import songlist
 
 
 DIRECTORY = 'directory'
 
 
-class Browser(songlistbase.SongListBaseTreeListMixin, songlist.SongList):
+class Browser(itemlist.ItemListTreeListMixin, songlist.SongList):
     sortable = True
 
     def __init__(self, unit, **kwargs):

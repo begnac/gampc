@@ -55,12 +55,12 @@ class FieldWithTable(Field):
         super().__init__(name, title, min_width, **kwargs)
         self.table = table
 
-    def get_value(self, record):
+    def get_value(self, data):
         for field, pattern, value in self.table:
             if not field:
                 return value
             else:
-                match = re.search(pattern, record.get(field, ''))
+                match = re.search(pattern, data.get(field, ''))
                 if match:
                     return match.expand(value)
 
@@ -120,8 +120,8 @@ class FieldFamily(GObject.Object):
         del self.fields[field.name]
         field.disconnect_by_func(config_notify_cb)
 
-    def set_derived_fields(self, record):
+    def set_derived_fields(self, data):
         for name in self.derived_names:
-            value = self.fields[name].get_value(record)
+            value = self.fields[name].get_value(data)
             if value is not None:
-                record[name] = value
+                data[name] = value

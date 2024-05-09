@@ -23,12 +23,12 @@ import ampd
 from .. import util
 # from ..ui import ssde
 
-from . import songlistbase
+from . import itemlist
 from . import editstack
 
 
-class Stream(editstack.SongListBaseEditStackMixin, songlistbase.SongListBase):
-    use_resources = ['songlistbase']
+class Stream(editstack.ItemListEditStackMixin, itemlist.ItemList):
+    use_resources = ['itemlist']
     DND_TARGET = 'GAMPC_STREAM'
 
     def __init__(self, unit):

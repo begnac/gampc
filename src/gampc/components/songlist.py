@@ -23,12 +23,12 @@ from gi.repository import Gtk
 from .. import util
 from .. import ui
 
-from . import songlistbase
+from . import itemlist
 from . import component
 
 
-class SongList(songlistbase.SongListBase):
-    use_resources = ['songlistbase', 'songlist']
+class SongList(itemlist.ItemList):
+    use_resources = ['itemlist', 'songlist']
     DND_TARGET = 'GAMPC_SONG'
 
     def __init__(self, unit, *args, **kwargs):
@@ -98,7 +98,7 @@ class SongListAddSpecialMixin:  #####  Not ready
 
 
 @util.unit.require_units('songlist')
-class UnitSongListMixin(songlistbase.UnitSongListBaseMixin):
+class UnitSongListMixin(itemlist.UnitItemListMixin):
     pass
 
 

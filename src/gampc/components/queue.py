@@ -26,7 +26,7 @@ import ampd
 from .. import util
 from .. import ui
 
-from . import songlistbase
+from . import itemlist
 from . import songlist
 
 
@@ -53,7 +53,7 @@ class QueueItem(util.item.ItemFromCache):
         super().set_value(value['file'])
 
 
-class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, songlistbase.SongListBaseEditableMixin, songlist.SongList):
+class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, itemlist.ItemListEditableMixin, songlist.SongList):
     editable = True
     duplicate_test_columns = ['Title']
 
@@ -67,9 +67,9 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, song
         self.actions.add_action(util.resource.Action('go-to-current', self.action_go_to_current_cb))
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
 
-        for name in self.songlistbase_actions.list_actions():
+        for name in self.itemlist_actions.list_actions():
             if name.startswith('queue-ext-'):
-                self.songlistbase_actions.remove(name)
+                self.itemlist_actions.remove(name)
         self.cursor_by_profile = {}
         # self.set_cursor = False
 

@@ -25,7 +25,7 @@ import ampd
 
 from .. import util
 from ..ui import dialog
-from . import songlistbase
+from . import itemlist
 
 
 class SimpleDelta(GObject.Object):
@@ -135,13 +135,13 @@ class EditStack:
             self.target.splice_items(pos, n, [])
 
 
-class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
+class ItemListEditStackMixin(itemlist.ItemListEditableMixin):
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
-        self.songlistbase_actions.add_action(util.resource.Action('save', self.action_save_cb))
-        # self.songlistbase_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
-        self.songlistbase_actions.add_action(util.resource.Action('undo', self.action_do_cb))
-        self.songlistbase_actions.add_action(util.resource.Action('redo', self.action_do_cb))
+        self.itemlist_actions.add_action(util.resource.Action('save', self.action_save_cb))
+        # self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
+        self.itemlist_actions.add_action(util.resource.Action('undo', self.action_do_cb))
+        self.itemlist_actions.add_action(util.resource.Action('redo', self.action_do_cb))
 
         self.edit_stack = None
 
@@ -210,9 +210,9 @@ class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
         self.step_edit_stack(True)
 
     def edit_stack_changed(self):
-        self.songlistbase_actions.lookup_action('save').set_enabled(True)
-        self.songlistbase_actions.lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.pos > 0)
-        self.songlistbase_actions.lookup_action('redo').set_enabled(self.edit_stack and self.edit_stack.pos < len(self.edit_stack.deltas))
+        self.itemlist_actions.lookup_action('save').set_enabled(True)
+        self.itemlist_actions.lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.pos > 0)
+        self.itemlist_actions.lookup_action('redo').set_enabled(self.edit_stack and self.edit_stack.pos < len(self.edit_stack.deltas))
 
     def action_do_cb(self, action, parameter):
         if action.get_name() == 'redo':

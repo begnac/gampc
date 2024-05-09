@@ -34,7 +34,7 @@ N = 4
 for d in range(N ** 3):
     colors = [((d // (N ** k)) % N) * 255 / (N - 1) for k in range(3)]
     CSS += f'''
-      columnview.songlistbase > listview > row > cell.duplicate{d} {{
+      columnview.itemlist > listview > row > cell.duplicate{d} {{
       background: rgba({colors[0]},{colors[1]},{colors[2]},0.5);
     }}
     '''
@@ -50,26 +50,26 @@ class __unit__(unit.UnitConfigMixin, unit.UnitCssMixin, unit.Unit):
             resource.MenuPath('edit/songlist'),
             resource.MenuPath('edit/songlist/base'),
             # resource.MenuAction('edit/songlist/base', 'mod.selectall', _("Select all"), ['<Control>a'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'songlistbase.cut', _("Cut"), ['<Control>x'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'songlistbase.copy', _("Copy"), ['<Control>c'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'songlistbase.paste', _("Paste"), ['<Control>v'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'songlistbase.paste-before', _("Paste before"), ['<Control>b']),
-            resource.MenuAction('edit/songlist/base', 'songlistbase.delete', _("Delete"), ['Delete'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'songlistbase.undo', _("Undo"), ['<Control>z'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'songlistbase.redo', _("Redo"), ['<Shift><Control>z'], accels_fragile=True),
-            # resource.MenuAction('edit/songlist/base', 'songlistbase.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'itemlist.cut', _("Cut"), ['<Control>x'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'itemlist.copy', _("Copy"), ['<Control>c'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'itemlist.paste', _("Paste"), ['<Control>v'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'itemlist.paste-before', _("Paste before"), ['<Control>b']),
+            resource.MenuAction('edit/songlist/base', 'itemlist.delete', _("Delete"), ['Delete'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'itemlist.undo', _("Undo"), ['<Control>z'], accels_fragile=True),
+            resource.MenuAction('edit/songlist/base', 'itemlist.redo', _("Redo"), ['<Shift><Control>z'], accels_fragile=True),
+            # resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
         ]
 
         self.add_resources(
             'app.menu',
-            resource.MenuAction('edit/global', 'songlistbase.save', _("Save"), ['<Control>s']),
-            resource.MenuAction('edit/global', 'songlistbase.reset', _("Reset"), ['<Control>r']),
-            resource.MenuAction('edit/global', 'songlistbase.filter', _("Filter"), ['<Control><Shift>f']),
+            resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
+            resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
+            resource.MenuAction('edit/global', 'itemlist.filter', _("Filter"), ['<Control><Shift>f']),
             *items,
         )
 
         self.add_resources(
-            'songlistbase.context.menu',
+            'itemlist.context.menu',
             resource.MenuPath('action'),
             resource.MenuPath('edit'),
             resource.MenuPath('other'),
@@ -77,7 +77,7 @@ class __unit__(unit.UnitConfigMixin, unit.UnitCssMixin, unit.Unit):
         )
 
         self.add_resources(
-            'songlistbase.left-context.menu',
+            'itemlist.left-context.menu',
             resource.MenuPath('action'),
             resource.MenuPath('edit'),
             resource.MenuPath('other'),

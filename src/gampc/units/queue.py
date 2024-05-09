@@ -77,7 +77,7 @@ class __unit__(songlist.UnitSongListMixin, unit.UnitDatabaseMixin, unit.UnitCssM
         )
 
         self.add_resources(
-            'songlistbase.action',
+            'itemlist.action',
             resource.ActionModel('queue-ext-add-high-priority', action_queue_add_high_priority_cb,
                                  dangerous=True, parameter_type=GLib.VariantType.new('b')),
             *(resource.ActionModel('queue-ext' + verb, action_queue_add_replace_cb,
@@ -87,10 +87,10 @@ class __unit__(songlist.UnitSongListMixin, unit.UnitDatabaseMixin, unit.UnitCssM
 
         for name, parameter in (('context', '(true)'), ('left-context', '(false)')):
             self.add_resources(
-                f'songlistbase.{name}.menu',
-                resource.MenuAction('action', 'songlistbase.queue-ext-add' + parameter, _("Add to play queue")),
-                resource.MenuAction('action', 'songlistbase.queue-ext-replace' + parameter, _("Replace play queue")),
-                resource.MenuAction('action', 'songlistbase.queue-ext-add-high-priority' + parameter, _("Add to play queue with high priority")),
+                f'itemlist.{name}.menu',
+                resource.MenuAction('action', 'itemlist.queue-ext-add' + parameter, _("Add to play queue")),
+                resource.MenuAction('action', 'itemlist.queue-ext-replace' + parameter, _("Replace play queue")),
+                resource.MenuAction('action', 'itemlist.queue-ext-add-high-priority' + parameter, _("Add to play queue with high priority")),
             )
 
         self.add_resources(

@@ -23,7 +23,7 @@ import ampd
 from ..util import resource
 from ..ui import dialog
 
-from . import songlistbase
+from . import itemlist
 from . import songlist
 from . import editstack
 
@@ -39,7 +39,7 @@ ICONS = {
 }
 
 
-class Playlist(songlistbase.SongListBaseTreeListMixin, editstack.SongListBaseEditStackMixin, songlist.SongListTotalsMixin, songlist.SongList):
+class Playlist(itemlist.ItemListTreeListMixin, editstack.ItemListEditStackMixin, songlist.SongListTotalsMixin, songlist.SongList):
     duplicate_test_columns = ['file']
 
     left_title = _("Playlists")
