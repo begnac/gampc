@@ -62,7 +62,7 @@ class AsyncCache:
         if key in self._cache:
             cb(self._cache[key], *args, **kwargs)
         else:
-            asyncio.create_task(self.call_async(cb, key, *args, **kwargs))
+            return asyncio.create_task(self.call_async(cb, key, *args, **kwargs))
 
     async def call_async(self, cb, key, *args, **kwargs):
         cb(await self.get(key), *args, **kwargs)

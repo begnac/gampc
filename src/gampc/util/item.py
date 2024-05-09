@@ -65,11 +65,16 @@ class Item(GObject.Object):
 class ItemFromCache(Item):
     def __init__(self, cache, **kwargs):
         self.cache = cache
+        self.tasks = {}
         super().__init__(**kwargs)
 
     def _set_bound(self, name):
         super()._set_bound(name)
-        self.cache.call_soon(self.set_label, self.value, self.bound[name], name)
+        if name in self.tasks:
+            self.tasks.pop(name).cancel()
+        task = self.cache.call_soon(self.set_label, self.value, self.bound[name], name)
+        if task is not None:
+            self.tasks[name] = task
 
     @staticmethod
     def set_label(data, label, name):
