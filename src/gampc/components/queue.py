@@ -66,28 +66,34 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
         self.actions.add_action(util.resource.Action('shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
         self.actions.add_action(util.resource.Action('go-to-current', self.action_go_to_current_cb))
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
+        self.signal_handler_connect(self.view.item_selection, 'selection-changed', self.selection_changed_cb)
 
         for name in self.itemlist_actions.list_actions():
             if name.startswith('queue-ext-'):
                 self.itemlist_actions.remove(name)
         self.cursor_by_profile = {}
-        # self.set_cursor = False
-
-        # self.view.record_display_hooks.append(self.record_current_song_hook)
+        self.set_cursor = False
 
     def item_factory(self):
         return QueueItem(self.unit.database, self.unit.unit_server.ampd_server_properties)
 
     @ampd.task
     async def client_connected_cb(self, client):
-        # self.set_cursor = True
+        self.set_cursor = True
         while True:
             self.set_songs(await self.ampd.playlistinfo())
             self.notify_current_song_cb(self.unit.unit_server.ampd_server_properties, None)
-            # if self.set_cursor:
-            #     self.widget.record_view.set_cursor(self.cursor_by_profile.get(self.unit.unit_server.server_profile) or Gtk.TreePath(), None, False)
-            #     self.set_cursor = False
+            if self.set_cursor:
+                position = self.cursor_by_profile.get(self.unit.unit_server.server_profile)
+                if position is not None:
+                    self.view.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
+                self.set_cursor = False
             await self.ampd.idle(ampd.PLAYLIST)
+
+    def selection_changed_cb(self, selection, *args):
+        selection = list(util.misc.get_selection(selection))
+        if len(selection) == 1:
+            self.cursor_by_profile[self.unit.unit_server.server_profile] = selection[0]
 
     @ampd.task
     async def action_priority_cb(self, action, parameter):
