@@ -72,10 +72,10 @@ class Playlist(songlistbase.SongListBaseTreeListMixin, editstack.SongListBaseEdi
         else:
             self.set_edit_stack(None)
             self.set_editable(False)
-            self.view.record_store[:] = sum(map(lambda node: list(node.edit_stack.records),
-                                                filter(lambda node: node.kind == NODE_PLAYLIST,
-                                                       map(lambda pos: selection[pos].get_item(),
-                                                           self.left_selection_pos))), [])
+            self.view.item_store.set_items(sum(map(lambda node: list(node.edit_stack.strings),
+                                                   filter(lambda node: node.kind == NODE_PLAYLIST,
+                                                          map(lambda pos: selection[pos].get_item(),
+                                                              self.left_selection_pos))), []))
         self.edit_stack_changed()
 
     def left_view_activate_cb(self, view, position):

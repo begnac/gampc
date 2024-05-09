@@ -65,22 +65,25 @@ class Item(GObject.Object):
 class ItemFromCache(Item):
     def __init__(self, cache, **kwargs):
         self.cache = cache
-        self.tasks = {}
+        self.barrier = {}
         super().__init__(**kwargs)
+
+    def move_barrier(self, name):
+        barrier = self.barrier.get(name, 0) + 1
+        self.barrier[name] = barrier
+        return barrier
 
     def _set_bound(self, name):
         super()._set_bound(name)
-        if name in self.tasks:
-            self.tasks.pop(name).cancel()
-        task = self.cache.call_soon(self.set_label, self.value, self.bound[name], name)
-        if task is not None:
-            self.tasks[name] = task
+        if self.cache.call_soon(self.set_label, self.value, name, self.move_barrier(name)) is not None:
+            self.bound[name].set_label("")
 
-    @staticmethod
-    def set_label(data, label, name):
-        label.set_label(data.get(name, ""))
+    def set_label(self, data, name, barrier):
+        if barrier == self.barrier[name]:
+            self.bound[name].set_label(data.get(name, ""))
 
     def _unset_bound(self, name):
+        self.move_barrier(name)
         self.bound[name].set_label("")
         super()._unset_bound(name)
 

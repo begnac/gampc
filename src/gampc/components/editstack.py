@@ -200,7 +200,8 @@ class SongListBaseEditStackMixin(songlistbase.SongListBaseEditableMixin):
         for k in indices[1:] + [0]:
             j += 1
             if j != k:
-                deltas.append(SimpleDelta(self.view.item_selection[i:j], i, True))
+                strings = [item.to_string() for item in self.view.item_selection[i:j]]
+                deltas.append(SimpleDelta(strings, i, True))
                 i = j = k
         self.edit_stack.set_from_here([MetaDelta(deltas, False)])
         self.step_edit_stack(True)
