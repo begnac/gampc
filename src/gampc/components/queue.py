@@ -119,8 +119,8 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
         Id = self.unit.unit_server.ampd_server_properties.current_song.get('Id')
         if Id is None:
             return
-        for position, item_ in enumerate(self.view.item_store_filter):
-            if item_.Id == Id:
+        for position, item in enumerate(self.view.item_store_filter):
+            if item.Id == Id:
                 self.view.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
                 view_height = self.view.item_view_rows.get_allocation().height
                 # row_height = self.view.item_view_rows.get_focus_child().get_allocation().height
@@ -129,12 +129,14 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
     def notify_current_song_cb(self, server_properties, pspec):
         if self.current_song_item is not None:
             self.current_song_item.rebind()
-        pos = server_properties.current_song.get('Pos')
-        if pos is not None:
-            self.current_song_item = self.widget.item_store[int(pos)]
-            self.current_song_item.rebind()
-        else:
-            self.current_song_item = None
+        Id = server_properties.current_song.get('Id')
+        if Id is not None:
+            for item in self.view.item_store:
+                if item.Id == Id:
+                    self.current_song_item = item
+                    item.rebind()
+                    return
+        self.current_song_item = None
 
     @ampd.task
     async def remove_items(self, items):

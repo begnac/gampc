@@ -18,12 +18,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gtk
-
 import ampd
 
-from ..util import resource
-from ..util import unit
+from .. import util
 from ..components import component
 from ..components import songlist
 
@@ -41,7 +38,7 @@ class Search(component.ComponentEntryMixin, songlist.SongList):
         # for name in self.fields.names:
         #     self.field_choice.append_text(name)
 
-        self.actions.add_action(resource.Action('search', self.action_search_cb))
+        self.actions.add_action(util.resource.Action('search', self.action_search_cb))
 
     def action_search_cb(self, *args):
         self.entry.grab_focus()
@@ -70,7 +67,7 @@ class Search(component.ComponentEntryMixin, songlist.SongList):
         condition = sum((['any', s] if '=' not in s else s.split('=', 1) for s in self.parse(query)), [])
         if condition:
             songs = await (self.ampd.find if find else self.ampd.search)(*condition)
-            self.set_songs(songs)
+            self.set_songs(song['file'] for song in songs)
 
     @staticmethod
     def parse(s):
@@ -101,8 +98,8 @@ class Search(component.ComponentEntryMixin, songlist.SongList):
             yield token
 
 
-@unit.require_units('misc')
-class __unit__(songlist.UnitSongListMixin, unit.Unit):
+@util.unit.require_units('misc')
+class __unit__(songlist.UnitSongListMixin, util.unit.UnitDatabaseMixin, util.unit.Unit):
     title = _("Search")
     key = '3'
 
@@ -112,5 +109,5 @@ class __unit__(songlist.UnitSongListMixin, unit.Unit):
         super().__init__(name, manager)
         self.add_resources(
             'app.menu',
-            resource.MenuAction('edit/component', 'search.search', _("Search"), ['<Control><Alt>f']),
+            util.resource.MenuAction('edit/component', 'search.search', _("Search"), ['<Control><Alt>f']),
         )
