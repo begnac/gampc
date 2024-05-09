@@ -34,13 +34,13 @@ class Item(GObject.Object):
         if self.value is not None:
             self._set_bound(name)
 
-    @staticmethod
-    def _set_bound(name):
-        pass
-
     def unbind(self, name):
         self._unset_bound(name)
         del self.bound[name]
+
+    @staticmethod
+    def _set_bound(name):
+        pass
 
     @staticmethod
     def _unset_bound(name):
@@ -116,13 +116,13 @@ class ItemWithDict(Item):
         super().bind(widget, name)
         self.edited_handlers[name] = widget.connect('edited', self.edited_cb, name)
 
-    def _set_bound(self, name):
-        super()._set_bound(name)
-        self.bound[name].label = self.value.get(name, "")
-
     def unbind(self, name):
         self.bound[name].disconnect(self.edited_handlers.pop(name))
         super().unbind(name)
+
+    def _set_bound(self, name):
+        super()._set_bound(name)
+        self.bound[name].label = self.value.get(name) or ""
 
     def _unset_bound(self, name):
         self.bound[name].set_text("")

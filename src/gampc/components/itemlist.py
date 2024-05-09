@@ -43,10 +43,10 @@ class ItemList(component.Component):
     duplicate_test_columns = []
     duplicate_extra_items = None
 
-    def __init__(self, unit, widget_factory, item_store, *args, **kwargs):
+    def __init__(self, unit, widget_factory, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.widget = self.view = ui.view.View(self.fields, widget_factory, item_store, self.__class__.sortable, unit_misc=unit.unit_misc)
+        self.widget = self.view = ui.view.View(self.fields, widget_factory, util.item.ItemListStore(self.item_factory), self.__class__.sortable, unit_misc=unit.unit_misc)
         self.view.item_view.add_css_class('itemlist')
         self.focus_widget = self.view.item_view
 

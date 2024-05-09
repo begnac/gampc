@@ -18,10 +18,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import Gtk
+
 import ampd
 
 from .. import util
-# from ..ui import ssde
+from .. import ui
 
 from . import itemlist
 from . import editstack
@@ -34,8 +36,8 @@ class Stream(editstack.ItemListEditStackMixin, itemlist.ItemList):
     def __init__(self, unit):
         self.fields = unit.fields
 
-        super().__init__(unit)
-        self.widget.record_view.add_css_class('stream')
+        super().__init__(unit, widget_factory=self.widget_factory)
+        self.widget.item_view.add_css_class('stream')
 
         self.actions.add_action(util.resource.Action('add', self.action_add_cb))
         self.actions.add_action(util.resource.Action('modify', self.action_modify_cb))
@@ -49,18 +51,26 @@ class Stream(editstack.ItemListEditStackMixin, itemlist.ItemList):
         #     ])
 
         self.signal_handler_connect(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
-        self.widget.record_display_hooks.append(self.record_current_song_hook)
+        # self.widget.record_display_hooks.append(self.record_current_song_hook)
 
         self.load_streams()
 
-    def record_current_song_hook(self, label, record):
-        if self.unit.unit_server.ampd_server_properties.state != 'stop' and record.file == self.unit.unit_server.ampd_server_properties.current_song.get('file'):
-            label.get_parent().add_css_class('playing')
+    def widget_factory(self):
+        return ui.editable.EditableLabel(unit_misc=self.unit.unit_misc)
+        return Gtk.Label()
+        return ui.editable.EditableLabel(unit_misc=self.unit.unit_misc)
+
+    def item_factory(self):
+        return util.item.ItemWithDict()
+
+    # def record_current_song_hook(self, label, record):
+    #     if self.unit.unit_server.ampd_server_properties.state != 'stop' and record.file == self.unit.unit_server.ampd_server_properties.current_song.get('file'):
+    #         label.get_parent().add_css_class('playing')
 
     def load_streams(self):
         streams = self.unit.db.get_streams()
         # self.set_songs(streams)
-        self.set_edit_stack(editstack.EditStack(map(lambda stream: util.record.Record(stream), streams)))
+        self.set_edit_stack(editstack.EditStack(streams))
 
     def action_save_cb(self, action, parameter):
         raise NotImplementedError
@@ -90,5 +100,5 @@ class Stream(editstack.ItemListEditStackMixin, itemlist.ItemList):
         record.emit('changed')
 
     def notify_current_song_cb(self, *args):
-        for record in self.view.record_store:
-            record.emit('changed')
+        for item in self.view.item_store:
+            item.rebind()
