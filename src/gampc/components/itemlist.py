@@ -98,6 +98,14 @@ class ItemList(component.Component):
             item_id = await self.ampd.addid(filename)
         await self.ampd.playid(item_id)
 
+    def set_items(self, items):
+        self.splice_items(0, None, items)
+
+    def splice_items(self, pos, remove, add):
+        if remove is None:
+            remove = self.view.item_store.get_n_items()
+        self.view.item_store.splice_items(pos, remove, add)
+
     def mark_duplicates(self, *args):
         items = list(self.view.item_store)
         if self.duplicate_extra_items:
@@ -208,6 +216,29 @@ class ItemList(component.Component):
         if keyval == Gdk.KEY_Escape:
             source.drag_cancel()
         return False
+
+
+class ItemListFromCacheMixin:
+    def __init__(self, unit, *args, **kwargs):
+        super().__init__(unit, *args, **kwargs)
+        self.items_task = None
+
+    def splice_items(self, pos, remove, add):
+        self.items_task = asyncio.create_task(self._splice_items(pos, remove, list(add), self.items_task))
+        self.items_task.add_done_callback(self.items_task_done)
+
+    def items_task_done(self, task):
+        if task == self.items_task:
+            self.items_task = None
+
+    async def _splice_items(self, pos, remove, add, task):
+        if task is not None:
+            await task
+        await self.unit.database.ensure(add)
+        super().splice_items(pos, remove, add)
+
+    def item_factory(self):
+        return util.item.ItemFromCache(self.unit.database)
 
 
 class ItemListEditableMixin:

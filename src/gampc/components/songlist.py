@@ -39,31 +39,9 @@ class SongList(itemlist.ItemList):
         self.songlist_actions = self.add_actions_provider('songlist')
         # self.songlist_actions.add_action(resource.Action('delete-file', self.action_delete_file_cb))
 
-        self.songs_task = None
-
     def shutdown(self):
         del self.songlist_actions
         super().shutdown()
-
-    def set_items(self, items):
-        self.splice_items(0, None, items)
-
-    def splice_items(self, pos, remove, add):
-        self.songs_task = asyncio.create_task(self._splice_items(pos, remove, list(add), self.songs_task))
-
-    async def _splice_items(self, pos, remove, add, task):
-        if task is not None:
-            await task
-        if remove is None:
-            remove = self.view.item_store.get_n_items()
-        await self.unit.database.ensure(add)
-        self.view.item_store.splice_items(pos, remove, add)
-
-        if asyncio.current_task() == self.songs_task:
-            self.songs_task = None
-
-    def item_factory(self):
-        return util.item.ItemFromCache(self.unit.database)
 
     def get_filenames(self, selection):
         return self.view.get_filenames(selection)

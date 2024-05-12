@@ -31,7 +31,7 @@ from ..components import songlist
 DIRECTORY = 'directory'
 
 
-class Browser(itemlist.ItemListTreeListMixin, songlist.SongList):
+class Browser(itemlist.ItemListTreeListMixin, itemlist.ItemListFromCacheMixin, songlist.SongList):
     sortable = True
 
     def __init__(self, unit, **kwargs):

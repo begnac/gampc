@@ -22,10 +22,11 @@ import ampd
 
 from .. import util
 from ..components import component
+from ..components import itemlist
 from ..components import songlist
 
 
-class Search(component.ComponentEntryMixin, songlist.SongList):
+class Search(component.ComponentEntryMixin, itemlist.ItemListFromCacheMixin, songlist.SongList):
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
 
     sortable = True

@@ -88,9 +88,6 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
                 self.set_cursor = False
             await self.ampd.idle(ampd.PLAYLIST)
 
-    def set_items(self, items):
-        self.view.item_store.set_items(items)
-
     def selection_changed_cb(self, selection, *args):
         selection = list(util.misc.get_selection(selection))
         if len(selection) == 1:
