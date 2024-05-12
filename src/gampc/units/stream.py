@@ -24,8 +24,6 @@ from ..util import unit
 from ..util import field
 from ..util.logger import logger
 
-from ..ui import column
-
 from ..components import itemlist
 from ..components import stream
 
@@ -60,6 +58,12 @@ class __unit__(itemlist.UnitItemListMixin, unit.UnitCssMixin, unit.Unit):
       background: rgba(128,128,128,0.1);
       font-style: italic;
       font-weight: bold;
+    }
+    columnview > listview > row > cell > editablelabel:focus {
+      outline-color: yellow;
+      outline-offset: 0px;
+      outline-style: solid;
+      outline-width: 4px;
     }
     '''
 

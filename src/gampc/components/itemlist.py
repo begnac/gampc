@@ -82,15 +82,11 @@ class ItemList(component.Component):
         except Exception:
             pass
 
-    # def records_from_data(self, songs):
-    #     self.set_extra_fields(songs)
-    #     return list(map(util.record.Record, songs))
-
     @ampd.task
     async def view_activate_cb(self, view, position):
         if self.unit.unit_persistent.protect_active:
             return
-        filename = self.view.item_selection[position].to_string()
+        filename = self.view.item_selection[position].get_name()
         items = await self.ampd.playlistfind('file', filename)
         if items:
             item_id = sorted(items, key=lambda item: item['Pos'])[0]['Id']

@@ -87,6 +87,9 @@ class ItemFromCache(Item):
     def to_string(self):
         return self.value
 
+    def get_name(self):
+        return self.value
+
 
 class ItemWithDict(Item):
     __gsignals__ = {
@@ -118,8 +121,8 @@ class ItemWithDict(Item):
         self._set_bound(name)
         self.emit('changed')
 
-    def get_data_now(self):
-        return self.value
+    def get_name(self):
+        return self.value['file']
 
 
 class ItemListStore(Gio.ListStore):
@@ -136,8 +139,8 @@ class ItemListStore(Gio.ListStore):
             items[i].set_value(values[i])
         self[pos:pos + remove] = items[:n]
 
-    def set_items(self, values):
-        self.splice_items(0, self.get_n_items(), values)
+    # def set_items(self, values):
+    #     self.splice_items(0, self.get_n_items(), values)
 
     def get_strings(self, pos=0, n=None):
         if n is None:

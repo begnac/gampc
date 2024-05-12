@@ -19,7 +19,10 @@
 
 
 from gi.repository import GObject
+from gi.repository import Gdk
 from gi.repository import Gtk
+
+from .. import util
 
 
 class EditableMixin:
@@ -48,11 +51,32 @@ class EditableLabel(EditableMixin, Gtk.EditableLabel):
     }
 
     def __init__(self, **kwargs):
-        super().__init__(editable=True, **kwargs)
+        super().__init__(editable=False, **kwargs)
+
+        self.shortcut = Gtk.ShortcutController()
+        self.add_controller(self.shortcut)
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Return, modifiers=Gdk.ModifierType(0)), action=Gtk.CallbackAction.new(lambda self, arg: self.really_start_editing())))
+
+        self.gesture = Gtk.GestureClick()
+        self.add_controller(self.gesture)
+        self.gesture.connect('pressed', self.pressed_cb)
+
         self.connect('notify::editing', self.notify_editing_cb)
         self.bind_property('label', self, 'text', GObject.BindingFlags.SYNC_CREATE)
 
+    def really_start_editing(self):
+        self.set_editable(True)
+        self.start_editing()
+
     @staticmethod
     def notify_editing_cb(self, *args):
-        if self.get_text() != self.label:
-            self.emit('edited')
+        if not self.get_editing():
+            self.set_editable(False)
+            if self.get_text() != self.label:
+                self.emit('edited')
+
+    @staticmethod
+    def pressed_cb(click, *args):
+        if util.misc.get_modifier_state() & Gdk.ModifierType.CONTROL_MASK and \
+           click.set_state(Gtk.EventSequenceState.CLAIMED):
+            click.get_widget().really_start_editing()
