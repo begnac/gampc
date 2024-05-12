@@ -80,7 +80,7 @@ class ChoosePathDialog(dialog.AsyncTextDialog):
         return True
 
 
-class __unit__(songlist.UnitPanedSongListMixin, util.unit.UnitDatabaseMixin, util.unit.Unit):
+class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
     title = _("Playlists")
     key = '5'
 
@@ -156,7 +156,7 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.UnitDatabaseMixin, uti
 
     async def fill_contents_cb(self, node):
         if node.kind == playlist.NODE_PLAYLIST:
-            item = await self.cache.get(playlist.PSEUDO_SEPARATOR.join(node.path))
+            item = await self.cache.get_async(playlist.PSEUDO_SEPARATOR.join(node.path))
             node.edit_stack = editstack.EditStack(item.files)
 
     def get_pseudo_folder_contents(self, path):

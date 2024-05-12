@@ -29,21 +29,21 @@ from . import itemlist
 
 
 class SimpleDelta(GObject.Object):
-    def __init__(self, values, position, push):
+    def __init__(self, items, position, push):
         super().__init__()
-        self.values = values
+        self.items = items
         self.position = position
         self.push = push
 
     def apply(self, push, add_cb, remove_cb):
-        "Return value: focus position (or None), selection list."
+        "Return item: focus position (or None), selection list."
         if not self.push:
             push = not push
         if push:
-            add_cb(self.position, self.values)
-            return self.position, list(range(self.position, self.position + len(self.values)))
+            add_cb(self.position, self.items)
+            return self.position, list(range(self.position, self.position + len(self.items)))
         else:
-            remove_cb(self.position, len(self.values))
+            remove_cb(self.position, len(self.items))
             pos = self.position
             # if pos == len(model):
             #     pos -= 1
@@ -56,9 +56,9 @@ class SimpleDelta(GObject.Object):
         if not self.push:
             push = not push
         if push:
-            return [pos + len(self.values) if pos >= self.position else pos for pos in positions]
+            return [pos + len(self.items) if pos >= self.position else pos for pos in positions]
         else:
-            return [pos - len(self.values) if pos >= self.position else pos for pos in positions]
+            return [pos - len(self.items) if pos >= self.position else pos for pos in positions]
 
 
 class MetaDelta(GObject.Object):
@@ -94,11 +94,11 @@ class MetaDelta(GObject.Object):
 
 
 class EditStack:
-    def __init__(self, values):
+    def __init__(self, items):
         self.reset()
         self.target = None
 
-        self.values = values
+        self.items = items
 
     def step(self, push):
         if not push:
@@ -122,15 +122,15 @@ class EditStack:
     def set_target(self, target=None):
         self.target = target
         if target is not None:
-            target.set_items(self.values)
+            target.set_items(self.items)
 
-    def add_cb(self, pos, values):
-        self.values[pos:pos] = values
+    def add_cb(self, pos, items):
+        self.items[pos:pos] = items
         if self.target:
-            self.target.splice_items(pos, 0, values)
+            self.target.splice_items(pos, 0, items)
 
     def remove_cb(self, pos, n):
-        self.values[pos:pos + n] = []
+        self.items[pos:pos + n] = []
         if self.target:
             self.target.splice_items(pos, n, [])
 
@@ -151,10 +151,10 @@ class ItemListEditStackMixin(itemlist.ItemListEditableMixin):
     #     super().shutdown()
     #     self.view.item_edited_hooks.remove(self.item_edited_hook)
 
-    # def item_edited_hook(self, item, key, value):
+    # def item_edited_hook(self, item, key, item):
     #     new_item = util.item.Item(item.get_data())
-    #     if value:
-    #         new_item[key] = value
+    #     if item:
+    #         new_item[key] = item
     #     else:
     #         del new_item[key]
     #     position = list(self.view.item_selection).index(item)
@@ -168,7 +168,7 @@ class ItemListEditStackMixin(itemlist.ItemListEditableMixin):
             self.edit_stack.set_target()
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.edit_stack.set_target(self.view.item_store)
+            self.edit_stack.set_target(self)
         else:
             self.view.item_store.remove_all()
 
@@ -197,16 +197,16 @@ class ItemListEditStackMixin(itemlist.ItemListEditableMixin):
         for k in indices[1:] + [0]:
             j += 1
             if j != k:
-                values = [item.to_value() for item in self.view.item_selection[i:j]]
-                deltas.append(SimpleDelta(values, i, True))
+                items = [item.to_item() for item in self.view.item_selection[i:j]]
+                deltas.append(SimpleDelta(items, i, True))
                 i = j = k
         self.edit_stack.set_from_here([MetaDelta(deltas, False)])
         self.step_edit_stack(True)
 
-    def add_items(self, values, position):
-        if not values:
+    def add_items(self, items, position):
+        if not items:
             return
-        self.edit_stack.set_from_here([SimpleDelta(values, position, True)])
+        self.edit_stack.set_from_here([SimpleDelta(items, position, True)])
         self.step_edit_stack(True)
 
     def edit_stack_changed(self):

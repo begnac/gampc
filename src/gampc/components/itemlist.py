@@ -64,8 +64,6 @@ class ItemList(component.Component):
         if self.duplicate_test_columns:
             self.signal_handler_connect(self.view.item_store, 'items-changed', self.mark_duplicates)
 
-        self.duplicate_job = 0
-
     def shutdown(self):
         del self.itemlist_actions
         self.view.cleanup()
@@ -100,31 +98,17 @@ class ItemList(component.Component):
             item_id = await self.ampd.addid(filename)
         await self.ampd.playid(item_id)
 
-    def set_songs(self, songs):
-        self.view.item_store.set_items(list(songs))
-
     def mark_duplicates(self, *args):
         items = list(self.view.item_store)
         if self.duplicate_extra_items:
             items += list(self.duplicate_extra_items)
-        self.duplicate_job += 1
-        asyncio.create_task(self._mark_duplicates(items, self.duplicate_job))
 
-    async def duplicate_test(self, item):
-        data = await item.get_data()
-        return tuple(data.get(name) for name in self.duplicate_test_columns)
-
-    async def _mark_duplicates(self, items, job):
-        async with asyncio.TaskGroup() as task_group:
-            tests = [task_group.create_task(self.duplicate_test(item)) for item in items]
-        if self.duplicate_job != job:
-            return
         marker = 0
         firsts = {}
         for i, item in enumerate(items):
             if item.value == self.unit.unit_server.SEPARATOR_FILE:  # Only place where self is used here ...
                 continue
-            test = tests[i].result()
+            test = tuple(item.data.get(name) for name in self.duplicate_test_columns)
             first = firsts.get(test)
             if first is None:
                 firsts[test] = i

@@ -31,17 +31,17 @@ class AsyncCache:
         self.items = self._cache.items
         self.clear = self._cache.clear
         self.remove = self._cache.pop
+        self.get = self._cache.get
 
-    def clear(self):
-        for task in self._pending.values():
-            task.cancel()
-        self._cache.clear()
-        self._pending.clear()
+    def inject(self, key, value):
+        self._cache[key] = value
 
-    def get_now(self, key, default=None):
-        return self._cache.get(key, default)
+    async def ensure(self, keys):
+        async with asyncio.TaskGroup() as tasks:
+            for key in keys:
+                tasks.create_task(self.get_async(key))
 
-    async def get(self, key):
+    async def get_async(self, key):
         if key in self._cache:
             # print(f'E {key}', self._cache[key])
             return self._cache[key]
@@ -57,12 +57,3 @@ class AsyncCache:
             del self._pending[key]
             self._cache[key] = value
         return value
-
-    def call_soon(self, cb, key, *args, **kwargs):
-        if key in self._cache:
-            cb(self._cache[key], *args, **kwargs)
-        else:
-            return asyncio.create_task(self.call_async(cb, key, *args, **kwargs))
-
-    async def call_async(self, cb, key, *args, **kwargs):
-        cb(await self.get(key), *args, **kwargs)

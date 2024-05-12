@@ -58,33 +58,24 @@ class Item(GObject.Object):
 class ItemFromCache(Item):
     def __init__(self, cache, **kwargs):
         self.cache = cache
-        self.barrier = {}
+        self.data = {}
+        self.duplicate = None
         super().__init__(**kwargs)
 
     def set_value(self, value):
+        self.data = self.cache.get(value, {})
         self.duplicate = None
         super().set_value(value)
-
-    def move_barrier(self, name):
-        barrier = self.barrier.get(name, 0) + 1
-        self.barrier[name] = barrier
-        return barrier
 
     def _set_bound(self, name):
         super()._set_bound(name)
         label = self.bound[name]
+        label.set_label(self.data.get(name, ""))
         label.get_parent().set_css_classes([])
-        if self.cache.call_soon(self.set_label, self.value, name, self.move_barrier(name)) is not None:
-            label.set_label("")
         if self.duplicate is not None:
             label.get_parent().add_css_class(f'duplicate{self.duplicate % 64}')
 
-    def set_label(self, data, name, barrier):
-        if barrier == self.barrier[name]:
-            self.bound[name].set_label(data.get(name, ""))
-
     def _unset_bound(self, name):
-        self.move_barrier(name)
         label = self.bound[name]
         label.set_label("")
         label.get_parent().set_css_classes([])
@@ -95,12 +86,6 @@ class ItemFromCache(Item):
 
     def to_string(self):
         return self.value
-
-    def get_data_now(self):
-        return self.cache.get_now(self.value, {'file': self.value})
-
-    async def get_data(self):
-        return await self.cache.get(self.value)
 
 
 class ItemWithDict(Item):
@@ -145,13 +130,11 @@ class ItemListStore(Gio.ListStore):
     def splice_items(self, pos, remove, values):
         values = list(values)
         n = len(values)
-        if n > remove:
-            self[pos + remove:pos + remove] = [self.item_factory() for _ in range(n - remove)]
-        elif remove > n:
-            self[pos + n:pos + remove] = []
-        for value in values:
-            self[pos].set_value(value)
-            pos += 1
+        new_items = [] if remove >= n else [self.item_factory() for _ in range(n - remove)]
+        items = self[pos:pos + remove] + new_items
+        for i in range(n):
+            items[i].set_value(values[i])
+        self[pos:pos + remove] = items[:n]
 
     def set_items(self, values):
         self.splice_items(0, self.get_n_items(), values)

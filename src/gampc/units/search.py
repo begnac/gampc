@@ -67,7 +67,7 @@ class Search(component.ComponentEntryMixin, songlist.SongList):
         condition = sum((['any', s] if '=' not in s else s.split('=', 1) for s in self.parse(query)), [])
         if condition:
             songs = await (self.ampd.find if find else self.ampd.search)(*condition)
-            self.set_songs(song['file'] for song in songs)
+            self.set_items(song['file'] for song in songs)
 
     @staticmethod
     def parse(s):
@@ -99,7 +99,7 @@ class Search(component.ComponentEntryMixin, songlist.SongList):
 
 
 @util.unit.require_units('misc')
-class __unit__(songlist.UnitSongListMixin, util.unit.UnitDatabaseMixin, util.unit.Unit):
+class __unit__(songlist.UnitSongListMixin, util.unit.Unit):
     title = _("Search")
     key = '3'
 

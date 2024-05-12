@@ -42,14 +42,14 @@ class Browser(itemlist.ItemListTreeListMixin, songlist.SongList):
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
-        self.set_songs(sum((selection[pos].get_item().songs for pos in self.left_selection_pos), []))
+        self.set_items(sum((selection[pos].get_item().songs for pos in self.left_selection_pos), []))
 
     def root_items_changed_cb(self, model, p, r, a):
         if a:
             self.left_selection[0].set_expanded(True)
 
 
-class __unit__(songlist.UnitPanedSongListMixin, unit.UnitDatabaseMixin, unit.Unit):
+class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
     title = _("Database Browser")
     key = '2'
 

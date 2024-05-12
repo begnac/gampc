@@ -44,9 +44,11 @@ class QueueItem(util.item.ItemFromCache):
             parent.add_css_class('high-priority')
 
     def set_value(self, value):
-        self.Id = value['Id']
-        self.Prio = value.get('Prio')
-        super().set_value(value['file'])
+        self.Id = value.pop('Id')
+        self.Prio = value.pop('Prio', None)
+        name = value['file']
+        self.cache.inject(name, value)
+        super().set_value(name)
 
 
 class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, itemlist.ItemListEditableMixin, songlist.SongList):
@@ -77,7 +79,7 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
     async def client_connected_cb(self, client):
         self.set_cursor = True
         while True:
-            self.set_songs(await self.ampd.playlistinfo())
+            self.set_items(await self.ampd.playlistinfo())
             self.notify_current_song_cb(self.unit.unit_server.ampd_server_properties, None)
             if self.set_cursor:
                 position = self.cursor_by_profile.get(self.unit.unit_server.server_profile)
@@ -85,6 +87,9 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
                     self.view.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
                 self.set_cursor = False
             await self.ampd.idle(ampd.PLAYLIST)
+
+    def set_items(self, items):
+        self.view.item_store.set_items(items)
 
     def selection_changed_cb(self, selection, *args):
         selection = list(util.misc.get_selection(selection))
