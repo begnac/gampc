@@ -37,8 +37,8 @@ class ItemView(Gtk.ColumnView):
 
     def __init__(self, fields, widget_factory, **kwargs):
         self.fields = fields
-
         super().__init__(**kwargs)
+        self.add_css_class('data-table')
 
         self.columns = self.get_columns()
         self.columns_by_name = {}
@@ -90,7 +90,6 @@ class View(Gtk.Box):
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
         self.filter_view = ItemView(fields, lambda: editable.EditableLabel(unit_misc=unit_misc), sortable=False, model=self.filter_selection, show_column_separators=True)
         self.filter_view.add_css_class('filter')
-        self.filter_view.add_css_class('data-table')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
         self.append(self.scrolled_filter_view)
@@ -99,7 +98,6 @@ class View(Gtk.Box):
         self.item_selection = selection_model()
         self.item_view = ItemView(fields, widget_factory, sortable=sortable, model=self.item_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True, visible_titles=False)
         self.item_view.add_css_class('items')
-        self.item_view.add_css_class('data-table')
         self.item_view_rows = self.item_view.get_last_child()
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view, focusable=False)
         self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
