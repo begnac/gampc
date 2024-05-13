@@ -126,6 +126,7 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
     def shutdown(self):
         super().shutdown()
         del self.root
+        del self.cache
 
     @ampd.task
     async def client_connected_cb(self, client):

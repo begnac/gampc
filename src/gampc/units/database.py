@@ -29,6 +29,10 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
         self.require('songlist')
         self.cache = util.cache.AsyncCache(self.database_retrieve)
 
+    def shutdown(self):
+        super().shutdown()
+        del self.cache
+
     @ampd.task
     async def client_connected_cb(self, client):
         while True:
