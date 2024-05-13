@@ -112,6 +112,12 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
     async def zeroconf_profiles_cleanup(self):
         await self.asb.async_cancel()
         del self.asb
+        await self.azc.async_close()
+        del self.azc.zeroconf.engine
+        del self.azc.zeroconf.out_queue
+        del self.azc.zeroconf.out_delay_queue
+        del self.azc.zeroconf.query_handler
+        del self.azc.zeroconf.record_manager
 
     async def zeroconf_profiles_handler(self, *, service_type, name, state_change, **kwargs):
         match = re.fullmatch(ZEROCONF_NAME_REGEXP, name)

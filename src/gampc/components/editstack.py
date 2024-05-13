@@ -147,8 +147,9 @@ class ItemListEditStackMixin(itemlist.ItemListEditableMixin):
 
         # self.view.item_edited_hooks.append(self.item_edited_hook)
 
-    # def shutdown(self):
-    #     super().shutdown()
+    def shutdown(self):
+        super().shutdown()
+        del self.edit_stack
     #     self.view.item_edited_hooks.remove(self.item_edited_hook)
 
     # def item_edited_hook(self, item, key, item):

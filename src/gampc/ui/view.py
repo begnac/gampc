@@ -126,6 +126,7 @@ class View(Gtk.Box):
         self.filter_view.cleanup()
         self.item_view.cleanup()
         self.view_search.cleanup()
+        del self.item_store.item_factory
 
     # @staticmethod
     # def item_bind_hook(widget, item):
