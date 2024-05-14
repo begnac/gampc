@@ -53,6 +53,8 @@ class ItemView(Gtk.ColumnView):
         self.fields.order.disconnect_by_func(self.fields_order_changed_cb)
         self.get_columns().disconnect_by_func(self.columns_changed_cb)
         del self.widget_factory
+        for col in list(self.get_columns()):
+            self.remove_column(col)
 
     def columns_changed_cb(self, columns, position, removed, added):
         self.fields.order.handler_block_by_func(self.fields_order_changed_cb)
