@@ -23,47 +23,39 @@ from gi.repository import Gtk
 
 
 class ListViewSearch(Gtk.SearchEntry):
-    def __init__(self):
+    def __init__(self, widget, test_func):
         super().__init__()
-        self.popover = None
-        controller = Gtk.ShortcutController()
-        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Up, modifiers=Gdk.ModifierType(0)), action=Gtk.SignalAction(signal_name='previous-match')))
-        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Down, modifiers=Gdk.ModifierType(0)), action=Gtk.SignalAction(signal_name='next-match')))
-        self.add_controller(controller)
-
-    def setup(self, widget, test_func):
-        if self.popover is not None:
-            raise RuntimeError
-
-        self.popover = Gtk.Popover(has_arrow=False, halign=Gtk.Align.START)
-        self.popover.set_parent(widget)
-        self.popover.set_child(self)
-
-        self.connect('activate', self.do_search, widget, True, True, test_func)
-        self.connect('next-match', self.do_search, widget, True, False, test_func)
-        self.connect('previous-match', self.do_search, widget, False, False, test_func)
-        self.connect('search-changed', self.do_search, widget, None, True, test_func)
-        self.connect('stop-search', self.stop_search_cb)
+        self.widget = widget
+        self.test_func = test_func
 
         search_action = Gtk.CallbackAction.new(self.search_action_cb)
         search_trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_f, modifiers=Gdk.ModifierType.CONTROL_MASK)
         search_shortcut = Gtk.Shortcut(trigger=search_trigger, action=search_action)
         self.search_controller = Gtk.ShortcutController()
         self.search_controller.add_shortcut(search_shortcut)
-
         widget.add_controller(self.search_controller)
 
-    def cleanup(self):
-        if self.popover is None:
-            raise RuntimeError
-        widget = self.popover.get_parent()
-        self.popover.unparent()
+        controller = Gtk.ShortcutController()
+        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Up, modifiers=Gdk.ModifierType(0)), action=Gtk.SignalAction(signal_name='previous-match')))
+        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Down, modifiers=Gdk.ModifierType(0)), action=Gtk.SignalAction(signal_name='next-match')))
+        self.add_controller(controller)
 
-        widget.remove_controller(self.search_controller)
+        self.popover = Gtk.Popover(has_arrow=False, halign=Gtk.Align.START)
+        self.popover.set_child(self)
+
+        self.connect('activate', self.search_cb, widget, True, True, test_func)
+        self.connect('next-match', self.search_cb, widget, True, False, test_func)
+        self.connect('previous-match', self.search_cb, widget, False, False, test_func)
+        self.connect('search-changed', self.search_cb, widget, None, True, test_func)
+        self.connect('stop-search', self.stop_search_cb)
+
+    def cleanup(self):
+        self.widget.remove_controller(self.search_controller)
         del self.search_controller
-        self.popover = None
+        self.popover.set_child(None)
 
     def search_action_cb(self, widget, param):
+        self.popover.set_parent(widget)
         self.popover.popup()
         found, i, self.base = Gtk.BitsetIter.init_first(widget.get_model().get_selection())
         if not found:
@@ -72,7 +64,7 @@ class ListViewSearch(Gtk.SearchEntry):
         self.up = True
 
     @staticmethod
-    def do_search(self, widget, up, from_base, test_func):
+    def search_cb(self, widget, up, from_base, test_func):
         if up is None:
             up = self.up
         else:
@@ -104,3 +96,4 @@ class ListViewSearch(Gtk.SearchEntry):
     @staticmethod
     def stop_search_cb(self):
         self.popover.popdown()
+        self.popover.unparent()

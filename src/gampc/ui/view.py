@@ -37,28 +37,22 @@ class ItemView(Gtk.ColumnView):
 
     def __init__(self, fields, widget_factory, **kwargs):
         self.fields = fields
-        super().__init__(**kwargs)
+        super().__init__(show_row_separators=True, show_column_separators=True, **kwargs)
         self.add_css_class('data-table')
 
-        self.columns = self.get_columns()
-        self.columns_by_name = {}
+        self.widget_factory = widget_factory
+
         for name in fields.order:
-            name = name.get_string()
-            field = self.fields.fields[name]
-            col = column.FieldItemColumn(name, field, widget_factory, sortable=self.sortable)
-            self.columns_by_name[name] = col
-            self.append_column(col)
+            self.append_column(self.make_column(name))
 
         self.bind_property('visible-titles', self.get_first_child(), 'visible', GObject.BindingFlags.SYNC_CREATE)
-        self.columns.connect('items-changed', self.columns_changed_cb)
+        self.get_columns().connect('items-changed', self.columns_changed_cb)
         self.fields.order.connect('items-changed', self.fields_order_changed_cb)
 
     def cleanup(self):
         self.fields.order.disconnect_by_func(self.fields_order_changed_cb)
-        self.columns.disconnect_by_func(self.columns_changed_cb)
-        for col in self.columns_by_name.values():
-            col.set_factory(None)
-        del self.columns_by_name
+        self.get_columns().disconnect_by_func(self.columns_changed_cb)
+        del self.widget_factory
 
     def columns_changed_cb(self, columns, position, removed, added):
         self.fields.order.handler_block_by_func(self.fields_order_changed_cb)
@@ -66,12 +60,18 @@ class ItemView(Gtk.ColumnView):
         self.fields.order.handler_unblock_by_func(self.fields_order_changed_cb)
 
     def fields_order_changed_cb(self, order, position, removed, added):
-        self.columns.handler_block_by_func(self.columns_changed_cb)
-        for col in list(self.columns[position:position + removed]):
+        columns = self.get_columns()
+        columns.handler_block_by_func(self.columns_changed_cb)
+        for col in list(columns[position:position + removed]):
             self.remove_column(col)
         for i in range(position, position + added):
-            self.insert_column(i, self.columns_by_name[order[i].get_string()])
-        self.columns.handler_unblock_by_func(self.columns_changed_cb)
+            self.insert_column(i, self.make_column(order[i]))
+        columns.handler_unblock_by_func(self.columns_changed_cb)
+
+    def make_column(self, name):
+        name = name.get_string()
+        field = self.fields.fields[name]
+        return column.FieldItemColumn(name, field, self.widget_factory, sortable=self.sortable)
 
 
 class View(Gtk.Box):
@@ -88,7 +88,7 @@ class View(Gtk.Box):
         self.filter_item = util.item.ItemWithDict(value={})
         self.filter_store = util.item.ItemListStore(item_factory=None)
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = ItemView(fields, lambda: editable.EditableLabel(unit_misc=unit_misc), sortable=False, model=self.filter_selection, show_column_separators=True)
+        self.filter_view = ItemView(fields, lambda: editable.EditableLabel(unit_misc=unit_misc), sortable=False, model=self.filter_selection)
         self.filter_view.add_css_class('filter')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
@@ -96,7 +96,7 @@ class View(Gtk.Box):
         self.filter_item.connect('changed', self.filter_changed_cb)
 
         self.item_selection = selection_model()
-        self.item_view = ItemView(fields, widget_factory, sortable=sortable, model=self.item_selection, vexpand=True, enable_rubberband=False, show_row_separators=True, show_column_separators=True, visible_titles=False)
+        self.item_view = ItemView(fields, widget_factory, sortable=sortable, model=self.item_selection, vexpand=True, enable_rubberband=False, visible_titles=False)
         self.item_view.add_css_class('items')
         self.item_view_rows = self.item_view.get_last_child()
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view, focusable=False)
@@ -115,8 +115,7 @@ class View(Gtk.Box):
             self.item_selection.set_model(self.item_store_filter)
             self.item_view.sort_by_column(None, 0)
 
-        self.view_search = listviewsearch.ListViewSearch()
-        self.view_search.setup(self.item_view_rows, lambda text, item: any(text.lower() in value.lower() for value in item.get_data_clean().values()))
+        self.view_search = listviewsearch.ListViewSearch(self.item_view_rows, lambda text, item: any(text.lower() in value.lower() for value in item.data.values()))
 
         self.connect('notify::filtering', self.notify_filtering_cb)
 
@@ -127,12 +126,6 @@ class View(Gtk.Box):
         self.item_view.cleanup()
         self.view_search.cleanup()
         del self.item_store.item_factory
-
-    # @staticmethod
-    # def item_bind_hook(widget, item):
-    #     value = item[widget.name]
-    #     widget.props.label = '' if value is None else str(value)
-    #     widget.get_parent().set_css_classes([])
 
     def filter_changed_cb(self, item):
         # if not value:
@@ -158,7 +151,8 @@ class View(Gtk.Box):
         return True
 
     def get_current_position(self):
-        if (row := self.item_view_rows.get_focus_child()) is not None:
+        row = self.item_view_rows.get_focus_child()
+        if row is not None:
             return row.get_first_child()._pos
         found, i, pos = Gtk.BitsetIter.init_first(self.item_selection.get_selection())
         if found and not i.next()[0]:

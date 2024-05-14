@@ -78,39 +78,39 @@ class FieldItemColumn(Gtk.ColumnViewColumn):
         return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
 
-class FieldColumnFactory(Gtk.SignalListItemFactory):
-    def __init__(self, widget_factory):
-        super().__init__()
+# class FieldColumnFactory(Gtk.SignalListItemFactory):
+#     def __init__(self, widget_factory):
+#         super().__init__()
 
-        self.connect('setup', self.setup_cb, widget_factory)
-        self.connect('bind', self.bind_cb)
-        self.connect('unbind', self.unbind_cb)
-        # self.connect('teardown', self.teardown_cb)
+#         self.connect('setup', self.setup_cb, widget_factory)
+#         self.connect('bind', self.bind_cb)
+#         self.connect('unbind', self.unbind_cb)
+#         # self.connect('teardown', self.teardown_cb)
 
-    @staticmethod
-    def setup_cb(self, listitem, widget_factory):
-        listitem.child = widget_factory()
-        listitem.set_child(listitem.child)
+#     @staticmethod
+#     def setup_cb(self, listitem, widget_factory):
+#         listitem.child = widget_factory()
+#         listitem.set_child(listitem.child)
 
-    @staticmethod
-    def bind_cb(self, listitem):
-        child = listitem.child
-        cell = child.get_parent()
-        cell._pos = listitem.get_position()
-        child.bind(listitem.get_item())
+#     @staticmethod
+#     def bind_cb(self, listitem):
+#         child = listitem.child
+#         cell = child.get_parent()
+#         cell._pos = listitem.get_position()
+#         child.bind(listitem.get_item())
 
-    @staticmethod
-    def unbind_cb(self, listitem):
-        listitem.child.unbind()
+#     @staticmethod
+#     def unbind_cb(self, listitem):
+#         listitem.child.unbind()
 
-    # @staticmethod
-    # def teardown_cb(self, listitem):
-    #     pass
+#     # @staticmethod
+#     # def teardown_cb(self, listitem):
+#     #     pass
 
 
-class ColumnDef(GObject.Object):
-    name = GObject.Property(type=str)
-    title = GObject.Property(type=str)
-    visible = GObject.Property(type=bool, default=True)
-    fixed_width = GObject.Property(type=int)
-    editable = GObject.Property(type=bool, default=False)
+# class ColumnDef(GObject.Object):
+#     name = GObject.Property(type=str)
+#     title = GObject.Property(type=str)
+#     visible = GObject.Property(type=bool, default=True)
+#     fixed_width = GObject.Property(type=int)
+#     editable = GObject.Property(type=bool, default=False)
