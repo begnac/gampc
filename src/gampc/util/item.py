@@ -90,6 +90,9 @@ class ItemFromCache(Item):
     def get_name(self):
         return self.value
 
+    def get_datum(self, key, default=None):
+        return self.data.get(key, default)
+
 
 class ItemWithDict(Item):
     __gsignals__ = {
@@ -123,6 +126,9 @@ class ItemWithDict(Item):
 
     def get_name(self):
         return self.value['file']
+
+    def get_datum(self, key, default=None):
+        return self.value.get(key, default)
 
 
 class ItemListStore(Gio.ListStore):

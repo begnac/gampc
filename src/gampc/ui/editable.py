@@ -50,8 +50,10 @@ class EditableLabel(EditableMixin, Gtk.EditableLabel):
         'edited': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, **kwargs):
-        super().__init__(editable=False, **kwargs)
+    def __init__(self, *, always_editable, **kwargs):
+        self.always_editable = always_editable
+
+        super().__init__(editable=always_editable, **kwargs)
 
         self.shortcut = Gtk.ShortcutController()
         self.add_controller(self.shortcut)
@@ -71,7 +73,7 @@ class EditableLabel(EditableMixin, Gtk.EditableLabel):
     @staticmethod
     def notify_editing_cb(self, *args):
         if not self.get_editing():
-            self.set_editable(False)
+            self.set_editable(self.always_editable)
             if self.get_text() != self.label:
                 self.emit('edited')
 

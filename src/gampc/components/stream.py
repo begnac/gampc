@@ -56,9 +56,7 @@ class Stream(editstack.ItemListEditStackMixin, itemlist.ItemList):
         self.load_streams()
 
     def widget_factory(self):
-        return ui.editable.EditableLabel(unit_misc=self.unit.unit_misc)
-        return Gtk.Label()
-        return ui.editable.EditableLabel(unit_misc=self.unit.unit_misc)
+        return ui.editable.EditableLabel(always_editable=False, unit_misc=self.unit.unit_misc)
 
     def item_factory(self):
         return util.item.ItemWithDict()

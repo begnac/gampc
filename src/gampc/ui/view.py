@@ -88,7 +88,7 @@ class View(Gtk.Box):
         self.filter_item = util.item.ItemWithDict(value={})
         self.filter_store = util.item.ItemListStore(item_factory=None)
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = ItemView(fields, lambda: editable.EditableLabel(unit_misc=unit_misc), sortable=False, model=self.filter_selection)
+        self.filter_view = ItemView(fields, lambda: editable.EditableLabel(always_editable=True, unit_misc=unit_misc), sortable=False, model=self.filter_selection)
         self.filter_view.add_css_class('filter')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
@@ -146,7 +146,7 @@ class View(Gtk.Box):
 
     def filter_func(self, item):
         for name, value in self.filter_item.value.items():
-            if re.search(value, item.get_data_now().get(name, ''), re.IGNORECASE) is None:
+            if re.search(value, item.get_datum(name, ''), re.IGNORECASE) is None:
                 return False
         return True
 
