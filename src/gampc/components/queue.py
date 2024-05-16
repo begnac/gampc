@@ -45,9 +45,11 @@ class QueueItem(util.item.ItemFromCache):
 
     def set_value(self, value):
         self.Id = value.pop('Id')
+        self.Pos = value.pop('Pos')
         self.Prio = value.pop('Prio', None)
         name = value['file']
-        self.cache.inject(name, value)
+        if 'Title' in value:
+            self.cache.inject(name, value)
         super().set_value(name)
 
 
