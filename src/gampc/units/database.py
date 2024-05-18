@@ -28,6 +28,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
         super().__init__(name, manager)
         self.require('songlist')
         self.cache = util.cache.AsyncCache(self.database_retrieve)
+        self.cache.add_inject_hook(self.unit_songlist.fields.set_derived_fields)
 
     def shutdown(self):
         super().shutdown()
@@ -51,5 +52,4 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
             song = songs[0]
         else:
             raise ValueError
-        self.unit_songlist.fields.set_derived_fields(song)
         return song

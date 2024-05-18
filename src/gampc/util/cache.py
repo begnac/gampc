@@ -27,13 +27,20 @@ class AsyncCache:
         self._cache = {}
         self._pending = {}
 
+        self._inject_hooks = []
+
         self.keys = self._cache.keys
         self.items = self._cache.items
         self.clear = self._cache.clear
         self.remove = self._cache.pop
         self.get = self._cache.get
 
+    def add_inject_hook(self, hook):
+        self._inject_hooks.append(hook)
+
     def inject(self, key, value):
+        for hook in self._inject_hooks:
+            hook(value)
         self._cache[key] = value
 
     async def ensure(self, keys):
@@ -55,5 +62,5 @@ class AsyncCache:
             self._pending[key] = task
             value = await task
             del self._pending[key]
-            self._cache[key] = value
+            self.inject(key, value)
         return value
