@@ -117,7 +117,7 @@ class View(Gtk.Box):
             self.item_selection.set_model(self.item_store_filter)
             self.item_view.sort_by_column(None, 0)
 
-        self.view_search = listviewsearch.ListViewSearch(self.item_view_rows, lambda text, item: any(text.lower() in value.lower() for value in item.data.values()))
+        self.view_search = listviewsearch.ListViewSearch(self.item_view_rows, lambda text, item: any(text.lower() in value.lower() for value in item.data.values() if isinstance(value, str)))
 
         self.connect('notify::filtering', self.notify_filtering_cb)
 

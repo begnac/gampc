@@ -43,11 +43,12 @@ class ListViewSearch(Gtk.SearchEntry):
         self.popover = Gtk.Popover(has_arrow=False, halign=Gtk.Align.START)
         self.popover.set_child(self)
 
-        self.connect('activate', self.search_cb, widget, True, True, test_func)
+        # self.connect('activate', self.search_cb, widget, True, True, test_func)
         self.connect('next-match', self.search_cb, widget, True, False, test_func)
         self.connect('previous-match', self.search_cb, widget, False, False, test_func)
         self.connect('search-changed', self.search_cb, widget, None, True, test_func)
         self.connect('stop-search', self.stop_search_cb)
+        self.connect('activate', self.stop_search_cb)
 
     def cleanup(self):
         self.widget.remove_controller(self.search_controller)
@@ -84,7 +85,7 @@ class ListViewSearch(Gtk.SearchEntry):
         for i in range(n):
             j = (pos + i if up else pos - i) % n
             if test_func(text, model[j]):
-                widget.scroll_to(j, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
+                widget.scroll_to(j, Gtk.ListScrollFlags.SELECT, None)
                 self.remove_css_class('error')
                 self.grab_focus()
                 self.pos = j
@@ -97,3 +98,4 @@ class ListViewSearch(Gtk.SearchEntry):
     def stop_search_cb(self):
         self.popover.popdown()
         self.popover.unparent()
+        self.widget.scroll_to(self.pos, Gtk.ListScrollFlags.FOCUS, None)
