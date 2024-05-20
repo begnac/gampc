@@ -18,18 +18,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gtk
-
 import ampd
 
 from .. import util
 from .. import ui
 
 from . import itemlist
-from . import editstack
 
 
-class Stream(editstack.ItemListEditStackMixin, itemlist.ItemList):
+class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
     use_resources = ['itemlist']
     DND_TARGET = 'GAMPC_STREAM'
 

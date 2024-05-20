@@ -20,3 +20,4 @@
 
 from . import cache
 from . import item
+from . import editstack

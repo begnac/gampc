@@ -36,7 +36,7 @@ from .. import ui
 
 from ..components import component
 from ..components import songlist
-from ..components import editstack
+from ..components import itemlist
 
 from . import search
 
@@ -288,7 +288,7 @@ class TandaSubComponent(component.Component):
         self.current_tandaid = model[selection[0]]._tandaid if selection else None
 
 
-class TandaEdit(TandaSubComponent, editstack.ItemListEditStackMixin, songlist.SongList):
+class TandaEdit(TandaSubComponent, itemlist.ItemListEditStackMixin, songlist.SongList):
     duplicate_test_columns = ['Title']
 
     def __init__(self, unit):

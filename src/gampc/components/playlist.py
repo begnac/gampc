@@ -25,7 +25,6 @@ from ..ui import dialog
 
 from . import itemlist
 from . import songlist
-from . import editstack
 
 
 NODE_FOLDER = 0
@@ -39,7 +38,7 @@ ICONS = {
 }
 
 
-class Playlist(itemlist.ItemListTreeListMixin, editstack.ItemListEditStackFromCacheMixin, songlist.SongListTotalsMixin, songlist.SongList):
+class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListEditStackFromCacheMixin, songlist.SongListTotalsMixin, songlist.SongList):
     duplicate_test_columns = ['file']
 
     left_title = _("Playlists")
