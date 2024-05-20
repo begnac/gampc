@@ -214,23 +214,37 @@ class ItemList(component.Component):
         return False
 
 
+class AIOQueue:
+    def __init__(self):
+        self.task = None
+
+    def queue_task_lazy(self, coro, *args, **kwargs):
+        self.task = asyncio.create_task(self.wrapper_lazy(self.task, coro(self.task, *args, **kwargs)))
+        self.task.add_done_callback(self.task_done)
+
+    @staticmethod
+    async def wrapper_lazy(task, awaitable):
+        await awaitable
+        if task is not None:
+            await task
+
+    def task_done(self, task):
+        if task == self.task:
+            self.task = None
+
+
 class ItemListFromCacheMixin:
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
-        self.items_task = None
+        self.aioqueue = AIOQueue()
 
     def splice_items(self, pos, remove, add):
-        self.items_task = asyncio.create_task(self._splice_items(pos, remove, list(add), self.items_task))
-        self.items_task.add_done_callback(self.items_task_done)
+        self.aioqueue.queue_task_lazy(self._splice_items, pos, remove, list(add))
 
-    def items_task_done(self, task):
-        if task == self.items_task:
-            self.items_task = None
-
-    async def _splice_items(self, pos, remove, add, task):
+    async def _splice_items(self, task, pos, remove, add):
+        await self.unit.database.ensure(add)
         if task is not None:
             await task
-        await self.unit.database.ensure(add)
         super().splice_items(pos, remove, add)
 
     def item_factory(self):

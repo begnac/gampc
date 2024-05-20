@@ -54,6 +54,9 @@ class Item(GObject.Object):
         self.value = value
         self.rebind()
 
+    def get_value(self):
+        return self.value
+
 
 class ItemFromCache(Item):
     def __init__(self, cache, **kwargs):

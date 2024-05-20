@@ -96,8 +96,7 @@ class MetaDelta(GObject.Object):
 class EditStack:
     def __init__(self, items):
         self.reset()
-        self.target = None
-
+        self.splicer = None
         self.items = items
 
     def step(self, push):
@@ -119,20 +118,20 @@ class EditStack:
         self.deltas = []
         self.pos = 0
 
-    def set_target(self, target=None):
-        self.target = target
-        if target is not None:
-            target.set_items(self.items)
+    def set_splicer(self, splicer=None):
+        self.splicer = splicer
+        if splicer is not None:
+            splicer(0, None, self.items)
 
     def add_cb(self, pos, items):
         self.items[pos:pos] = items
-        if self.target:
-            self.target.splice_items(pos, 0, items)
+        if self.splicer:
+            self.splicer(pos, 0, items)
 
     def remove_cb(self, pos, n):
         self.items[pos:pos + n] = []
-        if self.target:
-            self.target.splice_items(pos, n, [])
+        if self.splicer:
+            self.splicer(pos, n, [])
 
 
 class ItemListEditStackMixin(itemlist.ItemListEditableMixin):
@@ -166,15 +165,18 @@ class ItemListEditStackMixin(itemlist.ItemListEditableMixin):
 
     def set_edit_stack(self, edit_stack):
         if self.edit_stack is not None:
-            self.edit_stack.set_target()
+            self.edit_stack.set_splicer()
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.edit_stack.set_target(self)
+            self.edit_stack.set_splicer(self.splice_items)
         else:
             self.view.item_store.remove_all()
 
     def step_edit_stack(self, push):
         focus, selection = self.edit_stack.step(push)
+        self.refocus(focus, selection)
+
+    def refocus(self, focus, selection):
         if focus is not None:
             self.view.item_view.scroll_to(focus, None, Gtk.ListScrollFlags.FOCUS, None)
         if selection is not None:
@@ -198,7 +200,7 @@ class ItemListEditStackMixin(itemlist.ItemListEditableMixin):
         for k in indices[1:] + [0]:
             j += 1
             if j != k:
-                items = [item.to_item() for item in self.view.item_selection[i:j]]
+                items = [item.get_value() for item in self.view.item_selection[i:j]]
                 deltas.append(SimpleDelta(items, i, True))
                 i = j = k
         self.edit_stack.set_from_here([MetaDelta(deltas, False)])
@@ -233,3 +235,13 @@ class ItemListEditStackMixin(itemlist.ItemListEditableMixin):
         self.edit_stack.undo()
         self.edit_stack.reset()
         self.edit_stack_changed()
+
+
+class ItemListEditStackFromCacheMixin(ItemListEditStackMixin, itemlist.ItemListFromCacheMixin):
+    def refocus(self, focus, selection):
+        self.aioqueue.queue_task_lazy(self._refocus, focus, selection)
+
+    async def _refocus(self, task, *args):
+        if task is not None:
+            await task
+        super().refocus(*args)

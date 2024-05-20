@@ -39,7 +39,7 @@ ICONS = {
 }
 
 
-class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListFromCacheMixin, editstack.ItemListEditStackMixin, songlist.SongListTotalsMixin, songlist.SongList):
+class Playlist(itemlist.ItemListTreeListMixin, editstack.ItemListEditStackFromCacheMixin, songlist.SongListTotalsMixin, songlist.SongList):
     duplicate_test_columns = ['file']
 
     left_title = _("Playlists")
@@ -50,6 +50,10 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListFromCacheMixin, 
         self.actions.add_action(resource.Action('rename', self.action_playlist_rename_cb))
         self.actions.add_action(resource.Action('delete', self.action_playlist_delete_cb))
         self.actions.add_action(resource.Action('update-from-queue', self.action_playlist_update_from_queue_cb))
+
+    def shutdown(self):
+        self.set_edit_stack(None)
+        super().shutdown()
 
     def edit_stack_changed(self):
         super().edit_stack_changed()
@@ -90,7 +94,7 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListFromCacheMixin, 
     async def action_save_cb(self, action, parameter):
         if not self.edit_stack.deltas:
             return
-        if await self.unit.save_playlist(self.left_selected_item.joined_path, [record.file for record in self.view.record_store], self.widget.get_root()):
+        if await self.unit.save_playlist(self.left_selected_item.joined_path, [item.get_value() for item in self.view.item_store], self.widget.get_root()):
             self.edit_stack.reset()
             self.edit_stack_changed()
 
