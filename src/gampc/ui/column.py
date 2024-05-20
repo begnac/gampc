@@ -73,8 +73,8 @@ class FieldItemColumn(Gtk.ColumnViewColumn):
 
     @staticmethod
     def sort_func(item1, item2, name):
-        s1 = item1.get_data_now.get(name, '')
-        s2 = item2.get_data_now.get(name, '')
+        s1 = item1.get_datum(name, '')
+        s2 = item2.get_datum(name, '')
         return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
 

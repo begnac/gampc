@@ -98,12 +98,15 @@ class View(Gtk.Box):
         self.filter_item.connect('changed', self.filter_changed_cb)
 
         self.item_selection = selection_model()
-        self.item_view = ItemView(fields, widget_factory, sortable=sortable, model=self.item_selection, vexpand=True, enable_rubberband=False, visible_titles=False)
+        self.item_view = ItemView(fields, widget_factory, sortable=sortable, model=self.item_selection, vexpand=True, enable_rubberband=False)
         self.item_view.add_css_class('items')
         self.item_view_rows = self.item_view.get_last_child()
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view, focusable=False)
         self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_item_view)
+
+        self.bind_property('filtering', self.filter_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE)
+        self.bind_property('filtering', self.item_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
 
         self.item_store = item_store
         # self.item_selection.set_model(self.item_store)
