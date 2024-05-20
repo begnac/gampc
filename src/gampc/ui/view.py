@@ -128,16 +128,12 @@ class View(Gtk.Box):
         self.filter_item.disconnect_by_func(self.filter_changed_cb)
         self.filter_filter.set_filter_func(None)
         self.filter_view.cleanup()
+        self.item_store.remove_all()
         self.item_view.cleanup()
         self.view_search.cleanup()
         del self.item_store.item_factory
 
     def filter_changed_cb(self, item):
-        # if not value:
-        #     del item[key]
-        #     self.filter_filter.changed(Gtk.FilterChange.LESS_STRICT)
-        # else:
-        #     item[key] = value
         self.filter_filter.changed(Gtk.FilterChange.DIFFERENT)
 
     @staticmethod

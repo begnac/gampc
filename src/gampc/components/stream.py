@@ -52,8 +52,17 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
 
         self.load_streams()
 
+    def splice_items(self, pos, remove, add):
+        add = list(add)
+        super().splice_items(pos, remove, add)
+        for item in self.view.item_store[pos:pos + len(add)]:
+            item.connect('changed', self.stream_changed_cb)
+
     def widget_factory(self):
         return ui.editable.EditableLabel(always_editable=False, unit_misc=self.unit.unit_misc)
+
+    def stream_changed_cb(self, *args):
+        print(args)
 
     def item_factory(self):
         return util.item.ItemWithDict()
@@ -65,7 +74,7 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
     def load_streams(self):
         streams = self.unit.db.get_streams()
         # self.set_songs(streams)
-        self.set_edit_stack(editstack.EditStack(streams))
+        self.set_edit_stack(util.editstack.EditStack(streams))
 
     def action_save_cb(self, action, parameter):
         raise NotImplementedError

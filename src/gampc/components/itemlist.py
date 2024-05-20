@@ -214,43 +214,6 @@ class ItemList(component.Component):
         return False
 
 
-class AIOQueue:
-    def __init__(self):
-        self.task = None
-
-    def queue_task_lazy(self, coro, *args, **kwargs):
-        self.task = asyncio.create_task(self.wrapper_lazy(self.task, coro(self.task, *args, **kwargs)))
-        self.task.add_done_callback(self.task_done)
-
-    @staticmethod
-    async def wrapper_lazy(task, awaitable):
-        await awaitable
-        if task is not None:
-            await task
-
-    def task_done(self, task):
-        if task == self.task:
-            self.task = None
-
-
-class ItemListFromCacheMixin:
-    def __init__(self, unit, *args, **kwargs):
-        super().__init__(unit, *args, **kwargs)
-        self.aioqueue = AIOQueue()
-
-    def splice_items(self, pos, remove, add):
-        self.aioqueue.queue_task_lazy(self._splice_items, pos, remove, list(add))
-
-    async def _splice_items(self, task, pos, remove, add):
-        await self.unit.database.ensure(add)
-        if task is not None:
-            await task
-        super().splice_items(pos, remove, add)
-
-    def item_factory(self):
-        return util.item.ItemFromCache(self.unit.database)
-
-
 class ItemListEditableMixin:
     sortable = False
 
@@ -453,14 +416,52 @@ class ItemListEditStackMixin(ItemListEditableMixin):
         self.edit_stack_changed()
 
 
-class ItemListEditStackFromCacheMixin(ItemListEditStackMixin, ItemListFromCacheMixin):
-    def refocus(self, focus, selection):
-        self.aioqueue.queue_task_lazy(self._refocus, focus, selection)
+class AIOQueue:
+    def __init__(self):
+        self.task = None
 
-    async def _refocus(self, task, *args):
+    def queue_task(self, func, *args, sync=False, **kwargs):
+        wrapper = self.wrapper_sync if sync else self.wrapper_async
+        self.task = asyncio.create_task(wrapper(self.task, func, *args, **kwargs))
+        self.task.add_done_callback(self.task_done)
+
+    @staticmethod
+    async def wrapper_async(task, coro, *args, **kwargs):
+        await coro(task, *args, **kwargs)
         if task is not None:
             await task
-        super().refocus(*args)
+
+    @staticmethod
+    async def wrapper_sync(task, func, *args, **kwargs):
+        if task is not None:
+            await task
+        func(*args, **kwargs)
+
+    def task_done(self, task):
+        if task == self.task:
+            self.task = None
+
+
+class ItemListFromCacheMixin:
+    def __init__(self, unit, *args, **kwargs):
+        super().__init__(unit, *args, **kwargs)
+        self.aioqueue = AIOQueue()
+
+    def splice_items(self, pos, remove, add):
+        self.aioqueue.queue_task(self._splice_items, pos, remove, list(add))
+
+    async def _splice_items(self, task, pos, remove, add):
+        await self.unit.database.ensure(add)
+        if task is not None:
+            await task
+        super().splice_items(pos, remove, add)
+
+    def item_factory(self):
+        return util.item.ItemFromCache(self.unit.database)
+
+    #  In case we inherit also from ItemListEditStackMixin.
+    def refocus(self, *args):
+        self.aioqueue.queue_task(super().refocus, *args, sync=True)
 
 
 class ItemListTreeListMixin(component.ComponentPaneTreeMixin):
