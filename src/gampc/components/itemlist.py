@@ -34,7 +34,7 @@ from . import component
 
 
 
-TRY_DND = False
+TRY_DND = True
 
 
 class ItemList(component.Component):
@@ -64,13 +64,21 @@ class ItemList(component.Component):
         if self.duplicate_test_columns:
             self.signal_handler_connect(self.view.item_store, 'items-changed', self.mark_duplicates)
 
+        self.view.item_view.columns['file'].get_factory().connect('bind', self.bind_cb)
+
     def shutdown(self):
         del self.itemlist_actions
+        self.view.item_view.columns['file'].get_factory().disconnect_by_func(self.bind_cb)
         self.view.cleanup()
+        if TRY_DND:
+            del self.drag_source
         super().shutdown()
 
-    @staticmethod
-    def content_from_items(items):
+    def bind_cb(self, factory, listitem):
+        listitem.row = listitem.get_child().get_parent().get_parent()
+        listitem.row.pos = listitem.get_position()
+
+    def content_from_items(self, items):
         return Gdk.ContentProvider.new_for_value(repr([item.to_string() for item in items]))
 
     @staticmethod
@@ -142,7 +150,7 @@ class ItemList(component.Component):
 
     @staticmethod
     def row_get_position(row, *, after=False):
-        pos = row.get_first_child()._pos
+        pos = row.pos
         if after:
             pos += 1
         return pos
@@ -180,19 +188,22 @@ class ItemList(component.Component):
         self.view.item_view_rows.add_controller(self.drag_key_controller)
 
     def drag_prepare_cb(self, source, x, y):
-        source.items = self.view.get_selection_items()
-        if not source.items:
+        source.selection = self.view.get_selection()
+        if not source.selection:
             row, x, y = util.misc.find_descendant_at_xy(self.view.item_view_rows, x, y, 1)
             if row is not None:
-                source.items = [self.view.item_selection[row.get_first_child()._pos]]
+                source.selection = [row.pos]
             else:
+                source.selection = None
                 return None
-        source.set_content(self.content_from_items(source.items))
-        return self.content_from_items(source.items)
+        source.data = GLib.Variant('as', [self.view.item_selection[pos].to_string() for pos in source.selection])
+        cp = Gdk.ContentProvider.new_for_value(source.data)
+        print(cp.props.formats.get_mime_types(), cp.props.formats.get_gtypes())
+        return cp
 
     def drag_begin_cb(self, source, drag):
         print(drag.get_actions())
-        print(drag.set_property('actions', Gdk.DragAction.COPY))
+        print(drag.set_property('actions', Gdk.DragAction.COPY | Gdk.DragAction.MOVE))
         print(drag.get_actions())
         pass
 
@@ -204,8 +215,9 @@ class ItemList(component.Component):
 
     def drag_end_cb(self, source, drag, delete):
         if delete:
-            self.remove_items(source.items)
-        del source.items
+            self.remove_items([self.view.item_selection[pos] for pos in source.selection])
+        print(888888888888)
+        del source.selection
 
     @staticmethod
     def drag_key_pressed_cb(controller, keyval, keycode, modifiers, source):
@@ -227,7 +239,7 @@ class ItemListEditableMixin:
         self.itemlist_actions.add_action(util.resource.Action('cut', self.action_copy_delete_cb))
         self.signal_handler_connect(self.view, 'notify::filtering', self.check_editable)
 
-        # self.setup_drop()
+        self.setup_drop()
 
     def get_editable(self):
         return self._editable
@@ -240,8 +252,8 @@ class ItemListEditableMixin:
         editable = self._editable and not self.view.filtering
         for name in ['paste', 'paste-before', 'delete', 'cut']:
             self.itemlist_actions.lookup(name).set_enabled(editable)
-        if TRY_DND:
-            self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
+        # if TRY_DND:
+        #     self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
     def action_paste_cb(self, action, parameter):
         self.widget.get_clipboard().read_text_async(None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
@@ -257,9 +269,13 @@ class ItemListEditableMixin:
             self.add_items(strings, self.row_get_position(row, after=not before))
 
     def setup_drop(self):
-        self.drop_target = Gtk.DropTarget(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=Gdk.ContentFormats.parse('gchararray'))
+        self.drop_target = Gtk.DropTarget(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=Gdk.ContentFormats.new_for_gtype(GLib.Variant), preload=True)
+        self.drop_target.drop_row = None
+        print(self.drop_target.props.formats.get_mime_types())
+        print(self.drop_target.props.formats.get_gtypes())
         self.signal_handler_connect(self.drop_target, 'enter', self.drop_action_cb)
         self.signal_handler_connect(self.drop_target, 'motion', self.drop_action_cb)
+        self.signal_handler_connect(self.drop_target, 'leave', self.drop_leave_cb)
         self.signal_handler_connect(self.drop_target, 'drop', self.drop_cb)
         # self.signal_handler_connect(self.drop_target, 'notify::value', misc.AutoWeakMethod(self.drop_notify_value_cb))
         # self.drop_target.set_preload(True)
@@ -270,28 +286,40 @@ class ItemListEditableMixin:
         self.signal_handler_connect(self.drop_key_controller, 'modifiers', self.drop_modifiers_cb, self.drop_target)
         self.view.item_view_rows.add_controller(self.drop_key_controller)
 
-    def drop_action_cb(self, target, x, y):
+    @staticmethod
+    def drop_action_cb(target, x, y):
+        # row, x, y = None, 0, 0
         row, x, y = util.misc.find_descendant_at_xy(target.get_widget(), x, y, 1)
         if row is None:
-            return 0
-        if target.get_value() is not None and not target.get_value().is_of_type(GLib.VariantType('as')):
-            return 0
+            row = target.get_widget().get_last_child()
+        elif y < row.get_height() / 2:
+            if row.pos == 0:
+                row = None
+            else:
+                row = target.get_widget().observe_children()[row.pos - 1]
+        if row != target.drop_row:
+            if target.drop_row is not None:
+                target.drop_row.remove_css_class('drop-row')
+            target.drop_row = row
+            if target.drop_row is not None:
+                target.drop_row.add_css_class('drop-row')
         if target.get_actions() & Gdk.DragAction.MOVE and util.misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
             return Gdk.DragAction.MOVE
         else:
             return Gdk.DragAction.COPY
 
+    @staticmethod
+    def drop_leave_cb(target):
+        if target.drop_row is not None:
+            target.drop_row.remove_css_class('drop-row')
+            target.drop_row = None
+
     def drop_cb(self, target, value, x, y):
-        data = self.data_from_raw(value)
-        if data is None:
-            return
-        row, x, y = util.misc.find_descendant_at_xy(self.view.item_view_rows, x, y, 1)
-        if row is not None:
-            if y < row.get_allocation().height / 2:
-                before = True
-            else:
-                before = False
-            self.add_items(data, self.row_get_position(row, after=not before))
+        if value.is_of_type(GLib.VariantType('as')):
+            self.add_items(value.unpack(), target.drop_row.pos + 1 if target.drop_row is not None else 0)
+        else:
+            target.reject()
+        self.drop_leave_cb(target)
 
     # def drop_notify_value_cb(self, target, param):
     #     drop = target.get_current_drop()

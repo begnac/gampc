@@ -97,28 +97,28 @@ class __unit__(itemlist.UnitItemListMixin, unit.UnitCssMixin, unit.UnitDatabaseM
 
         self.config.edit_dialog_size._get(default=[500, 500])
 
-        self.unit_server.add_current_song_hook(self.current_song_hook)
+        # self.unit_server.add_current_song_hook(self.current_song_hook)
 
-    def shutdown(self):
-        self.unit_server.remove_current_song_hook(self.current_song_hook)
-        super().shutdown()
+    # def shutdown(self):
+    #     self.unit_server.remove_current_song_hook(self.current_song_hook)
+    #     super().shutdown()
 
-    def current_song_hook(self, song):
-        if 'file' not in song or 'Title' not in song:
-            return
-        url = song['file']
-        if not url.startswith('http://') and not url.startswith('https://'):
-            return
-        orig_title = title = song['Title']
-        artist = song.get('Artist')
-        performer = song.get('Performer')
-        name = song.get('Name')
-        if artist is None and ' - ' in title:
-            artist, title = title.split(' - ', 1)
-        if performer is None and ' & ' in artist:
-            artist, performer = artist.split(' & ', 1)
-        if name is not None:
-            title += f' [{name}]'
-        song.update(Title=title, Artist=artist, Performer=performer)
+    # def current_song_hook(self, song):
+    #     if 'file' not in song or 'Title' not in song:
+    #         return
+    #     url = song['file']
+    #     if not url.startswith('http://') and not url.startswith('https://'):
+    #         return
+    #     orig_title = title = song['Title']
+    #     artist = song.get('Artist')
+    #     performer = song.get('Performer')
+    #     name = song.get('Name')
+    #     if artist is None and ' - ' in title:
+    #         artist, title = title.split(' - ', 1)
+    #     if performer is None and ' & ' in artist:
+    #         artist, performer = artist.split(' & ', 1)
+    #     if name is not None:
+    #         title += f' [{name}]'
+    #     song.update(Title=title, Artist=artist, Performer=performer)
 
-        logger.info(orig_title)
+    #     logger.info(orig_title)

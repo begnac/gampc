@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import ampd
+# import ampd
 
 from .. import util
 from .. import ui
@@ -36,8 +36,8 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
         super().__init__(unit, widget_factory=self.widget_factory)
         self.widget.item_view.add_css_class('stream')
 
-        self.actions.add_action(util.resource.Action('add', self.action_add_cb))
-        self.actions.add_action(util.resource.Action('modify', self.action_modify_cb))
+        # self.actions.add_action(util.resource.Action('add', self.action_add_cb))
+        # self.actions.add_action(util.resource.Action('modify', self.action_modify_cb))
 
         # self.ssde_struct = ssde.Dict(
         #     label=_("Internet stream"),
@@ -90,18 +90,18 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
         if value:
             self.add_record(value)
 
-    @ampd.task
-    async def action_modify_cb(self, action, parameter):
-        pos = self.view.get_current_position()
-        if pos is None:
-            return
-        record = self.view.record_selection[pos]
-        value = await self.ssde_struct.edit(self.get_window(), record.get_data(), size=self.config.edit_dialog_size._get(), scrolled=True)
-        if value is None:
-            return
-        record.set_data(value)
-        record._modified = True
-        record.emit('changed')
+    # @ampd.task
+    # async def action_modify_cb(self, action, parameter):
+    #     pos = self.view.get_current_position()
+    #     if pos is None:
+    #         return
+    #     record = self.view.record_selection[pos]
+    #     value = await self.ssde_struct.edit(self.get_window(), record.get_data(), size=self.config.edit_dialog_size._get(), scrolled=True)
+    #     if value is None:
+    #         return
+    #     record.set_data(value)
+    #     record._modified = True
+    #     record.emit('changed')
 
     def notify_current_song_cb(self, *args):
         for item in self.view.item_store:

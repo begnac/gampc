@@ -49,7 +49,7 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
         self.require('profiles')
         self.require('songlist')
 
-        self.current_song_hooks = []
+        # self.current_song_hooks = []
         self.ampd_client = ampd.ClientGLib()
         self.ampd_client.connect('client-connected', self.client_connected_cb)
         self.ampd_client.connect('client-disconnected', self.client_disconnected_cb)
@@ -57,7 +57,8 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
         self.ampd = self.ampd_client.executor.sub_executor()
 
         self.ampd_server_properties = ampd.ServerPropertiesGLib(self.ampd_client.executor)
-        self.ampd_server_properties.bind_property('current-song', self, 'current-song', GObject.BindingFlags.SYNC_CREATE, self.current_song_transform)
+        # self.ampd_server_properties.bind_property('current-song', self, 'current-song', GObject.BindingFlags.SYNC_CREATE, self.current_song_transform)
+        self.ampd_server_properties.bind_property('current-song', self, 'current-song', GObject.BindingFlags.SYNC_CREATE)
         self.ampd_server_properties.connect('server-error', self.server_error_cb)
         self.ampd_server_properties.connect('notify::updating-db', self.set_server_label)
         self.server_options = {name: ServerOption() for name in ampd.OPTION_NAMES}
@@ -100,8 +101,8 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
         )
 
     def shutdown(self):
-        if self.current_song_hooks:
-            raise RuntimeError
+        # if self.current_song_hooks:
+        #     raise RuntimeError
         self.want_to_connect = False
         asyncio.get_event_loop().run_until_complete(self.ampd_client.close())
         self.disconnect_by_func(self.notify_server_profile_cb)
@@ -202,16 +203,16 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
             self.server_profile_previous = self.server_profile_backup
             self.server_profile_backup = self.server_profile
 
-    def add_current_song_hook(self, hook, priority=None):
-        self.current_song_hooks.append(hook)
-        self.current_song = self.current_song_transform(None, self.ampd_server_properties.current_song)
+    # def add_current_song_hook(self, hook, priority=None):
+    #     self.current_song_hooks.append(hook)
+    #     self.current_song = self.current_song_transform(None, self.ampd_server_properties.current_song)
 
-    def remove_current_song_hook(self, hook):
-        self.current_song_hooks.remove(hook)
-        self.current_song = self.current_song_transform(None, self.ampd_server_properties.current_song)
+    # def remove_current_song_hook(self, hook):
+    #     self.current_song_hooks.remove(hook)
+    #     self.current_song = self.current_song_transform(None, self.ampd_server_properties.current_song)
 
-    def current_song_transform(self, binding, song):
-        song = song.copy()
-        for hook in self.current_song_hooks:
-            hook(song)
-        return song
+    # def current_song_transform(self, binding, song):
+    #     song = song.copy()
+    #     for hook in self.current_song_hooks:
+    #         hook(song)
+    #     return song

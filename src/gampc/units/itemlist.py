@@ -30,6 +30,12 @@ columnview.filter > listview > row {
 }
 '''
 
+CSS += '''
+columnview > listview > row.drop-row {
+  border-bottom-color: rgb(46,194,126);
+}
+'''
+
 N = 4
 for d in range(N ** 3):
     colors = [((d // (N ** k)) % N) * 255 / (N - 1) for k in range(3)]

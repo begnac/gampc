@@ -25,9 +25,60 @@ import re
 
 from .. import util
 
-from . import column
 from . import listviewsearch
 from . import editable
+
+
+class FieldItemFactory(Gtk.SignalListItemFactory):
+    def __init__(self, name, widget_factory):
+        super().__init__()
+
+        self.name = name
+        self.widget_factory = widget_factory
+
+        self.connect('setup', self.setup_cb)
+        self.connect('bind', self.bind_cb)
+        self.connect('unbind', self.unbind_cb)
+        # self.connect('teardown', self.teardown_cb)
+
+    @staticmethod
+    def setup_cb(self, listitem):
+        listitem.set_child(self.widget_factory())
+
+    @staticmethod
+    def bind_cb(self, listitem):
+        listitem.get_item().bind(listitem.get_child(), self.name)
+
+    @staticmethod
+    def unbind_cb(self, listitem):
+        listitem.get_item().unbind(self.name)
+
+    # @staticmethod
+    # def teardown_cb(self, listitem):
+    #     pass
+
+
+class FieldItemColumn(Gtk.ColumnViewColumn):
+    def __init__(self, field, widget_factory, *, sortable):
+        self.name = field.name
+
+        super().__init__(factory=FieldItemFactory(self.name, widget_factory))
+
+        field.bind_property('title', self, 'title', GObject.BindingFlags.SYNC_CREATE)
+        field.bind_property('visible', self, 'visible', GObject.BindingFlags.SYNC_CREATE)
+        field.bind_property('width', self, 'fixed-width', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL)
+
+        self.set_resizable(True)
+
+        if sortable:
+            sorter = Gtk.CustomSorter.new(self.sort_func, self.name)
+            self.set_sorter(sorter)
+
+    @staticmethod
+    def sort_func(item1, item2, name):
+        s1 = item1.get_datum(name, '')
+        s2 = item2.get_datum(name, '')
+        return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
 
 class ItemView(Gtk.ColumnView):
@@ -42,8 +93,9 @@ class ItemView(Gtk.ColumnView):
 
         self.widget_factory = widget_factory
 
+        self.columns = {field.name: FieldItemColumn(field, self.widget_factory, sortable=self.sortable) for field in fields.fields.values()}
         for name in fields.order:
-            self.append_column(self.make_column(name))
+            self.append_column(self.columns[name.get_string()])
 
         self.bind_property('visible-titles', self.get_first_child(), 'visible', GObject.BindingFlags.SYNC_CREATE)
         self.get_columns().connect('items-changed', self.columns_changed_cb)
@@ -67,13 +119,8 @@ class ItemView(Gtk.ColumnView):
         for col in list(columns[position:position + removed]):
             self.remove_column(col)
         for i in range(position, position + added):
-            self.insert_column(i, self.make_column(order[i]))
+            self.insert_column(i, self.columns[order[i].get_string()])
         columns.handler_unblock_by_func(self.columns_changed_cb)
-
-    def make_column(self, name):
-        name = name.get_string()
-        field = self.fields.fields[name]
-        return column.FieldItemColumn(name, field, self.widget_factory, sortable=self.sortable)
 
 
 class View(Gtk.Box):
@@ -151,15 +198,15 @@ class View(Gtk.Box):
                 return False
         return True
 
-    def get_current_position(self):
-        row = self.item_view_rows.get_focus_child()
-        if row is not None:
-            return row.get_first_child()._pos
-        found, i, pos = Gtk.BitsetIter.init_first(self.item_selection.get_selection())
-        if found and not i.next()[0]:
-            return pos
-        else:
-            return None
+    # def get_current_position(self):
+    #     row = self.item_view_rows.get_focus_child()
+    #     if row is not None:
+    #         return row.get_first_child()._pos
+    #     found, i, pos = Gtk.BitsetIter.init_first(self.item_selection.get_selection())
+    #     if found and not i.next()[0]:
+    #         return pos
+    #     else:
+    #         return None
 
     def _get_selection(self):
         return util.misc.get_selection(self.item_selection)
