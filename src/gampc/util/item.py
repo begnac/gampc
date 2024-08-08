@@ -57,6 +57,9 @@ class Item(GObject.Object):
     def get_value(self):
         return self.value
 
+    def __str__(self):
+        return f"{self.__class__.__name__}({repr(self.value)})"
+
 
 class ItemFromCache(Item):
     def __init__(self, cache, **kwargs):
