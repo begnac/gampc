@@ -31,10 +31,7 @@ import asyncio
 import gasyncio
 import ampd
 
-from .util import unit
-from .util import resource
-from .util.logger import logger
-from .util.misc import get_modifier_state
+from . import util
 
 from . import __application__, __program_name__, __version__, __copyright__, __license_type__
 
@@ -51,12 +48,12 @@ class App(Gtk.Application):
         self.add_main_option(GLib.OPTION_REMAINING, 0, GLib.OptionFlags.NONE, GLib.OptionArg.STRING_ARRAY, '', _("[ACTION...]"))
 
     def __del__(self):
-        logger.debug(f'Deleting {self}')
+        util.logger.logger.debug(f'Deleting {self}')
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
 
-        logger.debug("Starting")
+        util.logger.logger.debug("Starting")
 
         gasyncio.start_slave_loop()
 
@@ -66,7 +63,7 @@ class App(Gtk.Application):
         self.menubar = Gio.Menu()
         self.set_menubar(self.menubar)
 
-        self.unit_manager = unit.UnitManager()
+        self.unit_manager = util.unit.UnitManager()
         # self.unit_manager.set_target('config')
         # self.unit_config = self.unit_manager.get_unit('config')
 
@@ -88,11 +85,11 @@ class App(Gtk.Application):
         self.unit_component = self.unit_manager.get_unit('component')
         self.unit_window = self.unit_manager.get_unit('window')
 
-        self.action_aggregator = resource.ActionAggregator(['app.action'], self, self.task_hold_app, self.unit_persistent)
+        self.action_aggregator = util.resource.ActionAggregator(['app.action'], self, self.task_hold_app, self.unit_persistent)
         self.unit_manager.add_aggregator(self.action_aggregator)
 
         self.fragile_accels = {}
-        self.menu_aggregator = resource.MenuAggregator(['app.menu'], self.menubar)
+        self.menu_aggregator = util.resource.MenuAggregator(['app.menu'], self.menubar)
         self.menu_aggregator.connect('resource-added', self.menubar_item_added_cb)
         self.menu_aggregator.connect('resource-removed', self.menubar_item_removed_cb)
         self.unit_manager.add_aggregator(self.menu_aggregator)
@@ -108,20 +105,20 @@ class App(Gtk.Application):
         self.systemd_inhibit_fd = None
         self.unit_server.ampd_server_properties.connect('notify::state', self.set_inhibit)
 
-        self.add_action(resource.Action('new-window', self.new_window_cb))
-        self.add_action(resource.Action('close-window', self.close_window_cb))
-        self.add_action(resource.Action('notify', self.task_hold_app(self.action_notify_cb)))
-        self.add_action(resource.Action('quit', self.quit))
-        self.add_action(resource.Action('component-start', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
-        self.add_action(resource.Action('component-start-new-window', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
-        self.add_action(resource.Action('component-stop', self.component_stop_cb))
+        self.add_action(util.resource.Action('new-window', self.new_window_cb))
+        self.add_action(util.resource.Action('close-window', self.close_window_cb))
+        self.add_action(util.resource.Action('notify', self.task_hold_app(self.action_notify_cb)))
+        self.add_action(util.resource.Action('quit', self.quit))
+        self.add_action(util.resource.Action('component-start', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
+        self.add_action(util.resource.Action('component-start-new-window', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
+        self.add_action(util.resource.Action('component-stop', self.component_stop_cb))
 
         self.unit_server.ampd_connect()
 
         self.connect('window-removed', lambda self, window: window.shutdown())
 
     def do_shutdown(self):
-        logger.debug("Shutting down")
+        util.logger.logger.debug("Shutting down")
 
         self.unit_server.ampd_server_properties.disconnect_by_func(self.set_inhibit)
         self.unit_misc.disconnect_by_func(self.notify_block_fragile_accels_cb)
@@ -179,10 +176,10 @@ class App(Gtk.Application):
                 try:
                     success, name, target = Gio.Action.parse_detailed_name(option)
                 except Exception as e:
-                    logger.error(e)
+                    util.logger.logger.error(e)
                     continue
                 if not self.has_action(name):
-                    logger.error(_("Action '{name}' does not exist").format(name=name))
+                    util.logger.logger.error(_("Action '{name}' does not exist").format(name=name))
                 else:
                     self.activate_action(name, target)
         else:
@@ -200,9 +197,9 @@ class App(Gtk.Application):
     @staticmethod
     def excepthook(*args):
         if args[0] == ampd.errors.ReplyError:
-            logger.error(args[1])
+            util.logger.logger.error(args[1])
         else:
-            logger.error(args[1], exc_info=args)
+            util.logger.logger.error(args[1], exc_info=args)
         try:
             del sys.last_type, sys.last_value, sys.last_traceback
         except AttributeError:
@@ -222,7 +219,7 @@ class App(Gtk.Application):
             self.set_accels_for_action(action, [] if self.unit_misc.block_fragile_accels else self.fragile_accels[action])
 
     def menubar_item_added_cb(self, aggregator, target, menu_item):
-        if isinstance(menu_item, resource.MenuAction) and menu_item.accels:
+        if isinstance(menu_item, util.resource.MenuAction) and menu_item.accels:
             if menu_item.accels_fragile:
                 if menu_item.action in self.fragile_accels:
                     raise ValueError
@@ -231,7 +228,7 @@ class App(Gtk.Application):
                 self.set_accels_for_action(menu_item.action, menu_item.accels)
 
     def menubar_item_removed_cb(self, aggregator, target, menu_item):
-        if isinstance(menu_item, resource.MenuAction) and menu_item.accels:
+        if isinstance(menu_item, util.resource.MenuAction) and menu_item.accels:
             if menu_item.accels_fragile:
                 del self.fragile_accels[menu_item.action]
             self.set_accels_for_action(menu_item.action, [])
@@ -244,7 +241,7 @@ class App(Gtk.Application):
         self.get_active_window().destroy()
 
     def component_start_cb(self, action, parameter):
-        component = self.unit_component.get_component(parameter.unpack(), True if get_modifier_state() & Gdk.ModifierType.CONTROL_MASK else False)
+        component = self.unit_component.get_component(parameter.unpack(), True if util.misc.get_modifier_state() & Gdk.ModifierType.CONTROL_MASK else False)
         self.display_component(component, action.get_name().endswith('new-window'))
 
     def display_component(self, component, new_window):
@@ -264,7 +261,7 @@ class App(Gtk.Application):
             self.unit_component.remove_component(component)
 
     def quit(self, *args):
-        logger.debug("Quit")
+        util.logger.logger.debug("Quit")
         for win in self.get_windows():
             win.destroy()
         super().quit()
