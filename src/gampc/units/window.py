@@ -31,8 +31,8 @@ from .. import __application__
 
 
 class Window(Gtk.ApplicationWindow):
-    def __init__(self, app, unit):
-        super().__init__(application=app, show_menubar=True)
+    def __init__(self, unit, **kwargs):
+        super().__init__(show_menubar=True, **kwargs)
         self.unit = unit
         self.component = None
 
@@ -170,4 +170,4 @@ class __unit__(unit.UnitConfigMixin, unit.UnitServerMixin, unit.Unit):
         self.config.message_timeout._get(default=5)
 
     def new_window(self, app):
-        return Window(app, self)
+        return Window(self, application=app)
