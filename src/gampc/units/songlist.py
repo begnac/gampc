@@ -136,7 +136,7 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
                 ],
                 [
                     'Artist',
-                    '(.*), dir\. (.*) ([^ ]+)',
+                    '(.*), dir\\. (.*) ([^ ]+)',
                     '\\3, \\2 (\\1)'
                 ],
                 [
