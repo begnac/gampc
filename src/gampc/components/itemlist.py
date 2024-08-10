@@ -18,7 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import Gdk
 from gi.repository import Gtk
@@ -132,8 +131,9 @@ class ItemList(component.Component):
 
     def action_copy_delete_cb(self, action, parameter):
         items = self.view.get_selection_items()
+        self.clipboard_content = self.content_from_items(items)
         if action.get_name() in ['copy', 'cut']:
-            self.widget.get_clipboard().set_content(self.content_from_items(items))
+            util.misc.get_clipboard().set_content(self.clipboard_content)
         if action.get_name() in ['delete', 'cut']:
             self.remove_items(items)
 
@@ -144,49 +144,35 @@ class ItemList(component.Component):
             pos += 1
         return pos
 
-    # def drag_begin_cb(self, source, drag):
-    #     positions = self.get_selection()
-    #     if not positions:
-    #         return
-    #     icons = [self.create_row_drag_icon(ref.get_path()) for ref in context.drag_refs]
-    #     xscale, yscale = icons[0].get_device_scale()
-    #     width, height = icons[0].get_width(), icons[0].get_height() - yscale
-    #     target = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(width / xscale), int(height * len(context.drag_refs) / yscale) + 1)
-    #     cr = cairo.Context(target)
-    #     cr.set_source_rgba(0, 0, 0, 1)
-    #     cr.paint()
-    #     y = 2
-    #     for icon in icons:
-    #         cr.set_source_surface(icon, 2 / xscale, y / yscale)
-    #         cr.paint()
-    #         y += height
-    #     icon.flush()
-    #     Gtk.drag_set_icon_surface(context, target)
-
     def setup_drag(self):
-        self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY)
+        # self.drag_source = ui.dnd.ListDragSource(actions=Gdk.DragAction.COPY)
+        # self.view.item_view_rows.add_controller(self.drag_source)
+        # return
+        self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY|Gdk.DragAction.MOVE)
         self.drag_source_icon = Gtk.IconTheme.get_for_display(util.misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
         self.drag_source.set_icon(self.drag_source_icon, 5, 5)
         self.signal_handler_connect(self.drag_source, 'prepare', self.drag_prepare_cb)
         # self.signal_handler_connect(self.drag_source, 'drag-begin', self.drag_begin_cb)
         # self.signal_handler_connect(self.drag_source, 'drag-cancel', self.drag_cancel_cb)
         self.signal_handler_connect(self.drag_source, 'drag-end', self.drag_end_cb)
-        self.view.item_view.add_controller(self.drag_source)
 
-        self.drag_key_controller = Gtk.EventControllerKey()
-        self.signal_handler_connect(self.drag_key_controller, 'key-pressed', self.drag_key_pressed_cb, self.drag_source)
-        self.view.item_view.add_controller(self.drag_key_controller)
+        # self.view.item_view_rows.add_controller(self.drag_source)
+
+        # self.drag_key_controller = Gtk.EventControllerKey()
+        # self.signal_handler_connect(self.drag_key_controller, 'key-pressed', self.drag_key_pressed_cb, self.drag_source)
+        # self.view.item_view.add_controller(self.drag_key_controller)
 
     def drag_prepare_cb(self, source, x, y):
         source.selection = self.view.get_selection()
         if not source.selection:
-            row, x, y = util.misc.find_descendant_at_xy(self.view.item_view_rows, x, y, 1)
+            row, x, y = util.misc.find_descendant_at_xy(source.get_widget(), x, y, 1)
             if row is not None:
                 source.selection = [row.pos]
             else:
                 source.selection = None
                 return None
-        return self.content_from_items(self.view.item_selection[pos] for pos in source.selection)
+        self.drag_content = self.content_from_items(self.view.item_selection[pos] for pos in source.selection)
+        return self.drag_content
 
     # def drag_begin_cb(self, source, drag):
     #     pass
@@ -199,10 +185,14 @@ class ItemList(component.Component):
         if delete:
             self.remove_items([self.view.item_selection[pos] for pos in source.selection])
         del source.selection
+        drag.drop_done(True)
+        print(drag.get_content())
 
     @staticmethod
     def drag_key_pressed_cb(controller, keyval, keycode, modifiers, source):
         if keyval == Gdk.KEY_Escape:
+            drag = source.get_drag()
+            print(drag, source.get_contents())
             source.drag_cancel()
         return False
 
@@ -220,7 +210,14 @@ class ItemListEditableMixin:
         self.itemlist_actions.add_action(util.resource.Action('cut', self.action_copy_delete_cb))
         self.signal_handler_connect(self.view, 'notify::filtering', self.check_editable)
 
-        self.setup_drop()
+        self.drop_target = ui.dnd.ListDropTarget(self.add_items)
+        self.view.item_view_rows.add_controller(self.drop_target)
+
+    def shutdown(self):
+        self.view.item_view_rows.remove_controller(self.drop_target)
+        # Cleanup ????
+        del self.drop_target
+        super().shutdown()
 
     def get_editable(self):
         return self._editable
@@ -236,85 +233,13 @@ class ItemListEditableMixin:
         self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
     def action_paste_cb(self, action, parameter):
-        self.widget.get_clipboard().read_value_async(util.item.ItemsFromCacheTransfer, 0, None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
+        util.misc.get_clipboard().read_value_async(util.item.ItemsFromCacheTransfer, 0, None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
 
     def action_paste_finish_cb(self, clipboard, result, before):
         strings = clipboard.read_value_finish(result).values
         row = self.view.item_view_rows.get_focus_child()
         if strings is not None and row is not None:
             self.add_items(strings, self.row_get_position(row, after=not before))
-
-    def setup_drop(self):
-        self.drop_target = Gtk.DropTarget(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=Gdk.ContentFormats.new_for_gtype(util.item.ItemsFromCacheTransfer)) # , preload=True)
-        # self.drop_target = Gtk.DropTarget.new(GLib.Variant, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
-        self.drop_target.drop_row = None
-        print(self.drop_target.props.formats.get_mime_types())
-        print(self.drop_target.props.formats.get_gtypes())
-        # self.signal_handler_connect(self.drop_target, 'notify::value', self.drop_notify_value_cb)
-        # self.signal_handler_connect(self.drop_target, 'accept', self.drop_accept_cb)
-        self.signal_handler_connect(self.drop_target, 'enter', self.drop_action_cb)
-        self.signal_handler_connect(self.drop_target, 'motion', self.drop_action_cb)
-        self.signal_handler_connect(self.drop_target, 'leave', self.drop_leave_cb)
-        self.signal_handler_connect(self.drop_target, 'drop', self.drop_cb)
-        self.view.item_view_rows.add_controller(self.drop_target)
-
-        self.drop_key_controller = Gtk.EventControllerKey()
-        self.signal_handler_connect(self.drop_key_controller, 'key-pressed', self.drop_key_pressed_cb, self.drop_target)
-        self.signal_handler_connect(self.drop_key_controller, 'modifiers', self.drop_modifiers_cb, self.drop_target)
-        self.view.item_view_rows.add_controller(self.drop_key_controller)
-
-    # @staticmethod
-    # def drop_accept_cb(target, drop):
-    #     print('accept')
-    #     return True
-
-    @staticmethod
-    def drop_action_cb(target, x, y):
-        # row, x, y = None, 0, 0
-        row, x, y = util.misc.find_descendant_at_xy(target.get_widget(), x, y, 1)
-        if row is None:
-            row = target.get_widget().get_last_child()
-        elif y < row.get_height() / 2:
-            if row.pos == 0:
-                row = None
-            else:
-                row = target.get_widget().observe_children()[row.pos - 1]
-        if row != target.drop_row:
-            if target.drop_row is not None:
-                target.drop_row.remove_css_class('drop-row')
-            target.drop_row = row
-            if target.drop_row is not None:
-                target.drop_row.add_css_class('drop-row')
-        if target.get_actions() & Gdk.DragAction.MOVE and util.misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
-            return Gdk.DragAction.MOVE
-        else:
-            return Gdk.DragAction.COPY
-
-    @staticmethod
-    def drop_cleanup(target):
-        if target.drop_row is not None:
-            target.drop_row.remove_css_class('drop-row')
-            target.drop_row = None
-
-    def drop_leave_cb(self, target):
-        print('leave')
-        self.drop_cleanup(target)
-
-    def drop_cb(self, target, value, x, y):
-        self.add_items(value.values, target.drop_row.pos + 1 if target.drop_row is not None else 0)
-        self.drop_cleanup(target)
-
-    @staticmethod
-    def drop_key_pressed_cb(controller, keyval, keycode, modifiers, target):
-        if keyval == Gdk.KEY_Escape:
-            target.get_drop().finish(0)
-            target.reject()
-        return False
-
-    @staticmethod
-    def drop_modifiers_cb(controller, modifiers, target):
-        if target.get_actions() & Gdk.DragAction.MOVE and util.misc.get_modifier_state() & Gdk.ModifierType.SHIFT_MASK:
-            pass
 
 
 class ItemListEditStackMixin(ItemListEditableMixin):

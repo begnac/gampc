@@ -19,3 +19,4 @@
 
 
 from . import view
+from . import dnd
