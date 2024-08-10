@@ -120,6 +120,8 @@ class App(Gtk.Application):
     def do_shutdown(self):
         util.logger.logger.debug("Shutting down")
 
+        util.misc.get_clipboard().set_content(None)
+
         self.unit_server.ampd_server_properties.disconnect_by_func(self.set_inhibit)
         self.unit_misc.disconnect_by_func(self.notify_block_fragile_accels_cb)
         self.unit_manager.set_target()
