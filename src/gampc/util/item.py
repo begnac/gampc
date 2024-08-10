@@ -158,3 +158,17 @@ class ItemListStore(Gio.ListStore):
         if n is None:
             n = self.get_n_items()
         return [item.to_string() for item in self[pos:pos + n]]
+
+
+class ItemsFromCacheTransfer(GObject.Object):
+    values = GObject.Property()
+
+    def __init__(self, items):
+        super().__init__(values=[item.get_name() for item in items])
+
+
+class ItemsWithDictTransfer(GObject.Object):
+    values = GObject.Property()
+
+    def __init__(self, items):
+        super().__init__(values=[item.get_value() for item in items])

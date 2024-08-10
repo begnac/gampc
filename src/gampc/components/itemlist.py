@@ -24,17 +24,12 @@ from gi.repository import Gdk
 from gi.repository import Gtk
 
 import asyncio
-import ast
 
 import ampd
 
 from .. import util
 from .. import ui
 from . import component
-
-
-
-TRY_DND = True
 
 
 class ItemList(component.Component):
@@ -54,8 +49,7 @@ class ItemList(component.Component):
         self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
         self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
 
-        if TRY_DND:
-            self.setup_drag()
+        self.setup_drag()
 
         self.itemlist_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
 
@@ -70,8 +64,7 @@ class ItemList(component.Component):
         del self.itemlist_actions
         self.view.item_view.columns['file'].get_factory().disconnect_by_func(self.bind_cb)
         self.view.cleanup()
-        if TRY_DND:
-            del self.drag_source
+        del self.drag_source
         super().shutdown()
 
     def bind_cb(self, factory, listitem):
@@ -79,16 +72,12 @@ class ItemList(component.Component):
         listitem.row.pos = listitem.get_position()
 
     def content_from_items(self, items):
-        return Gdk.ContentProvider.new_for_value(repr([item.to_string() for item in items]))
-
-    @staticmethod
-    def strings_from_raw(raw):
-        try:
-            strings = ast.literal_eval(raw)
-            if isinstance(strings, list) and all(isinstance(string, str) for string in strings):
-                return strings
-        except Exception:
-            pass
+        item_from_cache_transfer = Gdk.ContentProvider.new_for_value(util.item.ItemsFromCacheTransfer(items))
+        string_transfer = Gdk.ContentProvider.new_for_value(repr([item.value for item in items]))
+        content = Gdk.ContentProvider.new_union([item_from_cache_transfer,
+                                                 string_transfer,
+                                                 ])
+        return content
 
     @ampd.task
     async def view_activate_cb(self, view, position):
@@ -176,16 +165,17 @@ class ItemList(component.Component):
 
     def setup_drag(self):
         self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY)
-        self.drag_source.set_icon(Gtk.IconTheme.get_for_display(util.misc.get_display()).lookup_icon('face-cool', None, 48, 1, Gtk.TextDirection.NONE, 0), 5, 5)
+        self.drag_source_icon = Gtk.IconTheme.get_for_display(util.misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
+        self.drag_source.set_icon(self.drag_source_icon, 5, 5)
         self.signal_handler_connect(self.drag_source, 'prepare', self.drag_prepare_cb)
-        self.signal_handler_connect(self.drag_source, 'drag-begin', self.drag_begin_cb)
-        self.signal_handler_connect(self.drag_source, 'drag-cancel', self.drag_cancel_cb)
+        # self.signal_handler_connect(self.drag_source, 'drag-begin', self.drag_begin_cb)
+        # self.signal_handler_connect(self.drag_source, 'drag-cancel', self.drag_cancel_cb)
         self.signal_handler_connect(self.drag_source, 'drag-end', self.drag_end_cb)
-        self.view.item_view_rows.add_controller(self.drag_source)
+        self.view.item_view.add_controller(self.drag_source)
 
         self.drag_key_controller = Gtk.EventControllerKey()
         self.signal_handler_connect(self.drag_key_controller, 'key-pressed', self.drag_key_pressed_cb, self.drag_source)
-        self.view.item_view_rows.add_controller(self.drag_key_controller)
+        self.view.item_view.add_controller(self.drag_key_controller)
 
     def drag_prepare_cb(self, source, x, y):
         source.selection = self.view.get_selection()
@@ -196,27 +186,18 @@ class ItemList(component.Component):
             else:
                 source.selection = None
                 return None
-        source.data = GLib.Variant('as', [self.view.item_selection[pos].to_string() for pos in source.selection])
-        cp = Gdk.ContentProvider.new_for_value(source.data)
-        print(cp.props.formats.get_mime_types(), cp.props.formats.get_gtypes())
-        return cp
+        return self.content_from_items(self.view.item_selection[pos] for pos in source.selection)
 
-    def drag_begin_cb(self, source, drag):
-        print(drag.get_actions())
-        print(drag.set_property('actions', Gdk.DragAction.COPY | Gdk.DragAction.MOVE))
-        print(drag.get_actions())
-        pass
+    # def drag_begin_cb(self, source, drag):
+    #     pass
 
-    def drag_cancel_cb(self, source, drag, reason):
-        print(2, source.get_content(), drag, reason)
-        source.set_content(None)
-        drag.drop_done(False)
-        return False
+    # def drag_cancel_cb(self, source, drag, reason):
+    #     return False
 
     def drag_end_cb(self, source, drag, delete):
+        print('end', source, delete)
         if delete:
             self.remove_items([self.view.item_selection[pos] for pos in source.selection])
-        print(888888888888)
         del source.selection
 
     @staticmethod
@@ -252,39 +233,40 @@ class ItemListEditableMixin:
         editable = self._editable and not self.view.filtering
         for name in ['paste', 'paste-before', 'delete', 'cut']:
             self.itemlist_actions.lookup(name).set_enabled(editable)
-        # if TRY_DND:
-        #     self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
+        self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
     def action_paste_cb(self, action, parameter):
-        self.widget.get_clipboard().read_text_async(None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
+        self.widget.get_clipboard().read_value_async(util.item.ItemsFromCacheTransfer, 0, None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
 
     def action_paste_finish_cb(self, clipboard, result, before):
-        try:
-            strings = self.strings_from_raw(clipboard.read_text_finish(result))
-        except GLib.GError as error:
-            print(error)
-            return
+        strings = clipboard.read_value_finish(result).values
         row = self.view.item_view_rows.get_focus_child()
         if strings is not None and row is not None:
             self.add_items(strings, self.row_get_position(row, after=not before))
 
     def setup_drop(self):
-        self.drop_target = Gtk.DropTarget(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=Gdk.ContentFormats.new_for_gtype(GLib.Variant), preload=True)
+        self.drop_target = Gtk.DropTarget(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=Gdk.ContentFormats.new_for_gtype(util.item.ItemsFromCacheTransfer)) # , preload=True)
+        # self.drop_target = Gtk.DropTarget.new(GLib.Variant, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
         self.drop_target.drop_row = None
         print(self.drop_target.props.formats.get_mime_types())
         print(self.drop_target.props.formats.get_gtypes())
+        # self.signal_handler_connect(self.drop_target, 'notify::value', self.drop_notify_value_cb)
+        # self.signal_handler_connect(self.drop_target, 'accept', self.drop_accept_cb)
         self.signal_handler_connect(self.drop_target, 'enter', self.drop_action_cb)
         self.signal_handler_connect(self.drop_target, 'motion', self.drop_action_cb)
         self.signal_handler_connect(self.drop_target, 'leave', self.drop_leave_cb)
         self.signal_handler_connect(self.drop_target, 'drop', self.drop_cb)
-        # self.signal_handler_connect(self.drop_target, 'notify::value', misc.AutoWeakMethod(self.drop_notify_value_cb))
-        # self.drop_target.set_preload(True)
         self.view.item_view_rows.add_controller(self.drop_target)
 
         self.drop_key_controller = Gtk.EventControllerKey()
         self.signal_handler_connect(self.drop_key_controller, 'key-pressed', self.drop_key_pressed_cb, self.drop_target)
         self.signal_handler_connect(self.drop_key_controller, 'modifiers', self.drop_modifiers_cb, self.drop_target)
         self.view.item_view_rows.add_controller(self.drop_key_controller)
+
+    # @staticmethod
+    # def drop_accept_cb(target, drop):
+    #     print('accept')
+    #     return True
 
     @staticmethod
     def drop_action_cb(target, x, y):
@@ -309,24 +291,18 @@ class ItemListEditableMixin:
             return Gdk.DragAction.COPY
 
     @staticmethod
-    def drop_leave_cb(target):
+    def drop_cleanup(target):
         if target.drop_row is not None:
             target.drop_row.remove_css_class('drop-row')
             target.drop_row = None
 
-    def drop_cb(self, target, value, x, y):
-        if value.is_of_type(GLib.VariantType('as')):
-            self.add_items(value.unpack(), target.drop_row.pos + 1 if target.drop_row is not None else 0)
-        else:
-            target.reject()
-        self.drop_leave_cb(target)
+    def drop_leave_cb(self, target):
+        print('leave')
+        self.drop_cleanup(target)
 
-    # def drop_notify_value_cb(self, target, param):
-    #     drop = target.get_current_drop()
-    #     if drop is None:
-    #         return
-    #     if not target.get_value().is_of_type(GLib.VariantType('as')):
-    #         target.reject()
+    def drop_cb(self, target, value, x, y):
+        self.add_items(value.values, target.drop_row.pos + 1 if target.drop_row is not None else 0)
+        self.drop_cleanup(target)
 
     @staticmethod
     def drop_key_pressed_cb(controller, keyval, keycode, modifiers, target):
