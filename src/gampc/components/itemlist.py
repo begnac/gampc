@@ -156,7 +156,7 @@ class ItemList(component.Component):
         # self.signal_handler_connect(self.drag_source, 'drag-cancel', self.drag_cancel_cb)
         self.signal_handler_connect(self.drag_source, 'drag-end', self.drag_end_cb)
 
-        # self.view.item_view_rows.add_controller(self.drag_source)
+        self.view.item_view_rows.add_controller(self.drag_source)
 
         # self.drag_key_controller = Gtk.EventControllerKey()
         # self.signal_handler_connect(self.drag_key_controller, 'key-pressed', self.drag_key_pressed_cb, self.drag_source)
