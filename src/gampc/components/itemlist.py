@@ -37,10 +37,13 @@ class ItemList(component.Component):
     duplicate_test_columns = []
     duplicate_extra_items = None
 
-    def __init__(self, unit, widget_factory, *args, **kwargs):
+    factory_factory = ui.view.LabelItemFactory
+    item_factory = util.item.Item
+
+    def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.widget = self.view = ui.view.View(self.fields, widget_factory, util.item.ItemListStore(self.item_factory), self.__class__.sortable, unit_misc=unit.unit_misc)
+        self.widget = self.view = ui.view.View(self.fields, self.factory_factory, self.__class__.sortable, unit_misc=unit.unit_misc)
         self.view.item_view.add_css_class('itemlist')
         self.focus_widget = self.view.item_view
 
@@ -71,18 +74,13 @@ class ItemList(component.Component):
         listitem.row.pos = listitem.get_position()
 
     def content_from_items(self, items):
-        item_from_cache_transfer = Gdk.ContentProvider.new_for_value(util.item.ItemsFromCacheTransfer(items))
-        string_transfer = Gdk.ContentProvider.new_for_value(repr([item.value for item in items]))
-        content = Gdk.ContentProvider.new_union([item_from_cache_transfer,
-                                                 string_transfer,
-                                                 ])
-        return content
+        return util.item.transfer_union(items, util.item.ItemKeyTransfer, util.item.ItemStringTransfer)
 
     @ampd.task
     async def view_activate_cb(self, view, position):
         if self.unit.unit_persistent.protect_active:
             return
-        filename = self.view.item_selection[position].get_name()
+        filename = self.view.item_selection[position].get_key()
         items = await self.ampd.playlistfind('file', filename)
         if items:
             item_id = sorted(items, key=lambda item: item['Pos'])[0]['Id']
@@ -90,13 +88,19 @@ class ItemList(component.Component):
             item_id = await self.ampd.addid(filename)
         await self.ampd.playid(item_id)
 
-    def set_items(self, items):
-        self.splice_items(0, None, items)
+    def set_values(self, values):
+        self.splice_values(0, None, values)
 
-    def splice_items(self, pos, remove, add):
+    def splice_values(self, pos, remove, values):
         if remove is None:
             remove = self.view.item_store.get_n_items()
-        self.view.item_store.splice_items(pos, remove, add)
+        values = list(values)
+        n = len(values)
+        new_items = [] if remove >= n else [self.item_factory() for _ in range(n - remove)]
+        items = self.view.item_store[pos:pos + remove] + new_items
+        for i in range(n):
+            items[i].load(values[i])
+        self.view.item_store[pos:pos + remove] = items[:n]
 
     def mark_duplicates(self, *args):
         items = list(self.view.item_store)
@@ -106,22 +110,22 @@ class ItemList(component.Component):
         marker = 0
         firsts = {}
         for i, item in enumerate(items):
-            if item.value == self.unit.unit_server.SEPARATOR_FILE:  # Only place where self is used here ...
+            if item.get_key() == self.unit.unit_server.SEPARATOR_FILE:
                 continue
-            test = tuple(item.data.get(name) for name in self.duplicate_test_columns)
+            test = tuple(item.get_field(name) for name in self.duplicate_test_columns)
             first = firsts.get(test)
             if first is None:
                 firsts[test] = i
                 if item.duplicate is not None:
                     item.duplicate = None
-                    item.rebind()
+                    # item.rebind()
             else:
                 if items[first].duplicate is None:
                     items[first].duplicate = marker
-                    items[first].rebind()
+                    # items[first].rebind()
                     marker += 1
                 item.duplicate = items[first].duplicate
-                item.rebind()
+                # item.rebind()
 
     def action_reset_cb(self, action, parameter):
         self.view.filter_item.set_data({})
@@ -233,13 +237,13 @@ class ItemListEditableMixin:
         self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
     def action_paste_cb(self, action, parameter):
-        util.misc.get_clipboard().read_value_async(util.item.ItemsFromCacheTransfer, 0, None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
+        util.misc.get_clipboard().read_value_async(util.item.ItemKeyTransfer, 0, None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
 
     def action_paste_finish_cb(self, clipboard, result, before):
-        strings = clipboard.read_value_finish(result).values
+        values = clipboard.read_value_finish(result).values
         row = self.view.item_view_rows.get_focus_child()
-        if strings is not None and row is not None:
-            self.add_items(strings, self.row_get_position(row, after=not before))
+        if values is not None and row is not None:
+            self.add_items(values, self.row_get_position(row, after=not before))
 
 
 class ItemListEditStackMixin(ItemListEditableMixin):
@@ -276,7 +280,7 @@ class ItemListEditStackMixin(ItemListEditableMixin):
             self.edit_stack.set_splicer()
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.edit_stack.set_splicer(self.splice_items)
+            self.edit_stack.set_splicer(self.edit_stack_splicer)
         else:
             self.view.item_store.remove_all()
 
@@ -308,16 +312,16 @@ class ItemListEditStackMixin(ItemListEditableMixin):
         for k in indices[1:] + [0]:
             j += 1
             if j != k:
-                items = [item.get_value() for item in self.view.item_selection[i:j]]
-                deltas.append(util.editstack.SimpleDelta(items, i, True))
+                values = [self.edit_stack_getter(item) for item in self.view.item_selection[i:j]]
+                deltas.append(util.editstack.SimpleDelta(values, i, True))
                 i = j = k
         self.edit_stack.set_from_here([util.editstack.MetaDelta(deltas, False)])
         self.step_edit_stack(True)
 
-    def add_items(self, items, position):
-        if not items:
+    def add_items(self, values, position):
+        if not values:
             return
-        self.edit_stack.set_from_here([util.editstack.SimpleDelta(items, position, True)])
+        self.edit_stack.set_from_here([util.editstack.SimpleDelta(values, position, True)])
         self.step_edit_stack(True)
 
     def edit_stack_changed(self):
@@ -371,22 +375,22 @@ class AIOQueue:
             self.task = None
 
 
-class ItemListFromCacheMixin:
+class ItemListDatabaseMixin:
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
         self.aioqueue = AIOQueue()
 
-    def splice_items(self, pos, remove, add):
-        self.aioqueue.queue_task(self._splice_items, pos, remove, list(add))
+    def set_keys(self, keys):
+        self.splice_keys(0, None, keys)
 
-    async def _splice_items(self, task, pos, remove, add):
-        await self.unit.database.ensure(add)
+    def splice_keys(self, pos, remove, keys):
+        self.aioqueue.queue_task(self._splice_keys, pos, remove, list(keys))
+
+    async def _splice_keys(self, task, pos, remove, keys):
+        await self.cache.ensure_keys(keys)
         if task is not None:
             await task
-        super().splice_items(pos, remove, add)
-
-    def item_factory(self):
-        return util.item.ItemFromCache(self.unit.database)
+        self.splice_values(pos, remove, (self.cache[key] for key in keys))
 
     #  In case we inherit also from ItemListEditStackMixin.
     def refocus(self, *args):

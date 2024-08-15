@@ -56,15 +56,10 @@ class __unit__(songlist.UnitSongListMixin, unit.UnitCssMixin, unit.Unit):
     ##############################    TODO : merge playing CSS with stream
 
     COMPONENT_CLASS = queue.Queue
-    CSS = '''
-    columnview.queue > listview > row > cell.playing {
-      background: rgba(128,128,128,0.1);
-      font-style: italic;
-      font-weight: bold;
-    }
-    columnview.queue > listview > row > cell.high-priority {
+    CSS = f'''
+    columnview.queue > listview > row > cell.{queue.QUEUE_PRIORITY_CSS_PREFIX}- {{
       background: rgba(0,255,0,0.5);
-    }
+    }}
     '''
 
     def __init__(self, name, manager):

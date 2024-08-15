@@ -34,8 +34,9 @@ class SongList(itemlist.ItemList):
     DND_TARGET = 'GAMPC_SONG'
 
     def __init__(self, unit, *args, **kwargs):
+        self.cache = unit.unit_database.cache
         self.fields = unit.unit_songlist.fields
-        super().__init__(unit, *args, widget_factory=lambda: Gtk.Label(halign=Gtk.Align.START), **kwargs)
+        super().__init__(unit, *args, **kwargs)
         self.songlist_actions = self.add_actions_provider('songlist')
         # self.songlist_actions.add_action(resource.Action('delete-file', self.action_delete_file_cb))
 
@@ -43,8 +44,15 @@ class SongList(itemlist.ItemList):
         del self.songlist_actions
         super().shutdown()
 
-    def get_filenames(self, selection):
-        return self.view.get_filenames(selection)
+    def set_songs(self, songs):
+        for song in songs:
+            self.unit.unit_songlist.fields.set_derived_fields(song)
+            self.cache[song['file']] = song
+        self.set_values(songs)
+
+
+    # def get_filenames(self, selection):
+    #     return self.view.get_filenames(selection)
 
     # def records_set_fields(self, songs):
     #     for song in songs:
@@ -79,7 +87,7 @@ class SongListTotalsMixin:
         self.signal_handler_connect(self.view.item_store, 'items-changed', self.set_totals)
 
     def set_totals(self, store, *args):
-        time = sum(int(self.unit.database.get(song, {}).get('Time', '0')) for song in store)
+        time = sum(int(item.get_field('Time', '0')) for item in store)
         self.status = '{} / {}'.format(store.get_n_items(), util.misc.format_time(time))
 
 
@@ -99,8 +107,8 @@ class SongListAddSpecialMixin:  #####  Not ready
             self.add_record(dict(file=url))
 
 
-@util.unit.require_units('songlist')
-class UnitSongListMixin(itemlist.UnitItemListMixin, util.unit.UnitDatabaseMixin):
+@util.unit.require_units('songlist', 'database')
+class UnitSongListMixin(itemlist.UnitItemListMixin):
     pass
 
 

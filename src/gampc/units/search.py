@@ -26,7 +26,7 @@ from ..components import itemlist
 from ..components import songlist
 
 
-class Search(component.ComponentEntryMixin, itemlist.ItemListFromCacheMixin, songlist.SongList):
+class Search(component.ComponentEntryMixin, itemlist.ItemListDatabaseMixin, songlist.SongList):
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
 
     sortable = True
@@ -68,7 +68,7 @@ class Search(component.ComponentEntryMixin, itemlist.ItemListFromCacheMixin, son
         condition = sum((['any', s] if '=' not in s else s.split('=', 1) for s in self.parse(query)), [])
         if condition:
             songs = await (self.ampd.find if find else self.ampd.search)(*condition)
-            self.set_items(song['file'] for song in songs)
+            self.set_songs(songs)
 
     @staticmethod
     def parse(s):

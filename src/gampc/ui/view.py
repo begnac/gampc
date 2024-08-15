@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import Gio
 from gi.repository import GObject
 from gi.repository import Gtk
 
@@ -29,12 +30,15 @@ from . import listviewsearch
 from . import editable
 
 
-class FieldItemFactory(Gtk.SignalListItemFactory):
-    def __init__(self, name, widget_factory):
+class ItemFactory(Gtk.SignalListItemFactory):
+    def __init__(self, name):
         super().__init__()
 
         self.name = name
-        self.widget_factory = widget_factory
+
+        self.binders = {}
+        self.binders['value'] = (self.value_binder, name)
+        self.binders['duplicate'] = (self.duplicate_binder,)
 
         self.connect('setup', self.setup_cb)
         self.connect('bind', self.bind_cb)
@@ -43,26 +47,80 @@ class FieldItemFactory(Gtk.SignalListItemFactory):
 
     @staticmethod
     def setup_cb(self, listitem):
-        listitem.set_child(self.widget_factory())
+        listitem.set_child(self.make_widget())
 
     @staticmethod
     def bind_cb(self, listitem):
-        listitem.get_item().bind(listitem.get_child(), self.name)
+        self.bind(listitem.get_child(), listitem.get_item())
 
     @staticmethod
     def unbind_cb(self, listitem):
-        listitem.get_item().unbind(self.name)
+        self.unbind(listitem.get_child(), listitem.get_item())
 
     # @staticmethod
     # def teardown_cb(self, listitem):
     #     pass
 
+    def bind(self, widget, item):
+        for binder, *args in self.binders.values():
+            binder(widget, item, *args)
+        item.connect('notify', self.notify_item_cb, widget)
+
+    def unbind(self, widget, item):
+        item.disconnect_by_func(self.notify_item_cb)
+
+    def notify_item_cb(self, item, param, widget):
+        binder, *args = self.binders[param.name]
+        binder(widget, item, *args)
+
+    @staticmethod
+    def value_binder(widget, item, name):
+        widget.set_label(item.get_field(name))
+
+    @staticmethod
+    def duplicate_binder(widget, item):
+        if item.duplicate is None:
+            suffix = None
+        else:
+            suffix = str(item.duplicate % 64)
+        util.misc.add_unique_css_class(widget.get_parent(), 'duplicate', suffix)
+
+
+class LabelItemFactory(ItemFactory):
+    @staticmethod
+    def make_widget():
+        return Gtk.Label(halign=Gtk.Align.START)
+
+
+class EditableItemFactory(ItemFactory):
+    def __init__(self, name, unit_misc, always_editable=False):
+        super().__init__(name)
+
+        self.unit_misc = unit_misc
+        self.always_editable = always_editable
+
+    def make_widget(self):
+        return editable.EditableLabel(always_editable=self.always_editable, unit_misc=self.unit_misc)
+
+    def bind(self, widget, item):
+        super().bind(widget, item)
+        widget.connect('edited', self.label_edited_cb, item, self.name)
+
+    def unbind(self, widget, item):
+        super().unbind(widget, item)
+        widget.disconnect_by_func(self.label_edited_cb)
+
+    @staticmethod
+    def label_edited_cb(widget, item, name):
+        item.value[name] = widget.get_text()
+        item.value = item.value
+
 
 class FieldItemColumn(Gtk.ColumnViewColumn):
-    def __init__(self, field, widget_factory, *, sortable):
+    def __init__(self, field, *, sortable, **kwargs):
         self.name = field.name
 
-        super().__init__(factory=FieldItemFactory(self.name, widget_factory))
+        super().__init__(**kwargs)
 
         field.bind_property('title', self, 'title', GObject.BindingFlags.SYNC_CREATE)
         field.bind_property('visible', self, 'visible', GObject.BindingFlags.SYNC_CREATE)
@@ -76,8 +134,8 @@ class FieldItemColumn(Gtk.ColumnViewColumn):
 
     @staticmethod
     def sort_func(item1, item2, name):
-        s1 = item1.get_datum(name, '')
-        s2 = item2.get_datum(name, '')
+        s1 = item1.get_field(name)
+        s2 = item2.get_field(name)
         return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
 
@@ -86,14 +144,12 @@ class ItemView(Gtk.ColumnView):
     visible_titles = GObject.Property(type=bool, default=True)
     # column_defs = GObject.Property(type=Gio.ListModel)
 
-    def __init__(self, fields, widget_factory, **kwargs):
+    def __init__(self, fields, factory_factory, **kwargs):
         self.fields = fields
         super().__init__(show_row_separators=True, show_column_separators=True, **kwargs)
         self.add_css_class('data-table')
 
-        self.widget_factory = widget_factory
-
-        self.columns = {field.name: FieldItemColumn(field, self.widget_factory, sortable=self.sortable) for field in fields.fields.values()}
+        self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name)) for field in fields.fields.values()}
         for name in fields.order:
             self.append_column(self.columns[name.get_string()])
 
@@ -104,7 +160,6 @@ class ItemView(Gtk.ColumnView):
     def cleanup(self):
         self.fields.order.disconnect_by_func(self.fields_order_changed_cb)
         self.get_columns().disconnect_by_func(self.columns_changed_cb)
-        del self.widget_factory
         for col in list(self.get_columns()):
             self.remove_column(col)
 
@@ -126,26 +181,26 @@ class ItemView(Gtk.ColumnView):
 class View(Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, widget_factory, item_store, sortable, *, selection_model=Gtk.MultiSelection, unit_misc):
-        # self.sortable = sortable
-
+    def __init__(self, fields, factory_factory, sortable, *, selection_model=Gtk.MultiSelection, unit_misc):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
+
+        self.unit_misc = unit_misc
 
         self.filter_filter = Gtk.CustomFilter()
         self.filter_filter.set_filter_func(self.filter_func)
 
-        self.filter_item = util.item.ItemWithDict(value={})
-        self.filter_store = util.item.ItemListStore(item_factory=None)
+        self.filter_item = util.item.Item(value={})
+        self.filter_store = Gio.ListStore()
         self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = ItemView(fields, lambda: editable.EditableLabel(always_editable=True, unit_misc=unit_misc), sortable=False, model=self.filter_selection)
+        self.filter_view = ItemView(fields, self.filter_factory_factory, sortable=False, model=self.filter_selection)
         self.filter_view.add_css_class('filter')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
         self.append(self.scrolled_filter_view)
-        self.filter_item.connect('changed', self.filter_changed_cb)
+        self.filter_item.connect('notify::value', self.notify_filter_cb)
 
         self.item_selection = selection_model()
-        self.item_view = ItemView(fields, widget_factory, sortable=sortable, model=self.item_selection, vexpand=True, enable_rubberband=False)
+        self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_selection, vexpand=True, enable_rubberband=False)
         self.item_view.add_css_class('items')
         self.item_view_rows = self.item_view.get_last_child()
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view, focusable=False)
@@ -155,7 +210,7 @@ class View(Gtk.Box):
         self.bind_property('filtering', self.filter_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE)
         self.bind_property('filtering', self.item_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
 
-        self.item_store = item_store
+        self.item_store = Gio.ListStore(item_type=util.item.Item)
         # self.item_selection.set_model(self.item_store)
 
         self.item_store_filter = Gtk.FilterListModel(model=self.item_store)
@@ -167,20 +222,22 @@ class View(Gtk.Box):
             self.item_selection.set_model(self.item_store_filter)
             self.item_view.sort_by_column(None, 0)
 
-        self.view_search = listviewsearch.ListViewSearch(self.item_view_rows, lambda text, item: any(text.lower() in value.lower() for value in item.data.values() if isinstance(value, str)))
+        self.view_search = listviewsearch.ListViewSearch(self.item_view_rows, lambda text, item: any(text.lower() in item.get_field(name).lower() for name in fields.fields))
 
         self.connect('notify::filtering', self.notify_filtering_cb)
 
     def cleanup(self):
-        self.filter_item.disconnect_by_func(self.filter_changed_cb)
+        self.filter_item.disconnect_by_func(self.notify_filter_cb)
         self.filter_filter.set_filter_func(None)
         self.filter_view.cleanup()
         self.item_store.remove_all()
         self.item_view.cleanup()
         self.view_search.cleanup()
-        del self.item_store.item_factory
 
-    def filter_changed_cb(self, item):
+    def filter_factory_factory(self, name):
+        return EditableItemFactory(name, always_editable=True, unit_misc=self.unit_misc)
+
+    def notify_filter_cb(self, item, param):
         self.filter_filter.changed(Gtk.FilterChange.DIFFERENT)
 
     @staticmethod
@@ -194,7 +251,7 @@ class View(Gtk.Box):
 
     def filter_func(self, item):
         for name, value in self.filter_item.value.items():
-            if re.search(value, item.get_datum(name, ''), re.IGNORECASE) is None:
+            if re.search(value, self.item_get_field(item, name), re.IGNORECASE) is None:
                 return False
         return True
 
@@ -217,7 +274,7 @@ class View(Gtk.Box):
     def get_selection_items(self):
         return list(map(lambda i: self.item_selection[i], self._get_selection()))
 
-    def get_filenames(self, selection):
+    def xget_filenames(self, selection):
         if selection:
             return list(map(lambda i: self.item_selection[i].file, self._get_selection()))
         else:

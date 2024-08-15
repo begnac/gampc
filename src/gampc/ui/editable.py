@@ -66,6 +66,9 @@ class EditableLabel(EditableMixin, Gtk.EditableLabel):
         self.connect('notify::editing', self.notify_editing_cb)
         self.bind_property('label', self, 'text', GObject.BindingFlags.SYNC_CREATE)
 
+    def set_label(self, label):
+        self.label = label
+
     def really_start_editing(self):
         self.set_editable(True)
         self.start_editing()

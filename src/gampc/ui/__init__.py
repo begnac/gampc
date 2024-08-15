@@ -18,5 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from . import view
 from . import dnd
+from . import treelist
+from . import view

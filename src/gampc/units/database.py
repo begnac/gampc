@@ -27,8 +27,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
         self.require('songlist')
-        self.cache = util.cache.AsyncCache(self.database_retrieve)
-        self.cache.add_inject_hook(self.unit_songlist.fields.set_derived_fields)
+        self.cache = util.cache.AsyncCache(self.cache_retrieve)
 
     def shutdown(self):
         super().shutdown()
@@ -40,7 +39,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
             await self.ampd.idle(ampd.DATABASE)
             self.cache.clear()
 
-    async def database_retrieve(self, key):
+    async def cache_retrieve(self, key):
         try:
             songs = await self.ampd.find('file', key)
         except Exception as e:
@@ -50,6 +49,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
             song = {'file': key}
         elif len(songs) == 1:
             song = songs[0]
+            self.unit_songlist.fields.set_derived_fields(song)
         else:
             raise ValueError
         return song

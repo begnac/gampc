@@ -48,7 +48,7 @@ class StreamDatabase(db.Database):
                                                                                                        ':' + ',:'.join(self.fields.basic_names)), stream_)
 
 
-class __unit__(itemlist.UnitItemListMixin, unit.UnitCssMixin, unit.UnitDatabaseMixin, unit.Unit):
+class __unit__(itemlist.UnitItemListMixin, unit.UnitCssMixin, unit.Unit):
     title = _("Internet Streams")
     key = '4'
 
@@ -69,6 +69,8 @@ class __unit__(itemlist.UnitItemListMixin, unit.UnitCssMixin, unit.UnitDatabaseM
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
+
+        self.require('database')
 
         self.add_resources(
             'app.menu',
@@ -93,7 +95,7 @@ class __unit__(itemlist.UnitItemListMixin, unit.UnitCssMixin, unit.UnitDatabaseM
         self.db = StreamDatabase(self.name, self.fields)
         for song in self.db.get_streams():
             song['Title'] = song['Name']
-            self.database.inject(song['file'], song)
+            self.unit_database.cache[song['file']] = song
 
         self.config.edit_dialog_size._get(default=[500, 500])
 

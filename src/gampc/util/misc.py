@@ -68,3 +68,11 @@ def get_selection(selection):
     while found:
         yield pos
         found, pos = i.next()
+
+
+def add_unique_css_class(widget, prefix, suffix):
+    for css_class in widget.get_css_classes():
+        if css_class.startswith(prefix):
+            widget.remove_css_class(css_class)
+    if suffix is not None:
+        widget.add_css_class(f'{prefix}-{suffix}')

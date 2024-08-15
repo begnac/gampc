@@ -19,6 +19,7 @@
 
 
 from gi.repository import GLib
+from gi.repository import GObject
 from gi.repository import Gtk
 
 import ampd
@@ -30,36 +31,47 @@ from . import itemlist
 from . import songlist
 
 
-class QueueItem(util.item.ItemFromCache):
-    def __init__(self, cache, server_properties, **kwargs):
-        super().__init__(cache, **kwargs)
-        self.server_properties = server_properties
+QUEUE_ID_CSS_PREFIX = 'queue-Id'
+QUEUE_PRIORITY_CSS_PREFIX = 'queue-priority'
 
-    def _set_bound(self, name):
-        super()._set_bound(name)
-        parent = self.bound[name].get_parent()
-        if self.server_properties.state != 'stop' and self.Id == self.server_properties.current_song.get('Id'):
-            parent.add_css_class('playing')
-        if name == 'FormattedTime' and self.Prio is not None:
-            parent.add_css_class('high-priority')
 
-    def set_value(self, value):
+class QueueItem(util.item.Item):
+    Id = GObject.Property()
+    Prio = GObject.Property()
+
+    def load(self, value):
         self.Id = value.pop('Id')
-        self.Pos = value.pop('Pos')
+        value.pop('Pos')
         self.Prio = value.pop('Prio', None)
-        name = value['file']
-        if 'Title' in value:
-            self.cache.inject(name, value)
-        super().set_value(name)
+        super().load(value)
+
+
+class QueueItemFactory(ui.view.LabelItemFactory):
+    def __init__(self, name):
+        super().__init__(name)
+
+        self.binders['Id'] = (self.id_binder,)
+        self.binders['Prio'] = (self.prio_binder, name)
+
+    @staticmethod
+    def id_binder(widget, item):
+        util.misc.add_unique_css_class(widget.get_parent(), QUEUE_ID_CSS_PREFIX, item.Id)
+
+    @staticmethod
+    def prio_binder(widget, item, name):
+        if name == 'FormattedTime':
+            util.misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
 class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, itemlist.ItemListEditableMixin, songlist.SongList):
     editable = True
     duplicate_test_columns = ['Title']
 
+    factory_factory = QueueItemFactory
+    item_factory = QueueItem
+
     def __init__(self, unit):
         super().__init__(unit)
-        self.current_song_item = None
         self.widget.item_view.add_css_class('queue')
 
         self.actions.add_action(util.resource.Action('priority', self.action_priority_cb, parameter_type=GLib.VariantType.new('i')))
@@ -74,14 +86,18 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
         self.cursor_by_profile = {}
         self.set_cursor = False
 
-    def item_factory(self):
-        return QueueItem(self.unit.database, self.unit.unit_server.ampd_server_properties)
+        self.css_provider = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(self.widget.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+    def shutdown(self):
+        Gtk.StyleContext.remove_provider_for_display(self.widget.get_display(), self.css_provider)
+        super().shutdown()
 
     @ampd.task
     async def client_connected_cb(self, client):
         self.set_cursor = True
         while True:
-            self.set_items(await self.ampd.playlistinfo())
+            self.set_songs(await self.ampd.playlistinfo())
             self.notify_current_song_cb(self.unit.unit_server.ampd_server_properties, None)
             if self.set_cursor:
                 position = self.cursor_by_profile.get(self.unit.unit_server.server_profile)
@@ -97,19 +113,19 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
 
     @ampd.task
     async def action_priority_cb(self, action, parameter):
-        songs, refs = self.widget.item_view.get_selection_rows()
-        if not songs:
+        items = self.view.get_selection_items()
+        if not items:
             return
 
         priority = parameter.unpack()
         if priority == -1:
-            priority = sum(int(song.get('Prio', 0)) for song in songs) // len(songs)
+            priority = sum(int(item.Prio or '0') for item in items) // len(items)
             struct = ui.ssde.Integer(default=priority, min_value=0, max_value=255)
             priority = await struct.edit_async(self.widget.get_root())
             if priority is None:
                 return
-        if songs:
-            await self.ampd.prioid(priority, *(song['Id'] for song in songs))
+
+        await self.ampd.prioid(priority, *(item.Id for item in items))
 
     @ampd.task
     async def action_shuffle_cb(self, action, parameter):
@@ -127,24 +143,26 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
                 self.view.scrolled_item_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
 
     def notify_current_song_cb(self, server_properties, pspec):
-        if self.current_song_item is not None:
-            self.current_song_item.rebind()
         Id = server_properties.current_song.get('Id')
-        if Id is not None:
-            for item in self.view.item_store:
-                if item.Id == Id:
-                    self.current_song_item = item
-                    item.rebind()
-                    return
-        self.current_song_item = None
+        if Id is None:
+            PLAYING_CSS = ''
+        else:
+            PLAYING_CSS = f'''
+            columnview.queue > listview > row > cell.{QUEUE_ID_CSS_PREFIX}-{Id} {{
+              background: rgba(128,128,128,0.1);
+              font-style: italic;
+              font-weight: bold;
+            }}
+            '''
+        self.css_provider.load_from_string(PLAYING_CSS)
 
     @ampd.task
     async def remove_items(self, items):
         await self.ampd.command_list(self.ampd.deleteid(item.Id) for item in items)
 
     @ampd.task
-    async def add_items(self, strings, position):
-        await self.ampd.command_list(self.ampd.add(string, position) for string in reversed(strings))
+    async def add_items(self, keys, position):
+        await self.ampd.command_list(self.ampd.add(key, position) for key in reversed(keys))
 
     @ampd.task
     async def view_activate_cb(self, view, position):

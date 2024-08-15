@@ -18,6 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import Gtk
+
 # import ampd
 
 from .. import util
@@ -26,14 +28,28 @@ from .. import ui
 from . import itemlist
 
 
+STREAM_URL_CSS_PREFIX = 'stream-url'
+
+
+def encode_url(url):
+    return url.encode().hex()
+
+
+class StreamItemFactory(ui.view.EditableItemFactory):
+    @staticmethod
+    def value_binder(widget, item, name):
+        util.misc.add_unique_css_class(widget.get_parent(), STREAM_URL_CSS_PREFIX, encode_url(item.get_key()))
+        ui.view.EditableItemFactory.value_binder(widget, item, name)
+
+
 class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
     use_resources = ['itemlist']
-    DND_TARGET = 'GAMPC_STREAM'
+    # DND_TARGET = 'GAMPC_STREAM'
 
     def __init__(self, unit):
         self.fields = unit.fields
 
-        super().__init__(unit, widget_factory=self.widget_factory)
+        super().__init__(unit)
         self.widget.item_view.add_css_class('stream')
 
         # self.actions.add_action(util.resource.Action('add', self.action_add_cb))
@@ -50,22 +66,31 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
         self.signal_handler_connect(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
         # self.widget.record_display_hooks.append(self.record_current_song_hook)
 
+        self.css_provider = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(self.widget.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
         self.load_streams()
 
-    def splice_items(self, pos, remove, add):
-        add = list(add)
-        super().splice_items(pos, remove, add)
-        for item in self.view.item_store[pos:pos + len(add)]:
-            item.connect('changed', self.stream_changed_cb)
+    edit_stack_splicer = itemlist.ItemList.splice_values
 
-    def widget_factory(self):
-        return ui.editable.EditableLabel(always_editable=False, unit_misc=self.unit.unit_misc)
+    # def splice_values(self, pos, remove, add):
+    #     add = list(add)
+    #     super().splice_values(pos, remove, add)
+    #     for item in self.view.item_store[pos:pos + len(add)]:
+    #         item.connect('changed', self.stream_changed_cb)
 
-    def stream_changed_cb(self, *args):
-        print(args)
+    @staticmethod
+    def edit_stack_getter(item):
+        return item.value
 
-    def item_factory(self):
-        return util.item.ItemWithDict()
+    def factory_factory(self, name):
+        return StreamItemFactory(name, self.unit.unit_misc)
+
+    # def stream_changed_cb(self, *args):
+    #     print(args)
+
+    # def item_factory(self):
+    #     return util.item.ItemWithDict()
 
     # def record_current_song_hook(self, label, record):
     #     if self.unit.unit_server.ampd_server_properties.state != 'stop' and record.file == self.unit.unit_server.ampd_server_properties.current_song.get('file'):
@@ -73,6 +98,13 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
 
     def load_streams(self):
         streams = self.unit.db.get_streams()
+
+        # XXXXXXXXXXXXX
+        streams = list(streams)
+        for stream in streams:
+            for key in stream:
+                if stream[key] is None:
+                    stream[key] = ''
         # self.set_songs(streams)
         self.set_edit_stack(util.editstack.EditStack(streams))
 
@@ -103,6 +135,16 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
     #     record._modified = True
     #     record.emit('changed')
 
-    def notify_current_song_cb(self, *args):
-        for item in self.view.item_store:
-            item.rebind()
+    def notify_current_song_cb(self, server_properties, pspec):
+        url = server_properties.current_song.get('file')
+        if url is not None and (url.startswith('http://') or url.startswith('https://')):
+            PLAYING_CSS = f'''
+            columnview.stream > listview > row > cell.{STREAM_URL_CSS_PREFIX}-{encode_url(url)} {{
+              background: rgba(128,128,128,0.1);
+              font-style: italic;
+              font-weight: bold;
+            }}
+            '''
+        else:
+            PLAYING_CSS = ''
+        self.css_provider.load_from_string(PLAYING_CSS)

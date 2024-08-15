@@ -86,13 +86,6 @@ class UnitConfigMixin:
         self.config = self.unit_config.load_config(name)
 
 
-class UnitDatabaseMixin:
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
-        self.require('database')
-        self.database = self.unit_database.cache
-
-
 class UnitServerMixin:
     def __init__(self, name, manager):
         super().__init__(name, manager)

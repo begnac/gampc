@@ -19,7 +19,7 @@
 
 
 from . import cache
-from . import item
 from . import editstack
+from . import item
 from . import logger
 from . import unit

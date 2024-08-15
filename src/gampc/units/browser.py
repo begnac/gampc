@@ -31,7 +31,7 @@ from ..components import songlist
 DIRECTORY = 'directory'
 
 
-class Browser(itemlist.ItemListTreeListMixin, itemlist.ItemListFromCacheMixin, songlist.SongList):
+class Browser(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, songlist.SongList):
     sortable = True
 
     def __init__(self, unit, **kwargs):
@@ -42,7 +42,7 @@ class Browser(itemlist.ItemListTreeListMixin, itemlist.ItemListFromCacheMixin, s
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
-        self.set_items(sum((selection[pos].get_item().songs for pos in self.left_selection_pos), []))
+        self.set_keys(sum((selection[pos].get_item().songs for pos in self.left_selection_pos), []))
 
     def root_items_changed_cb(self, model, p, r, a):
         if a:

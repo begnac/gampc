@@ -86,7 +86,7 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
     TEMPNAME = '$$TEMP$$'
 
     def __init__(self, name, manager):
-        self.cache = util.cache.AsyncCache(self.playlist_retrieve)
+        self.playlist_cache = util.cache.AsyncCache(self.playlist_retrieve)
         self.playlists = {}
         self.root = ui.treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node), fill_contents_cb=self.fill_contents_cb)
 
@@ -123,16 +123,16 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
     def shutdown(self):
         super().shutdown()
         del self.root
-        del self.cache
+        del self.playlist_cache
 
     @ampd.task
     async def client_connected_cb(self, client):
         try:
             while True:
                 self.playlists = {entry['playlist']: entry['Last_Modified'] for entry in await self.ampd.listplaylists() if entry['playlist'] != self.TEMPNAME}
-                for name, value in list(self.cache.items()):
+                for name, value in list(self.playlist_cache.items()):
                     if value.last_modified != self.playlists.get(name):
-                        self.cache.remove(name)
+                        self.playlist_cache.remove(name)
                 self.root.reset()
                 await self.root.fill_sub_nodes()
                 self.root.expose()
@@ -154,7 +154,7 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
 
     async def fill_contents_cb(self, node):
         if node.kind == playlist.NODE_PLAYLIST:
-            item = await self.cache.get_async(playlist.PSEUDO_SEPARATOR.join(node.path))
+            item = await self.playlist_cache.get_async(playlist.PSEUDO_SEPARATOR.join(node.path))
             node.edit_stack = util.editstack.EditStack(item.files)
 
     def get_pseudo_folder_contents(self, path):

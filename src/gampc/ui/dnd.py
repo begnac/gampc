@@ -61,7 +61,7 @@ class ListDragSource(Gtk.DragSource):
 
 class ListDropTarget(Gtk.DropTarget):
     def __init__(self, add_items):
-        super().__init__(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=Gdk.ContentFormats.new_for_gtype(util.item.ItemsFromCacheTransfer))
+        super().__init__(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=Gdk.ContentFormats.new_for_gtype(util.item.ItemKeyTransfer))
         self.row = None
         self.connect('enter', self.action_cb)
         self.connect('motion', self.action_cb)

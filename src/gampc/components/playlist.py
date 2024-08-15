@@ -38,7 +38,7 @@ ICONS = {
 }
 
 
-class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListFromCacheMixin, itemlist.ItemListEditStackMixin, songlist.SongListTotalsMixin, songlist.SongList):
+class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, itemlist.ItemListEditStackMixin, songlist.SongListTotalsMixin, songlist.SongList):
     duplicate_test_columns = ['file']
 
     left_title = _("Playlists")
@@ -53,6 +53,12 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListFromCacheMixin, 
     def shutdown(self):
         self.set_edit_stack(None)
         super().shutdown()
+
+    edit_stack_splicer = itemlist.ItemListDatabaseMixin.splice_keys
+
+    @staticmethod
+    def edit_stack_getter(item):
+        return item.get_key()
 
     def edit_stack_changed(self):
         super().edit_stack_changed()
@@ -75,10 +81,10 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListFromCacheMixin, 
         else:
             self.set_edit_stack(None)
             self.set_editable(False)
-            self.set_items(sum(map(lambda node: list(node.edit_stack.items),
-                                   filter(lambda node: node.kind == NODE_PLAYLIST,
-                                          map(lambda pos: selection[pos].get_item(),
-                                              self.left_selection_pos))), []))
+            self.set_values(sum(map(lambda node: list(node.edit_stack.items),
+                                    filter(lambda node: node.kind == NODE_PLAYLIST,
+                                           map(lambda pos: selection[pos].get_item(),
+                                               self.left_selection_pos))), []))
         self.edit_stack_changed()
 
     def left_view_activate_cb(self, view, position):
