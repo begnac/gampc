@@ -25,26 +25,28 @@ from .. import util
 
 
 class ListDragSource(Gtk.DragSource):
-    def __init__(self, **kwargs):
+    def __init__(self, content_from_items, **kwargs):
         super().__init__(**kwargs)
         icon = Gtk.IconTheme.get_for_display(util.misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
         self.set_icon(icon, 5, 5)
-        self.connect('prepare', self.drag_prepare_cb)
+        self.connect('prepare', self.prepare_cb, content_from_items)
         # self.connect('drag-begin', self.drag_begin_cb)
         # self.connect('drag-cancel', self.drag_cancel_cb)
-        self.connect('drag-end', self.drag_end_cb)
+        self.connect('drag-end', self.end_cb)
 
     @staticmethod
-    def prepare_cb(self, source, x, y, get_selection):
-        source.selection = get_selection()
-        if not source.selection:
-            row, x, y = util.misc.find_descendant_at_xy(self.get_widget(), x, y, 1)
-            if row is not None:
-                source.selection = [row.pos]
-            else:
-                source.selection = None
-                return None
-        return self.content_from_items(self.view.item_selection[pos] for pos in source.selection)
+    def prepare_cb(self, x, y, content_from_items):
+        widget = self.get_widget()
+        row, x, y = util.misc.find_descendant_at_xy(widget, x, y, 1)
+        if row is None:
+            return
+
+        model = widget.get_model()
+        self.selection = list(util.misc.get_selection(model))
+        if row.pos not in self.selection:
+            model.select_item(row.pos, True)
+            self.selection = [row.pos]
+        return content_from_items(model[pos] for pos in self.selection)
 
     # def drag_begin_cb(self, source, drag):
     #     pass
@@ -52,11 +54,14 @@ class ListDragSource(Gtk.DragSource):
     # def drag_cancel_cb(self, source, drag, reason):
     #     return False
 
-    def end_cb(self, source, drag, delete):
-        print('end', source, delete)
+    @staticmethod
+    def end_cb(self, drag, delete):
+        print('end', delete)
+        widget = self.get_widget()
+        model = widget.get_model()
         if delete:
-            self.remove_items([self.view.item_selection[pos] for pos in source.selection])
-        del source.selection
+            self.remove_items([model[pos] for pos in self.selection])
+        del self.selection
 
 
 class ListDropTarget(Gtk.DropTarget):

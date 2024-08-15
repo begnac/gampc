@@ -40,7 +40,7 @@ N = 4
 for d in range(N ** 3):
     colors = [((d // (N ** k)) % N) * 255 / (N - 1) for k in range(3)]
     CSS += f'''
-      columnview.itemlist > listview > row > cell.duplicate{d} {{
+      columnview.itemlist > listview > row > cell.duplicate-{d} {{
       background: rgba({colors[0]},{colors[1]},{colors[2]},0.5);
     }}
     '''

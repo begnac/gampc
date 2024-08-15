@@ -51,7 +51,8 @@ class ItemList(component.Component):
         self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
         self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
 
-        self.setup_drag()
+        self.drag_source = ui.dnd.ListDragSource(self.content_from_items, actions=Gdk.DragAction.COPY)
+        self.view.item_view_rows.add_controller(self.drag_source)
 
         self.itemlist_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
 
@@ -73,7 +74,8 @@ class ItemList(component.Component):
         listitem.row = listitem.get_child().get_parent().get_parent()
         listitem.row.pos = listitem.get_position()
 
-    def content_from_items(self, items):
+    @staticmethod
+    def content_from_items(items):
         return util.item.transfer_union(items, util.item.ItemKeyTransfer, util.item.ItemStringTransfer)
 
     @ampd.task
@@ -148,57 +150,57 @@ class ItemList(component.Component):
             pos += 1
         return pos
 
-    def setup_drag(self):
-        # self.drag_source = ui.dnd.ListDragSource(actions=Gdk.DragAction.COPY)
-        # self.view.item_view_rows.add_controller(self.drag_source)
-        # return
-        self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY|Gdk.DragAction.MOVE)
-        self.drag_source_icon = Gtk.IconTheme.get_for_display(util.misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
-        self.drag_source.set_icon(self.drag_source_icon, 5, 5)
-        self.signal_handler_connect(self.drag_source, 'prepare', self.drag_prepare_cb)
-        # self.signal_handler_connect(self.drag_source, 'drag-begin', self.drag_begin_cb)
-        # self.signal_handler_connect(self.drag_source, 'drag-cancel', self.drag_cancel_cb)
-        self.signal_handler_connect(self.drag_source, 'drag-end', self.drag_end_cb)
+    # def setup_drag(self):
+    #     #  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxxx
+    #     return
 
-        self.view.item_view_rows.add_controller(self.drag_source)
+    #     self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY|Gdk.DragAction.MOVE)
+    #     self.drag_source_icon = Gtk.IconTheme.get_for_display(util.misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
+    #     self.drag_source.set_icon(self.drag_source_icon, 5, 5)
+    #     self.signal_handler_connect(self.drag_source, 'prepare', self.drag_prepare_cb)
+    #     # self.signal_handler_connect(self.drag_source, 'drag-begin', self.drag_begin_cb)
+    #     # self.signal_handler_connect(self.drag_source, 'drag-cancel', self.drag_cancel_cb)
+    #     self.signal_handler_connect(self.drag_source, 'drag-end', self.drag_end_cb)
 
-        # self.drag_key_controller = Gtk.EventControllerKey()
-        # self.signal_handler_connect(self.drag_key_controller, 'key-pressed', self.drag_key_pressed_cb, self.drag_source)
-        # self.view.item_view.add_controller(self.drag_key_controller)
+    #     self.view.item_view_rows.add_controller(self.drag_source)
 
-    def drag_prepare_cb(self, source, x, y):
-        source.selection = self.view.get_selection()
-        if not source.selection:
-            row, x, y = util.misc.find_descendant_at_xy(source.get_widget(), x, y, 1)
-            if row is not None:
-                source.selection = [row.pos]
-            else:
-                source.selection = None
-                return None
-        self.drag_content = self.content_from_items(self.view.item_selection[pos] for pos in source.selection)
-        return self.drag_content
+    #     # self.drag_key_controller = Gtk.EventControllerKey()
+    #     # self.signal_handler_connect(self.drag_key_controller, 'key-pressed', self.drag_key_pressed_cb, self.drag_source)
+    #     # self.view.item_view.add_controller(self.drag_key_controller)
 
-    # def drag_begin_cb(self, source, drag):
-    #     pass
+    # def drag_prepare_cb(self, source, x, y):
+    #     source.selection = self.view.get_selection()
+    #     if not source.selection:
+    #         row, x, y = util.misc.find_descendant_at_xy(source.get_widget(), x, y, 1)
+    #         if row is not None:
+    #             source.selection = [row.pos]
+    #         else:
+    #             source.selection = None
+    #             return None
+    #     self.drag_content = self.content_from_items(self.view.item_selection[pos] for pos in source.selection)
+    #     return self.drag_content
 
-    # def drag_cancel_cb(self, source, drag, reason):
+    # # def drag_begin_cb(self, source, drag):
+    # #     pass
+
+    # # def drag_cancel_cb(self, source, drag, reason):
+    # #     return False
+
+    # def drag_end_cb(self, source, drag, delete):
+    #     print('end', source, delete)
+    #     if delete:
+    #         self.remove_items([self.view.item_selection[pos] for pos in source.selection])
+    #     del source.selection
+    #     drag.drop_done(True)
+    #     print(drag.get_content())
+
+    # @staticmethod
+    # def drag_key_pressed_cb(controller, keyval, keycode, modifiers, source):
+    #     if keyval == Gdk.KEY_Escape:
+    #         drag = source.get_drag()
+    #         print(drag, source.get_contents())
+    #         source.drag_cancel()
     #     return False
-
-    def drag_end_cb(self, source, drag, delete):
-        print('end', source, delete)
-        if delete:
-            self.remove_items([self.view.item_selection[pos] for pos in source.selection])
-        del source.selection
-        drag.drop_done(True)
-        print(drag.get_content())
-
-    @staticmethod
-    def drag_key_pressed_cb(controller, keyval, keycode, modifiers, source):
-        if keyval == Gdk.KEY_Escape:
-            drag = source.get_drag()
-            print(drag, source.get_contents())
-            source.drag_cancel()
-        return False
 
 
 class ItemListEditableMixin:
