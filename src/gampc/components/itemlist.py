@@ -40,6 +40,8 @@ class ItemList(component.Component):
     factory_factory = ui.view.LabelItemFactory
     item_factory = util.item.Item
 
+    remove_items = None  # For drag source
+
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
@@ -51,7 +53,7 @@ class ItemList(component.Component):
         self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
         self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
 
-        self.drag_source = ui.dnd.ListDragSource(self.content_from_items, actions=Gdk.DragAction.COPY)
+        self.drag_source = ui.dnd.ListDragSource(self.content_from_items, self.remove_items, actions=Gdk.DragAction.COPY)
         self.view.item_view_rows.add_controller(self.drag_source)
 
         self.itemlist_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
@@ -67,6 +69,7 @@ class ItemList(component.Component):
         del self.itemlist_actions
         self.view.item_view.columns['file'].get_factory().disconnect_by_func(self.bind_cb)
         self.view.cleanup()
+        self.view.item_view_rows.remove_controller(self.drag_source)
         del self.drag_source
         super().shutdown()
 
@@ -208,7 +211,6 @@ class ItemListEditableMixin:
 
     def __init__(self, unit, *args, editable=True, **kwargs):
         super().__init__(unit, *args, **kwargs)
-        self._editable = editable
 
         self.itemlist_actions.add_action(util.resource.Action('paste', self.action_paste_cb))
         self.itemlist_actions.add_action(util.resource.Action('paste-before', self.action_paste_cb))
@@ -218,6 +220,8 @@ class ItemListEditableMixin:
 
         self.drop_target = ui.dnd.ListDropTarget(self.add_items)
         self.view.item_view_rows.add_controller(self.drop_target)
+
+        self.set_editable(editable)
 
     def shutdown(self):
         self.view.item_view_rows.remove_controller(self.drop_target)

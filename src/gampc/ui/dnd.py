@@ -25,14 +25,14 @@ from .. import util
 
 
 class ListDragSource(Gtk.DragSource):
-    def __init__(self, content_from_items, **kwargs):
+    def __init__(self, content_from_items, remove_items, **kwargs):
         super().__init__(**kwargs)
         icon = Gtk.IconTheme.get_for_display(util.misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
         self.set_icon(icon, 5, 5)
         self.connect('prepare', self.prepare_cb, content_from_items)
         # self.connect('drag-begin', self.drag_begin_cb)
         # self.connect('drag-cancel', self.drag_cancel_cb)
-        self.connect('drag-end', self.end_cb)
+        self.connect('drag-end', self.end_cb, remove_items)
 
     @staticmethod
     def prepare_cb(self, x, y, content_from_items):
@@ -55,12 +55,10 @@ class ListDragSource(Gtk.DragSource):
     #     return False
 
     @staticmethod
-    def end_cb(self, drag, delete):
-        print('end', delete)
-        widget = self.get_widget()
-        model = widget.get_model()
+    def end_cb(self, drag, delete, remove_items):
+        model = self.get_widget().get_model()
         if delete:
-            self.remove_items([model[pos] for pos in self.selection])
+            remove_items([model[pos] for pos in self.selection])
         del self.selection
 
 
@@ -73,22 +71,13 @@ class ListDropTarget(Gtk.DropTarget):
         self.connect('leave', self.leave_cb)
         self.connect('drop', self.drop_cb, add_items)
 
-    # def cleanup(self):
-    #     self.disconnect_by_func(self.drop_cb)
-
-    def actions(self):
-        state = util.misc.get_modifier_state()
-        if state & Gdk.ModifierType.ALT_MASK:
-            return 0
-        if self.get_actions() & Gdk.DragAction.MOVE and state & Gdk.ModifierType.SHIFT_MASK:
-            return Gdk.DragAction.MOVE
-        else:
-            return Gdk.DragAction.COPY
-
-    def drop_cleanup(self):
-        if self.row is not None:
-            self.row.remove_css_class('drop-row')
-            self.row = None
+    def set_row(self, row=None):
+        if row != self.row:
+            if self.row is not None:
+                self.row.remove_css_class('drop-row')
+            self.row = row
+            if self.row is not None:
+                self.row.add_css_class('drop-row')
 
     @staticmethod
     def action_cb(self, x, y):
@@ -100,21 +89,15 @@ class ListDropTarget(Gtk.DropTarget):
                 row = None
             else:
                 row = self.get_widget().observe_children()[row.pos - 1]
-        if row != self.row:
-            if self.row is not None:
-                self.row.remove_css_class('drop-row')
-            self.row = row
-            if self.row is not None:
-                self.row.add_css_class('drop-row')
-
-        return self.actions()
+        self.set_row(row)
+        return Gdk.DragAction.MOVE
 
     @staticmethod
     def leave_cb(self):
-        print('leave')
-        self.drop_cleanup()
+        # print('leave')
+        self.set_row()
 
     @staticmethod
     def drop_cb(self, value, x, y, add_items):
         add_items(value.values, self.row.pos + 1 if self.row is not None else 0)
-        self.drop_cleanup()
+        self.set_row()
