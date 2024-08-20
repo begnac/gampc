@@ -99,7 +99,7 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
     async def action_save_cb(self, action, parameter):
         if not self.edit_stack.deltas:
             return
-        if await self.unit.save_playlist(self.left_selected_item.joined_path, [item.get_value() for item in self.view.item_store], self.widget.get_root()):
+        if await self.unit.save_playlist(self.left_selected_item.joined_path, [item.get_key() for item in self.view.item_store], self.widget.get_root()):
             self.edit_stack.reset()
             self.edit_stack_changed()
 

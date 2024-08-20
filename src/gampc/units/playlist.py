@@ -132,7 +132,7 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
                 self.playlists = {entry['playlist']: entry['Last_Modified'] for entry in await self.ampd.listplaylists() if entry['playlist'] != self.TEMPNAME}
                 for name, value in list(self.playlist_cache.items()):
                     if value.last_modified != self.playlists.get(name):
-                        self.playlist_cache.remove(name)
+                        self.playlist_cache.pop(name)
                 self.root.reset()
                 await self.root.fill_sub_nodes()
                 self.root.expose()
