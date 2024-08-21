@@ -61,3 +61,15 @@ class ItemStringTransfer(ItemKeyTransfer):
 
 def transfer_union(items, *transfers):
     return Gdk.ContentProvider.new_union([transfer(items).get_content() for transfer in transfers])
+
+
+class ItemInterface(GObject.Object):
+    content_from_items = GObject.Property()
+    content_formats = GObject.Property()
+    add_items = GObject.Property()
+    remove_items = GObject.Property()
+    # def __init__(self, content_from_items, content_type=None, add_items=None, remove_items=None):
+    #     self.content_from_items = content_from_items
+    #     self.content_type = content_type
+    #     self.add_items = add_items
+    #     self.remove_items = remove_items

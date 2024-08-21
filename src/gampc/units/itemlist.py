@@ -18,8 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from ..util import resource
-from ..util import unit
+from .. import util
+from .. import ui
 
 
 CSS = ''
@@ -30,11 +30,7 @@ columnview.filter > listview > row {
 }
 '''
 
-CSS += '''
-columnview > listview > row.drop-row {
-  border-bottom-color: rgb(46,194,126);
-}
-'''
+CSS += ui.dnd.CSS
 
 N = 4
 for d in range(N ** 3):
@@ -46,45 +42,45 @@ for d in range(N ** 3):
     '''
 
 
-class __unit__(unit.UnitConfigMixin, unit.UnitCssMixin, unit.Unit):
+class __unit__(util.unit.UnitConfigMixin, util.unit.UnitCssMixin, util.unit.Unit):
     CSS = CSS
 
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
         items = [
-            resource.MenuPath('edit/songlist'),
-            resource.MenuPath('edit/songlist/base'),
-            # resource.MenuAction('edit/songlist/base', 'mod.selectall', _("Select all"), ['<Control>a'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'itemlist.cut', _("Cut"), ['<Control>x'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'itemlist.copy', _("Copy"), ['<Control>c'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'itemlist.paste', _("Paste"), ['<Control>v'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'itemlist.paste-before', _("Paste before"), ['<Control>b']),
-            resource.MenuAction('edit/songlist/base', 'itemlist.delete', _("Delete"), ['Delete'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'itemlist.undo', _("Undo"), ['<Control>z'], accels_fragile=True),
-            resource.MenuAction('edit/songlist/base', 'itemlist.redo', _("Redo"), ['<Shift><Control>z'], accels_fragile=True),
-            # resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
+            util.resource.MenuPath('edit/songlist'),
+            util.resource.MenuPath('edit/songlist/base'),
+            # util.resource.MenuAction('edit/songlist/base', 'mod.selectall', _("Select all"), ['<Control>a'], accels_fragile=True),
+            util.resource.MenuAction('edit/songlist/base', 'itemlist.cut', _("Cut"), ['<Control>x'], accels_fragile=True),
+            util.resource.MenuAction('edit/songlist/base', 'itemlist.copy', _("Copy"), ['<Control>c'], accels_fragile=True),
+            util.resource.MenuAction('edit/songlist/base', 'itemlist.paste', _("Paste"), ['<Control>v'], accels_fragile=True),
+            util.resource.MenuAction('edit/songlist/base', 'itemlist.paste-before', _("Paste before"), ['<Control>b']),
+            util.resource.MenuAction('edit/songlist/base', 'itemlist.delete', _("Delete"), ['Delete'], accels_fragile=True),
+            util.resource.MenuAction('edit/songlist/base', 'itemlist.undo', _("Undo"), ['<Control>z'], accels_fragile=True),
+            util.resource.MenuAction('edit/songlist/base', 'itemlist.redo', _("Redo"), ['<Shift><Control>z'], accels_fragile=True),
+            # util.resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
         ]
 
         self.add_resources(
             'app.menu',
-            resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
-            resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
-            resource.MenuAction('edit/global', 'itemlist.filter', _("Filter"), ['<Control><Shift>f']),
+            util.resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
+            util.resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
+            util.resource.MenuAction('edit/global', 'itemlist.filter', _("Filter"), ['<Control><Shift>f']),
             *items,
         )
 
         self.add_resources(
             'itemlist.context.menu',
-            resource.MenuPath('action'),
-            resource.MenuPath('edit'),
-            resource.MenuPath('other'),
+            util.resource.MenuPath('action'),
+            util.resource.MenuPath('edit'),
+            util.resource.MenuPath('other'),
             *items,
         )
 
         self.add_resources(
             'itemlist.left-context.menu',
-            resource.MenuPath('action'),
-            resource.MenuPath('edit'),
-            resource.MenuPath('other'),
+            util.resource.MenuPath('action'),
+            util.resource.MenuPath('edit'),
+            util.resource.MenuPath('other'),
         )
