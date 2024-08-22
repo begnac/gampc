@@ -51,7 +51,9 @@ class ItemFactory(Gtk.SignalListItemFactory):
 
     @staticmethod
     def bind_cb(self, listitem):
-        self.bind(listitem.get_child(), listitem.get_item())
+        widget = listitem.get_child()
+        widget.pos = listitem.get_position()
+        self.bind(widget, listitem.get_item())
 
     @staticmethod
     def unbind_cb(self, listitem):

@@ -61,11 +61,11 @@ class ItemList(component.Component):
         if self.duplicate_test_columns:
             self.signal_handler_connect(self.view.item_store, 'items-changed', self.mark_duplicates)
 
-        self.view.item_view.columns['file'].get_factory().connect('bind', self.bind_cb)
+        # self.view.item_view.columns['file'].get_factory().connect('bind', self.bind_cb)
 
     def shutdown(self):
         del self.itemlist_actions
-        self.view.item_view.columns['file'].get_factory().disconnect_by_func(self.bind_cb)
+        # self.view.item_view.columns['file'].get_factory().disconnect_by_func(self.bind_cb)
         self.view.cleanup()
         self.view.item_view_rows.remove_controller(self.drag_source)
         del self.drag_source
@@ -78,9 +78,9 @@ class ItemList(component.Component):
     def content_from_items(items):
         return util.item.transfer_union(items, util.item.ItemKeyTransfer, util.item.ItemStringTransfer)
 
-    def bind_cb(self, factory, listitem):
-        listitem.row = listitem.get_child().get_parent().get_parent()
-        listitem.row.pos = listitem.get_position()
+    # def bind_cb(self, factory, listitem):
+    #     listitem.row = listitem.get_child().get_parent().get_parent()
+    #     listitem.row.pos = listitem.get_position()
 
     @ampd.task
     async def view_activate_cb(self, view, position):
@@ -147,12 +147,12 @@ class ItemList(component.Component):
         if action.get_name() in ['delete', 'cut']:
             self.remove_items(items)
 
-    @staticmethod
-    def row_get_position(row, *, after=False):
-        pos = row.pos
-        if after:
-            pos += 1
-        return pos
+    # @staticmethod
+    # def row_get_position(row, *, after=False):
+    #     pos = row.pos
+    #     if after:
+    #         pos += 1
+    #     return pos
 
 
 class ItemListEditableMixin:
@@ -201,7 +201,10 @@ class ItemListEditableMixin:
         values = clipboard.read_value_finish(result).values
         row = self.view.item_view_rows.get_focus_child()
         if values is not None and row is not None:
-            self.add_items(values, self.row_get_position(row, after=not before))
+            pos = row.get_first_child().get_first_child().pos
+            if not before:
+                pos += 1
+            self.add_items(values, pos)
 
 
 class ItemListEditStackMixin(ItemListEditableMixin):

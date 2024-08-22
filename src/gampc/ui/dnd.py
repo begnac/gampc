@@ -50,9 +50,10 @@ class ListDragSource(Gtk.DragSource):
 
         model = widget.get_model()
         self.selection = list(util.misc.get_selection(model))
-        if row.pos not in self.selection:
-            model.select_item(row.pos, True)
-            self.selection = [row.pos]
+        pos = row.get_first_child().get_first_child().pos
+        if pos not in self.selection:
+            model.select_item(pos, True)
+            self.selection = [pos]
         return content_from_items(model[pos] for pos in self.selection)
 
     # def drag_begin_cb(self, source, drag):
@@ -92,10 +93,7 @@ class ListDropTarget(Gtk.DropTarget):
         if row is None:
             row = self.get_widget().get_last_child()
         elif y < row.get_height() / 2:
-            if row.pos == 0:
-                row = None
-            else:
-                row = self.get_widget().observe_children()[row.pos - 1]
+            row = row.get_prev_sibling()
         self.set_row(row)
         return Gdk.DragAction.MOVE
 
@@ -106,5 +104,5 @@ class ListDropTarget(Gtk.DropTarget):
 
     @staticmethod
     def drop_cb(self, value, x, y, add_items):
-        add_items(value.values, self.row.pos + 1 if self.row is not None else 0)
+        add_items(value.values, self.row.get_first_child().get_first_child().pos + 1 if self.row is not None else 0)
         return True
