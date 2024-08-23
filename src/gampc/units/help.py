@@ -20,59 +20,54 @@
 
 from gi.repository import Gtk
 
-import xml.sax.saxutils
-
 from ..util import resource
 from ..util import unit
+from ..ui import shortcut
 
 from .. import __program_name__, __version__, __program_description__, __copyright__, __license_type__, __website__
 
 
-def shortcuts_interface(resources):
-    groups = []
-    groups_by_name = {}
-    for menu_item in resources:
-        path_components = menu_item.path.split('/', 1)
-        name = path_components[0]
-        if len(path_components) == 1:
-            group = {'name': name, 'title': menu_item.label.replace('_', ''), 'items': []}
-            groups.append(group)
-            groups_by_name[name] = group
-        elif isinstance(menu_item, resource.MenuAction) and menu_item.accels:
-            groups_by_name[name]['items'].append(menu_item)
-
-    groups = [xml_group(**group) for group in groups]
-    section = xml_object('GtkShortcutsSection', {'section-name': 'section', 'title': _("Shortcuts")}, groups)
-    window = xml_object('GtkShortcutsWindow', {'modal': 'true'}, [section], attrs={'id': 'window'})
-    yield from xml_interface([window])
+def iterate_children(widget):
+    yield widget
+    for child in widget:
+        yield from iterate_children(child)
 
 
-def xml_group(name, title, items):
-    shortcuts = [xml_shortcut(item.label.replace('_', ''), item.accels) for item in items]
-    return xml_object('GtkShortcutsGroup', {'name': name, 'title': title}, shortcuts)
+class ShortcutsGroup(Gtk.ShortcutsGroup):
+    def __init__(self, items, **kwargs):
+        super().__init__(**kwargs)
+        for item in items:
+            self.add_shortcut(Gtk.ShortcutsShortcut(title=item.label.replace('_', ''), accelerator=' '.join(item.accels)))
 
 
-def xml_shortcut(title, accels):
-    return xml_object('GtkShortcutsShortcut', {'title': title, 'accelerator': ' '.join(accels)})
+class ShortcutsWindow(Gtk.ShortcutsWindow):
+    def __init__(self, resources, window):
+        super().__init__(modal=True)
+        section = Gtk.ShortcutsSection()
 
+        for child in iterate_children(window):
+            for controller in child.observe_controllers():
+                if isinstance(controller, shortcut.ShortcutController):
+                    group = Gtk.ShortcutsGroup(title=controller.title)
+                    for accel in controller.accels:
+                        group.add_shortcut(Gtk.ShortcutsShortcut(title=accel.title.replace('_', ''), accelerator=' '.join(accel.accels)))
+                    section.add_group(group)
 
-def xml_object(class_, props, children=[], *, attrs={}):
-    attributes = ' '.join(f'{name}="{value}"' for name, value in [('class', class_)] + list(attrs.items()))
-    yield f'<object {attributes}>'
-    for name, value in props.items():
-        yield f'<property name="{name}">{xml.sax.saxutils.escape(value)}</property>'
-    for child in children:
-        yield '<child>'
-        yield from child
-        yield '</child>'
-    yield '</object>'
+        groups = []
+        groups_by_name = {}
+        for menu_item in resources:
+            path_components = menu_item.path.split('/', 1)
+            name = path_components[0]
+            if len(path_components) == 1:
+                group = {'name': name, 'title': menu_item.label.replace('_', ''), 'items': []}
+                groups.append(group)
+                groups_by_name[name] = group
+            elif isinstance(menu_item, resource.MenuAction) and menu_item.accels:
+                groups_by_name[name]['items'].append(menu_item)
 
-
-def xml_interface(objects):
-    yield '<interface>'
-    for obj in objects:
-        yield from obj
-    yield '</interface>'
+        for group in groups:
+            section.add_group(ShortcutsGroup(**group))
+        self.add_section(section)
 
 
 class __unit__(unit.UnitServerMixin, unit.Unit):
@@ -84,26 +79,25 @@ class __unit__(unit.UnitServerMixin, unit.Unit):
 
         self.add_resources(
             'app.action',
-            resource.ActionModel('BAD', self.BAD_cb),
+            # resource.ActionModel('BAD', self.BAD_cb),
             resource.ActionModel('help', self.help_cb),
             resource.ActionModel('about', self.about_cb),
         )
 
         self.add_resources(
             'app.menu',
-            resource.MenuAction('help', 'app.BAD', _("BAD"), ['<Control><Shift>b']),
+            # resource.MenuAction('help', 'app.BAD', _("BAD"), ['<Control><Shift>b']),
             resource.MenuAction('help', 'app.help', _("Help"), ['<Control>h', 'F1']),
             resource.MenuAction('help', 'app.about', _("About"), ['<Control><Shift>h']),
         )
 
-    def BAD_cb(self, *args):
-        print(self.get_active_window().get_focus())
+    # def BAD_cb(self, *args):
+    #     print(self.get_active_window().get_focus())
 
     def about_cb(self, *args):
         dialog = Gtk.AboutDialog(program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=__license_type__, logo_icon_name='face-cool-gampc', website=__website__)
         dialog.present()
 
     def help_cb(self, *args):
-        builder = Gtk.Builder.new_from_string(''.join(shortcuts_interface(self.aggregator.get_all_resources())), -1)
-        window = builder.get_object('window')
-        window.present()
+        window = Gtk.Application.get_default().get_active_window()
+        ShortcutsWindow(self.aggregator.get_all_resources(), window).present()

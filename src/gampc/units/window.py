@@ -25,6 +25,7 @@ from ..util import resource
 from ..util import unit
 from ..util.logger import logger
 from ..ui import headerbar
+from ..ui import shortcut
 from ..ui import logging
 
 from .. import __application__
@@ -33,6 +34,11 @@ from .. import __application__
 class Window(Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
         super().__init__(show_menubar=True, **kwargs)
+
+        self.shortcut_accregator = shortcut.ShortcutAggregator(['win.accel'], _("Global shortcuts"))
+        unit.manager.add_aggregator(self.shortcut_accregator)
+        self.add_controller(self.shortcut_accregator.controller)
+
         self.unit = unit
         self.component = None
 

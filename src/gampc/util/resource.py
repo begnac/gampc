@@ -23,11 +23,10 @@ from gi.repository import Gio
 from gi.repository import GLib
 
 
-class MenuPathBase(GObject.Object):
+class MenuPathBase:
     ATTRIBUTE_NAME = 'menu-path-name'
 
     def __init__(self, path, label=None):
-        GObject.Object.__init__(self)
         self.path = path
         *self.path_names, self.name = path.split('/')
         self.label = label
@@ -94,9 +93,8 @@ class MenuActionMinimal(MenuPathBase):
         return item
 
 
-class MenuAction(MenuActionMinimal, GObject.Object):
+class MenuAction(MenuActionMinimal):
     def __init__(self, path, action, label, accels=[], accels_fragile=False):
-        GObject.Object.__init__(self)
         self.path = path
         self.action = action
         self.label = label
@@ -123,9 +121,8 @@ class PropertyAction(ActionDangerousMixin, Gio.PropertyAction):
         super().__init__(name=name, object=object_, property_name=property_name or name, **kwargs)
 
 
-class ActionModelBase(GObject.Object):
+class ActionModelBase:
     def __init__(self, name, **kwargs):
-        GObject.Object.__init__(self)
         self.name = name
         self.kwargs = kwargs
 
@@ -154,8 +151,8 @@ class PropertyActionModel(ActionModelBase):
 
 class ResourceProvider(GObject.Object):
     __gsignals__ = {
-        'resource-added': (GObject.SIGNAL_RUN_FIRST, None, (str, GObject.Object)),
-        'resource-removed': (GObject.SIGNAL_RUN_FIRST, None, (str, GObject.Object)),
+        'resource-added': (GObject.SIGNAL_RUN_FIRST, None, (str, object)),
+        'resource-removed': (GObject.SIGNAL_RUN_FIRST, None, (str, object)),
     }
 
     def __init__(self):
@@ -222,6 +219,20 @@ class ResourceAggregator(ResourceProvider):
             self.remove_resource(source, resource)
 
 
+class MenuAggregator(ResourceAggregator):
+    def __init__(self, sources, menu=None):
+        super().__init__(sources)
+        self.menu = menu or Gio.Menu()
+
+    def add_resource(self, source, menu_item):
+        super().add_resource(source, menu_item)
+        menu_item.insert_into(self.menu)
+
+    def remove_resource(self, source, menu_item):
+        menu_item.remove_from(self.menu)
+        super().remove_resource(source, menu_item)
+
+
 class ActionAggregator(ResourceAggregator):
     def __init__(self, sources, action_group, *params):
         super().__init__(sources)
@@ -235,17 +246,3 @@ class ActionAggregator(ResourceAggregator):
     def remove_resource(self, source, action):
         self.action_group.remove_action(action.get_name())
         super().remove_resource(source, action)
-
-
-class MenuAggregator(ResourceAggregator):
-    def __init__(self, sources, menu=None):
-        super().__init__(sources)
-        self.menu = menu or Gio.Menu()
-
-    def add_resource(self, source, menu_item):
-        super().add_resource(source, menu_item)
-        menu_item.insert_into(self.menu)
-
-    def remove_resource(self, source, menu_item):
-        menu_item.remove_from(self.menu)
-        super().remove_resource(source, menu_item)

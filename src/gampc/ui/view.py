@@ -20,6 +20,7 @@
 
 from gi.repository import Gio
 from gi.repository import GObject
+from gi.repository import Gdk
 from gi.repository import Gtk
 
 import re
@@ -141,6 +142,30 @@ class FieldItemColumn(Gtk.ColumnViewColumn):
         return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
 
+def clean_shortcuts(widget):
+    for controller in list(widget.observe_controllers()):
+        if isinstance(controller, Gtk.ShortcutController):
+            new_controller = Gtk.ShortcutController()
+            changed = False
+            for shortcut in controller:
+                trigger = shortcut.get_trigger()
+                if isinstance(trigger, Gtk.KeyvalTrigger) and \
+                   trigger.get_modifiers() & Gdk.ModifierType.CONTROL_MASK and \
+                   trigger.get_keyval() in (Gdk.KEY_Up, Gdk.KEY_Down, Gdk.KEY_Left, Gdk.KEY_Right, ):
+                    changed = True
+                else:
+                    new_controller.add_shortcut(shortcut)
+            if changed:
+                widget.remove_controller(controller)
+                widget.add_controller(new_controller)
+
+
+def clean_shortcuts_below(widget):
+    clean_shortcuts(widget)
+    for child in widget:
+        clean_shortcuts_below(child)
+
+
 class ItemView(Gtk.ColumnView):
     sortable = GObject.Property(type=bool, default=False)
     visible_titles = GObject.Property(type=bool, default=True)
@@ -151,6 +176,9 @@ class ItemView(Gtk.ColumnView):
         super().__init__(show_row_separators=True, show_column_separators=True, **kwargs)
         self.add_css_class('data-table')
 
+        self.o = self.get_last_child().observe_children()
+        self.o.connect('items-changed', lambda model, p, r, a: [clean_shortcuts(rw) for rw in model[p:p+a]])
+
         self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name)) for field in fields.fields.values()}
         for name in fields.order:
             self.append_column(self.columns[name.get_string()])
@@ -158,6 +186,10 @@ class ItemView(Gtk.ColumnView):
         self.bind_property('visible-titles', self.get_first_child(), 'visible', GObject.BindingFlags.SYNC_CREATE)
         self.get_columns().connect('items-changed', self.columns_changed_cb)
         self.fields.order.connect('items-changed', self.fields_order_changed_cb)
+
+        # key_controller = Gtk.EventControllerKey()
+        # self.add_controller(key_controller)
+        # key_controller.connect('key-pressed', lambda controller, keyval, keycode, state: controller.get_widget().get_root().set_focus_child(controller.get_widget().get_root().headerbar) or print(1, keyval, controller.get_widget().get_root().get_focus_child()) if keyval == Gdk.KEY_Control_L else print(2, keyval))
 
     def cleanup(self):
         self.fields.order.disconnect_by_func(self.fields_order_changed_cb)
@@ -208,6 +240,8 @@ class View(Gtk.Box):
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view, focusable=False)
         self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_item_view)
+
+        clean_shortcuts_below(self)
 
         self.bind_property('filtering', self.filter_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE)
         self.bind_property('filtering', self.item_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)

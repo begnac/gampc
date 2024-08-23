@@ -24,6 +24,7 @@ import ampd
 
 from ..util import resource
 from ..util import unit
+from ..ui import shortcut
 
 
 class __unit__(unit.UnitServerMixin, unit.Unit):
@@ -43,21 +44,37 @@ class __unit__(unit.UnitServerMixin, unit.Unit):
         self.add_resources(
             'app.menu',
             resource.MenuPath('playback/play'),
-            resource.MenuAction('playback/play', 'app.play-or-pause', _("_Play/pause"), ['<Control>Up', 'AudioPlay', 'space'], accels_fragile=True),
+            resource.MenuAction('playback/play', 'app.play-or-pause', _("_Play/pause")),
             resource.MenuAction('playback/play', 'app.stop', _("_Stop"), ['<Control>Down', 'AudioStop']),
-            resource.MenuAction('playback/play', 'app.fadeout-then(true)', _("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], accels_fragile=True),
+            resource.MenuAction('playback/play', 'app.fadeout-then(true)', _("Stop [fadeout]")),
             resource.MenuPath('playback/move'),
-            resource.MenuAction('playback/move', 'app.previous', _("_Previous"), ['<Control>Left', 'AudioPrev'], accels_fragile=True),
-            resource.MenuAction('playback/move', 'app.next', _("_Next"), ['<Control>Right', 'AudioNext'], accels_fragile=True),
-            resource.MenuAction('playback/move', 'app.fadeout-then(false)', _("Next [fadeout]"), ['<Control><Shift>Right'], accels_fragile=True),
+            resource.MenuAction('playback/move', 'app.previous', _("_Previous")),
+            resource.MenuAction('playback/move', 'app.next', _("_Next")),
+            resource.MenuAction('playback/move', 'app.fadeout-then(false)', _("Next [fadeout]")),
             resource.MenuPath('playback/volume'),
-            resource.MenuAction('playback/volume', 'app.volume(5)', _("Volume up"), ['<Control>plus', '<Control>KP_Add']),
-            resource.MenuAction('playback/volume', 'app.volume(-5)', _("Volume down"), ['<Control>minus', '<Control>KP_Subtract']),
+            resource.MenuAction('playback/volume', 'app.volume(5)', _("Volume up")),
+            resource.MenuAction('playback/volume', 'app.volume(-5)', _("Volume down")),
             resource.MenuPath('playback/jump'),
-            resource.MenuAction('playback/jump', 'app.absolute-jump(0)', _("Restart playback"), ['<Alt>Up'], accels_fragile=True),
-            resource.MenuAction('playback/jump', 'app.absolute-jump(-15)', _("End of song (-{} seconds)").format(15), ['<Alt>Down'], accels_fragile=True),
-            resource.MenuAction('playback/jump', 'app.relative-jump(-5)', _("Skip backwards ({} seconds)").format(5), ['<Alt>Left'], accels_fragile=True),
-            resource.MenuAction('playback/jump', 'app.relative-jump(5)', _("Skip forwards ({} seconds)").format(5), ['<Alt>Right'], accels_fragile=True),
+            resource.MenuAction('playback/jump', 'app.absolute-jump(0)', _("Restart playback")),
+            resource.MenuAction('playback/jump', 'app.absolute-jump(-15)', _("End of song (-{} seconds)").format(15)),
+            resource.MenuAction('playback/jump', 'app.relative-jump(-5)', _("Skip backwards ({} seconds)").format(5)),
+            resource.MenuAction('playback/jump', 'app.relative-jump(5)', _("Skip forwards ({} seconds)").format(5)),
+        )
+
+        self.add_resources(
+            'win.accel',
+            shortcut.Accel(_("_Play/pause"), ['<Control>Up', 'AudioPlay', 'space'], 'app.play-or-pause'),
+            shortcut.Accel(_("_Stop"), ['<Control>Down', 'AudioStop'], 'app.stop'),
+            shortcut.Accel(_("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], 'app.fadeout-then', GLib.Variant.new_boolean(True)),
+            shortcut.Accel(_("_Previous"), ['<Control>Left', 'AudioPrev'], 'app.previous'),
+            shortcut.Accel(_("_Next"), ['<Control>Right', 'AudioNext'], 'app.next'),
+            shortcut.Accel(_("Next [fadeout]"), ['<Control><Shift>Right'], 'app.fadeout-then', GLib.Variant.new_boolean(False)),
+            shortcut.Accel(_("Volume up"), ['<Control>plus', '<Control>KP_Add'], 'app.volume', GLib.Variant.new_int32(5)),
+            shortcut.Accel(_("Volume down"), ['<Control>minus', '<Control>KP_Subtract'], 'app.volume', GLib.Variant.new_int32(-5)),
+            shortcut.Accel(_("Restart playback"), ['<Alt>Up'], 'app.absolute-jump', GLib.Variant.new_int32(0)),
+            shortcut.Accel(_("End of song (-{} seconds)").format(15), ['<Alt>Down'], 'app.absolute-jump', GLib.Variant.new_int32(-15)),
+            shortcut.Accel(_("Skip backwards ({} seconds)").format(5), ['<Alt>Left'], 'app.relative-jump', GLib.Variant.new_int32(-5)),
+            shortcut.Accel(_("Skip forwards ({} seconds)").format(5), ['<Alt>Right'], 'app.relative-jump', GLib.Variant.new_int32(5)),
         )
 
         self.fading = False
