@@ -138,8 +138,8 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
         for position, item in enumerate(self.view.item_store_filter):
             if item.Id == Id:
                 self.view.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
-                view_height = self.view.item_view_rows.get_allocation().height
-                # row_height = self.view.item_view_rows.get_focus_child().get_allocation().height
+                view_height = self.view.item_view.rows.get_allocation().height
+                # row_height = self.view.item_view.rows.get_focus_child().get_allocation().height
                 self.view.scrolled_item_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
 
     def notify_current_song_cb(self, server_properties, pspec):

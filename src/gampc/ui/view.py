@@ -169,15 +169,15 @@ def clean_shortcuts_below(widget):
 class ItemView(Gtk.ColumnView):
     sortable = GObject.Property(type=bool, default=False)
     visible_titles = GObject.Property(type=bool, default=True)
-    # column_defs = GObject.Property(type=Gio.ListModel)
 
     def __init__(self, fields, factory_factory, **kwargs):
         self.fields = fields
         super().__init__(show_row_separators=True, show_column_separators=True, **kwargs)
         self.add_css_class('data-table')
 
-        self.o = self.get_last_child().observe_children()
-        self.o.connect('items-changed', lambda model, p, r, a: [clean_shortcuts(rw) for rw in model[p:p+a]])
+        self.rows = self.get_last_child()
+        self.rows_model = self.rows.observe_children()
+        self.rows_model.connect('items-changed', lambda model, p, r, a: [clean_shortcuts(row_widget) for row_widget in model[p:p + a]])
 
         self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name)) for field in fields.fields.values()}
         for name in fields.order:
@@ -186,10 +186,6 @@ class ItemView(Gtk.ColumnView):
         self.bind_property('visible-titles', self.get_first_child(), 'visible', GObject.BindingFlags.SYNC_CREATE)
         self.get_columns().connect('items-changed', self.columns_changed_cb)
         self.fields.order.connect('items-changed', self.fields_order_changed_cb)
-
-        # key_controller = Gtk.EventControllerKey()
-        # self.add_controller(key_controller)
-        # key_controller.connect('key-pressed', lambda controller, keyval, keycode, state: controller.get_widget().get_root().set_focus_child(controller.get_widget().get_root().headerbar) or print(1, keyval, controller.get_widget().get_root().get_focus_child()) if keyval == Gdk.KEY_Control_L else print(2, keyval))
 
     def cleanup(self):
         self.fields.order.disconnect_by_func(self.fields_order_changed_cb)
@@ -236,7 +232,6 @@ class View(Gtk.Box):
         self.item_selection = selection_model()
         self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_selection, vexpand=True, enable_rubberband=False)
         self.item_view.add_css_class('items')
-        self.item_view_rows = self.item_view.get_last_child()
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view, focusable=False)
         self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_item_view)
@@ -258,7 +253,7 @@ class View(Gtk.Box):
             self.item_selection.set_model(self.item_store_filter)
             self.item_view.sort_by_column(None, 0)
 
-        self.view_search = listviewsearch.ListViewSearch(self.item_view_rows, lambda text, item: any(text.lower() in item.get_field(name).lower() for name in fields.fields))
+        self.view_search = listviewsearch.ListViewSearch(self.item_view.rows, lambda text, item: any(text.lower() in item.get_field(name).lower() for name in fields.fields))
 
         self.connect('notify::filtering', self.notify_filtering_cb)
 
@@ -291,16 +286,6 @@ class View(Gtk.Box):
                 return False
         return True
 
-    # def get_current_position(self):
-    #     row = self.item_view_rows.get_focus_child()
-    #     if row is not None:
-    #         return row.get_first_child()._pos
-    #     found, i, pos = Gtk.BitsetIter.init_first(self.item_selection.get_selection())
-    #     if found and not i.next()[0]:
-    #         return pos
-    #     else:
-    #         return None
-
     def _get_selection(self):
         return util.misc.get_selection(self.item_selection)
 
@@ -310,8 +295,16 @@ class View(Gtk.Box):
     def get_selection_items(self):
         return list(map(lambda i: self.item_selection[i], self._get_selection()))
 
-    def xget_filenames(self, selection):
-        if selection:
-            return list(map(lambda i: self.item_selection[i].file, self._get_selection()))
-        else:
-            return list(map(lambda item: item.file, self.item_selection))
+    # def get_filenames(self, selection):
+    #     if selection:
+    #         return list(map(lambda i: self.item_selection[i].file, self._get_selection()))
+    #     else:
+    #         return list(map(lambda item: item.file, self.item_selection))
+
+
+class ItemViewInterface:
+    def __init__(self, content_from_items, content_type=None, add_items=None, remove_items=None):
+        self.content_from_items = content_from_items
+        self.content_type = content_type
+        self.add_items = add_items
+        self.remove_items = remove_items

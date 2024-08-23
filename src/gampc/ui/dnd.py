@@ -76,7 +76,7 @@ class ListDropTarget(Gtk.DropTarget):
         self.row = None
         self.connect('enter', self.action_cb)
         self.connect('motion', self.action_cb)
-        self.connect('leave', self.leave_cb)
+        # self.connect('leave', self.leave_cb)
         self.connect('drop', self.drop_cb, interface.add_items)
 
     def set_row(self, row=None):
@@ -97,10 +97,10 @@ class ListDropTarget(Gtk.DropTarget):
         self.set_row(row)
         return Gdk.DragAction.MOVE
 
-    @staticmethod
-    def leave_cb(self):
-        # print('leave')
-        self.set_row()
+    # @staticmethod
+    # def leave_cb(self):
+    #     # print('leave')
+    #     self.set_row()
 
     @staticmethod
     def drop_cb(self, value, x, y, add_items):

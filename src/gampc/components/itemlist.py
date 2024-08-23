@@ -52,7 +52,7 @@ class ItemList(component.Component):
         self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
 
         self.drag_source = ui.dnd.ListDragSource(self.get_item_interface(), actions=Gdk.DragAction.COPY)
-        self.view.item_view_rows.add_controller(self.drag_source)
+        self.view.item_view.rows.add_controller(self.drag_source)
 
         self.itemlist_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
 
@@ -67,7 +67,7 @@ class ItemList(component.Component):
         del self.itemlist_actions
         # self.view.item_view.columns['file'].get_factory().disconnect_by_func(self.bind_cb)
         self.view.cleanup()
-        self.view.item_view_rows.remove_controller(self.drag_source)
+        self.view.item_view.rows.remove_controller(self.drag_source)
         del self.drag_source
         super().shutdown()
 
@@ -168,12 +168,12 @@ class ItemListEditableMixin:
         self.signal_handler_connect(self.view, 'notify::filtering', self.check_editable)
 
         self.drop_target = ui.dnd.ListDropTarget(self.get_item_interface())
-        self.view.item_view_rows.add_controller(self.drop_target)
+        self.view.item_view.rows.add_controller(self.drop_target)
 
         self.set_editable(editable)
 
     def shutdown(self):
-        self.view.item_view_rows.remove_controller(self.drop_target)
+        self.view.item_view.rows.remove_controller(self.drop_target)
         # Cleanup ????
         del self.drop_target
         super().shutdown()
@@ -199,7 +199,7 @@ class ItemListEditableMixin:
 
     def action_paste_finish_cb(self, clipboard, result, before):
         values = clipboard.read_value_finish(result).values
-        row = self.view.item_view_rows.get_focus_child()
+        row = self.view.item_view.rows.get_focus_child()
         if values is not None and row is not None:
             pos = row.get_first_child().get_first_child().pos
             if not before:
