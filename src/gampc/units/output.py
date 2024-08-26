@@ -30,8 +30,8 @@ from ..util.misc import get_modifier_state
 
 
 class __unit__(unit.UnitServerMixin, unit.Unit):
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
 
         self.outputs = []
 

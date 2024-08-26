@@ -372,7 +372,7 @@ class ItemListTreeListMixin(component.ComponentPaneTreeMixin):
             row.set_expanded(not row.get_expanded())
 
 
-@util.unit.require_units('itemlist')
 class UnitItemListMixin(component.UnitComponentMixin):
     def __init__(self, *args, menus=[]):
         super().__init__(*args, menus=menus + ['context'])
+        self.require('itemlist')

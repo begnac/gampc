@@ -34,8 +34,8 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     protect_active = GObject.Property(type=bool, default=False)
     dark = GObject.Property(type=bool, default=False)
 
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
 
         self.require('menubar_old')
 

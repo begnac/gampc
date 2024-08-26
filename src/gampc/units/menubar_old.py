@@ -23,8 +23,8 @@ from ..util import unit
 
 
 class __unit__(unit.Unit):
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
 
         self.add_resources(
             'app.menu',

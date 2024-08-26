@@ -21,7 +21,6 @@
 from .. import util
 
 
-@util.unit.require_units('menubar_old')
 class __unit__(util.unit.UnitCssMixin, util.unit.Unit):
     CSS = """
     listview > row > treeexpander > box > label.modified {
@@ -30,11 +29,12 @@ class __unit__(util.unit.UnitCssMixin, util.unit.Unit):
     }
     """
 
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
         self._component_factories = {}
         self._components = {}
 
+        return
         self.add_resources(
             'app.menu',
             util.resource.MenuPath('components/components', _("Press <Ctrl> for a new instance")),

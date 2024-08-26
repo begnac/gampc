@@ -32,10 +32,10 @@ def iterate_children(widget):
 
 def iterate_action_families(widget):
     for child in iterate_children(widget):
-        for controller in child.observe_controllers():
-            if isinstance(controller, util.action.ShortcutController):
-                for family in controller.action_families:
-                    yield family, controller.is_global
+        if isinstance(child, util.action.WidgetActionFamilyMixin):
+            print(child)
+            for family in widget.action_info_families:
+                yield family
 
 
 class ShortcutsWindow(Gtk.ShortcutsWindow):
@@ -50,8 +50,8 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
         self.add_section(section_app)
         self.add_section(section_other)
 
-        for family, is_global in iterate_action_families(window):
-            if is_global:
+        for family in iterate_action_families(window):
+            if family.prefix == 'app':
                 groups, section = groups_app, section_app
             else:
                 groups, section = groups_other, section_other
@@ -67,8 +67,8 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
 
 
 class __unit__(util.unit.Unit):
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
 
     def generate_actions(self):
         # yield util.action.ActionInfo('app', 'BAD', self.BAD_cb, _("BAD"), ['<Control><Shift>b'])

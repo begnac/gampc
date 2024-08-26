@@ -30,8 +30,8 @@ from ..util.misc import format_time
 
 
 class __unit__(unit.UnitConfigMixin, unit.Unit):
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
         self.require('itemlist')
 
         menu = [

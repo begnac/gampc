@@ -829,8 +829,8 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.UnitCssMixin, util.uni
 
     COMPONENT_CLASS = Tanda
 
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
 
         self.fields = util.field.FieldFamily(self.config.fields)
         self.fields.register_field(util.field.Field('Artist', _("Artist")))

@@ -69,8 +69,8 @@ class __unit__(component.UnitComponentMixin, unit.Unit):
 
     COMPONENT_CLASS = Log
 
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
         self.handler = Handler()
         self.handler.setFormatter(logging.Formatter(fmt='%(asctime)s %(levelname)s: %(name)s: %(message)s (%(pathname)s %(lineno)d)'))
         logging.getLogger().addHandler(self.handler)

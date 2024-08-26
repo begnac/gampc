@@ -25,6 +25,7 @@ import zeroconf.asyncio
 import re
 import asyncio
 
+from .. import util
 from ..util import resource
 from ..util import unit
 from ..ui import ssde
@@ -59,10 +60,17 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
     LOCAL_HOST_NAME = _("Local host")
     LOCAL_HOST_ADDRESS = 'localhost:6600'
 
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    user_profiles_struct = ssde.List(
+        label=_("Profiles"),
+        substruct=ssde.Dict(
+            label=_("Profile"),
+            substructs=[
+                ssde.Text(name='name', label=_("Name"), default=_("<Name>")),
+                ssde.Text(name='address', label=_("[password@]host:port"), default=_("<Host>") + ':6600'),
+            ]))
 
-        self.require('menubar_old')
+    def __init__(self, *args):
+        super().__init__(*args)
 
         default_profiles = [
             {
@@ -78,11 +86,13 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
         self.config.profiles._get(default=default_profiles)
         self.user_profiles_setup()
 
-        self.add_resources(
-            'app.action',
-            resource.ActionModel('edit-user-profiles', self.edit_user_profiles_cb),
-        )
+        self.zeroconf_menu = Gio.Menu()
+        self.user_menu = Gio.Menu()
+        self.menu = Gio.Menu()
+        self.menu.append_section(None, self.zeroconf_menu)
+        self.menu.append_section(None, self.user_menu)
 
+        return
         self.add_resources(
             'app.menu',
             resource.MenuPath('server/profiles/profiles_menu', _("_Profiles"), is_submenu=True),
@@ -91,18 +101,12 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
             resource.MenuAction('server/profiles/profiles_menu', 'app.edit-user-profiles', _("Edit profiles")),
         )
 
-        self.user_profiles_struct = ssde.List(
-            label=_("Profiles"),
-            substruct=ssde.Dict(
-                label=_("Profile"),
-                substructs=[
-                    ssde.Text(name='name', label=_("Name"), default=_("<Name>")),
-                    ssde.Text(name='address', label=_("[password@]host:port"), default=_("<Host>") + ':6600'),
-                ]))
-
     def shutdown(self):
         super().shutdown()
         asyncio.get_event_loop().run_until_complete(self.zeroconf_profiles_cleanup())
+
+    def generate_actions(self):
+        yield util.action.ActionInfo('edit-user-profiles', self.edit_user_profiles_cb, _("Edit profiles"))
 
     def zeroconf_profiles_setup(self):
         self.zc_menu_actions = {}

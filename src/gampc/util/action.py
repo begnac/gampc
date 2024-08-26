@@ -19,7 +19,6 @@
 
 
 from gi.repository import GLib
-from gi.repository import GObject
 from gi.repository import Gio
 from gi.repository import Gtk
 
@@ -119,29 +118,35 @@ class ActionInfoFamily:
             if action is not None:
                 action_map.add_action(action)
 
+    def insert_action_group(self, widget):
+        action_group = Gio.SimpleActionGroup()
+        self.add_to_action_map(action_group)
+        widget.insert_action_group(self.prefix, action_group)
+        return action_group
+
     def add_to_shortcut_controller(self, controller):
-        controller.action_families.append(self)
         for action_info in self.action_infos:
             shortcut, secondary_shortcut = action_info.get_shortcut(self.prefix)
             if shortcut is not None:
-                print(self.prefix, action_info.name)
                 # Important to add the main shortcut last, for display in menu.
                 if secondary_shortcut is not None:
                     controller.add_shortcut(secondary_shortcut)
                 controller.add_shortcut(shortcut)
 
-    def add_to_widget(self, widget):
-        action_map = Gio.SimpleActionGroup()
-        widget.insert_action_group(self.prefix, action_map)
-        self.add_to_action_map(action_map)
-        controller = ShortcutController(widget)
+    def get_shortcut_controller(self):
+        controller = Gtk.ShortcutController()
         self.add_to_shortcut_controller(controller)
-        return action_map
+        return controller
 
 
-class ShortcutController(Gtk.ShortcutController):
-    def __init__(self, widget, is_global=False, **kwargs):
-        super().__init__(**kwargs)
-        self.action_families = []
-        self.is_global = is_global
-        widget.add_controller(self)
+class WidgetActionFamilyMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.action_info_families = []
+
+
+class UnitActionFamilyMixin:
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.action_family = ActionInfoFamily('app', self.label, self.generate_actions())

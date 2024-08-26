@@ -310,14 +310,15 @@ class ViewWithCopy(View):
         super().__init__(*args, **kwargs)
         self.interface = interface
 
+        self.copy_paste_family = util.action.ActionInfoFamily('view', _("Cut and Paste"), self.generate_copy_paste_actions())
+        self.copy_paste_actions = self.copy_paste_family.insert_action_group(self)
+        self.add_controller(self.copy_paste_family.get_shortcut_controller())
         # self.copy_paste_menu = util.action.Menu()
-
-        self.copy_paste_actions = util.action.ActionInfoFamily('view', _("Cut and Paste"), self.generate_actions()).add_to_widget(self)
 
         self.drag_source = dnd.ListDragSource(interface, actions=Gdk.DragAction.COPY)
         self.item_view.rows.add_controller(self.drag_source)
 
-    def generate_actions(self):
+    def generate_copy_paste_actions(self):
         yield util.action.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
 
     def action_copy_cb(self, action, parameter):
@@ -362,9 +363,9 @@ class ViewWithCopyPaste(ViewWithCopy):
             self.copy_paste_actions.lookup(name).set_enabled(editable)
         self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
-    def generate_actions(self):
+    def generate_copy_paste_actions(self):
         yield util.action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'])
-        yield from super().generate_actions()
+        yield from super().generate_copy_paste_actions()
         paste_after = util.action.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True, parameter_format='b')
         yield paste_after
         yield paste_after.derive(_("Paste before"), ['<Control>b'], False)

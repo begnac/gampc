@@ -34,10 +34,10 @@ class UnitLoadError(Exception):
 
 
 class Unit(resource.ResourceProvider):
-    def __init__(self, name, manager):
+    def __init__(self, manager):
         super().__init__()
-        self.name = name
         self.manager = manager
+        self.name = self.__module__.rsplit('.', 1)[1]
 
         self.loaded_required = []
 
@@ -58,20 +58,9 @@ class Unit(resource.ResourceProvider):
         return unit
 
 
-def require_units(*names):
-    def decorator(unit_cls):
-        class NewUnit(unit_cls):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                for name in names:
-                    self.require(name)
-        return NewUnit
-    return decorator
-
-
 class UnitCssMixin:
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
         self.css_provider = Gtk.CssProvider()
         self.css_provider.load_from_data(self.CSS, -1)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
@@ -82,15 +71,15 @@ class UnitCssMixin:
 
 
 class UnitConfigMixin:
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
         self.require('config')
-        self.config = self.unit_config.load_config(name)
+        self.config = self.unit_config.load_config(self.name)
 
 
 class UnitServerMixin:
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
 
         self.require('server')
         self.ampd = self.unit_server.ampd_client.executor.sub_executor()
@@ -136,7 +125,7 @@ class UnitManager(GObject.Object):
             unit = self._units[name]
         else:
             unit_module = importlib.import_module('gampc.units.' + name)
-            unit = self._units[name] = unit_module.__unit__(name, self)
+            unit = self._units[name] = unit_module.__unit__(self)
             unit.use_count = 0
             for aggregator in self._aggregators:
                 aggregator.link(unit)

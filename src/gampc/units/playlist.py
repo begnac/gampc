@@ -85,12 +85,12 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
 
     TEMPNAME = '$$TEMP$$'
 
-    def __init__(self, name, manager):
+    def __init__(self, *args):
         self.playlist_cache = util.cache.AsyncCache(self.playlist_retrieve)
         self.playlists = {}
         self.root = ui.treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node), fill_contents_cb=self.fill_contents_cb)
 
-        super().__init__(name, manager)
+        super().__init__(*args)
 
         self.add_resources(
             'app.menu',

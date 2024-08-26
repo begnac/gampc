@@ -31,16 +31,14 @@ from ..ui import logging
 from .. import __application__
 
 
-class Window(Gtk.ApplicationWindow):
+class Window(util.action.WidgetActionFamilyMixin, Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
         super().__init__(show_menubar=True, **kwargs)
 
-        # self.shortcut_accregator = shortcut.ShortcutAggregator(['win.accel'], _("Global shortcuts"))
-        # unit.manager.add_aggregator(self.shortcut_accregator)
-        # self.add_controller(self.shortcut_accregator.controller)
-
-        controller = util.action.ShortcutController(self, is_global=True)
-        for family in unit.action_info_families.values():
+        controller = Gtk.ShortcutController()
+        self.add_controller(controller)
+        self.action_info_families = list(unit.action_info_families.values())
+        for family in self.action_info_families:
             family.add_to_shortcut_controller(controller)
 
         self.unit = unit
@@ -173,10 +171,11 @@ class Window(Gtk.ApplicationWindow):
             self.volume_button.emit('popdown')
 
 
-@unit.require_units('persistent', 'component')
 class __unit__(unit.UnitConfigMixin, unit.UnitServerMixin, unit.Unit):
-    def __init__(self, manager, name):
-        super().__init__(manager, name)
+    def __init__(self, manager):
+        super().__init__(manager)
+        self.require('persistent')
+        self.require('component')
         self.config.message_timeout._get(default=5)
 
     def new_window(self, app):

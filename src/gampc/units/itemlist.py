@@ -45,8 +45,8 @@ for d in range(N ** 3):
 class __unit__(util.unit.UnitConfigMixin, util.unit.UnitCssMixin, util.unit.Unit):
     CSS = CSS
 
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
 
         items = [
             util.resource.MenuPath('edit/songlist'),

@@ -224,8 +224,8 @@ class ComponentEntryMixin:
 
 
 class UnitComponentMixin(util.unit.UnitConfigMixin, util.unit.UnitServerMixin):
-    def __init__(self, name, manager, *, menus=[]):
-        super().__init__(name, manager)
+    def __init__(self, *args, menus=[]):
+        super().__init__(*args)
         self.require('component')
         self.require('persistent')
 
@@ -257,6 +257,6 @@ class UnitComponentMixin(util.unit.UnitConfigMixin, util.unit.UnitServerMixin):
 
 
 class UnitPanedComponentMixin(UnitComponentMixin, util.unit.UnitConfigMixin):
-    def __init__(self, name, manager, **kwargs):
-        super().__init__(name, manager, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.config.pane_separator._get(default=100)

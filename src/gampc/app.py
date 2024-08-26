@@ -65,7 +65,6 @@ class App(Gtk.Application):
         # self.unit_config = self.unit_manager.get_unit('config')
 
         default_units = [
-            'menubar_old',
             'menubar', 'help', 'profiles', 'server',
             'output', 'persistent',
             'playback', 'window',
@@ -228,3 +227,15 @@ class App(Gtk.Application):
         else:
             self.session_inhibit_cookie = self.session_inhibit_cookie and self.uninhibit(self.session_inhibit_cookie)
             self.systemd_inhibit_fd = None
+
+    def follow_action_group(self, action_group):
+        for name in action_group.list_actions():
+            self.add_action(action_group.lookup_action())
+        action_group.connect('action-added', self.follow_action_added_cb)
+        action_group.connect('action-removed', self.follow_action_removed_cb)
+
+    def follow_action_added_cb(self, action_group, name):
+        self.add_action(action_group.lookup_action(name))
+
+    def follow_action_removed_cb(self, action_group, name):
+        self.remove_action(name)

@@ -105,8 +105,8 @@ class __unit__(songlist.UnitSongListMixin, util.unit.Unit):
 
     COMPONENT_CLASS = Search
 
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
+    def __init__(self, *args):
+        super().__init__(*args)
         self.add_resources(
             'app.menu',
             util.resource.MenuAction('edit/component', 'search.search', _("Search"), ['<Control><Alt>f']),

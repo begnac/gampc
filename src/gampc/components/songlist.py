@@ -107,11 +107,13 @@ class SongListAddSpecialMixin:  #####  Not ready
             self.add_record(dict(file=url))
 
 
-@util.unit.require_units('songlist', 'database')
 class UnitSongListMixin(itemlist.UnitItemListMixin):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.require('songlist')
+        self.require('database')
 
 
 class UnitPanedSongListMixin(UnitSongListMixin, component.UnitPanedComponentMixin):
-    def __init__(self, name, manager, *, menus=[]):
-        super().__init__(name, manager, menus=menus + ['left-context'])
+    def __init__(self, *args, menus=[]):
+        super().__init__(*args, menus=menus + ['left-context'])
