@@ -55,13 +55,8 @@ class ActionInfo:
 
     def get_action(self):
         if self.data is not None:
-            parameter_type = state = None
-            if self.parameter_format is not None:
-                parameter_type = GLib.VariantType.new(self.parameter_format)
-                if self.state is not None:
-                    state = GLib.Variant(self.parameter_format, self.state)
-
-            action = Gio.SimpleAction(name=self.name, parameter_type=parameter_type, state=state)
+            parameter_type = None if self.parameter_format is None else GLib.VariantType.new(self.parameter_format)
+            action = Gio.SimpleAction(name=self.name, parameter_type=parameter_type, state=self.state)
             action.connect('activate', self.data)
             return action
 
@@ -118,9 +113,13 @@ class ActionInfoFamily:
             if action is not None:
                 action_map.add_action(action)
 
-    def insert_action_group(self, widget):
+    def get_action_group(self):
         action_group = Gio.SimpleActionGroup()
         self.add_to_action_map(action_group)
+        return action_group
+
+    def insert_action_group(self, widget):
+        action_group = self.get_action_group()
         widget.insert_action_group(self.prefix, action_group)
         return action_group
 
@@ -143,10 +142,3 @@ class WidgetActionFamilyMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.action_info_families = []
-
-
-class UnitActionFamilyMixin:
-    def __init__(self, *args):
-        super().__init__(*args)
-
-        self.action_family = ActionInfoFamily('app', self.label, self.generate_actions())

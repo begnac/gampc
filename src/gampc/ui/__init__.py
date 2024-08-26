@@ -19,5 +19,7 @@
 
 
 from . import dnd
+from . import headerbar
+from . import logging
 from . import treelist
 from . import view

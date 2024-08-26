@@ -24,7 +24,7 @@ from gi.repository import Gtk
 import logging
 
 
-class Handeler(logging.Handler):
+class Handler(logging.Handler):
     MAX_MESSAGES = 5
 
     def __init__(self, timeout):

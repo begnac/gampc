@@ -18,50 +18,29 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GLib
+from gi.repository import Gtk
 
+import asyncio
 import ampd
 
-from ..util import resource
 from .. import util
+
+
+def hold_app(f):
+    def g(*args, **kwargs):
+        app = Gtk.Application.get_default()
+        retval = f(*args, **kwargs)
+        if isinstance(retval, asyncio.Future):
+            app.hold()
+            retval.add_done_callback(lambda future: app.release())
+        return retval
+    return g
 
 
 class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
         self.fading = False
-
-        return
-        self.add_resources(
-            'app.action',
-            resource.ActionModel('play-or-pause', self.play_or_pause_cb, dangerous=True),
-            resource.ActionModel('volume', self.change_volume_cb, parameter_type=GLib.VariantType.new('i')),
-            resource.ActionModel('absolute-jump', self.absolute_jump_cb, dangerous=True, parameter_type=GLib.VariantType.new('i')),
-            resource.ActionModel('relative-jump', self.relative_jump_cb, dangerous=True, parameter_type=GLib.VariantType.new('i')),
-            *(resource.ActionModel(name, self.mpd_command_cb, dangerous=True) for name in ('play', 'stop', 'next', 'previous')),
-            resource.ActionModel('fadeout-then', self.fadeout_then_cb, parameter_type=GLib.VariantType.new('b')),
-        )
-
-        self.add_resources(
-            'app.menu',
-            resource.MenuPath('playback/play'),
-            resource.MenuAction('playback/play', 'app.play-or-pause', _("_Play/pause")),
-            resource.MenuAction('playback/play', 'app.stop', _("_Stop"), ['<Control>Down', 'AudioStop']),
-            resource.MenuAction('playback/play', 'app.fadeout-then(true)', _("Stop [fadeout]")),
-            resource.MenuPath('playback/move'),
-            resource.MenuAction('playback/move', 'app.previous', _("_Previous")),
-            resource.MenuAction('playback/move', 'app.next', _("_Next")),
-            resource.MenuAction('playback/move', 'app.fadeout-then(false)', _("Next [fadeout]")),
-            resource.MenuPath('playback/volume'),
-            resource.MenuAction('playback/volume', 'app.volume(5)', _("Volume up")),
-            resource.MenuAction('playback/volume', 'app.volume(-5)', _("Volume down")),
-            resource.MenuPath('playback/jump'),
-            resource.MenuAction('playback/jump', 'app.absolute-jump(0)', _("Restart playback")),
-            resource.MenuAction('playback/jump', 'app.absolute-jump(-15)', _("End of song (-{} seconds)").format(15)),
-            resource.MenuAction('playback/jump', 'app.relative-jump(-5)', _("Skip backwards ({} seconds)").format(5)),
-            resource.MenuAction('playback/jump', 'app.relative-jump(5)', _("Skip forwards ({} seconds)").format(5)),
-        )
-
 
     def generate_actions(self):
         yield util.action.ActionInfo('play-or-pause', self.play_or_pause_cb, _("_Play/pause"), ['<Control>Up', 'AudioPlay', 'space'], dangerous=True)
@@ -73,20 +52,27 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
         yield fadeout
         yield fadeout.derive(_("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], True)
         yield fadeout.derive(_("Next [fadeout]"), ['<Control><Shift>Right'], False)
-        return
-        # shortcut.Accel(_("Volume up"), ['<Control>plus', '<Control>KP_Add'], 'app.volume', GLib.Variant.new_int32(5)),
-        # shortcut.Accel(_("Volume down"), ['<Control>minus', '<Control>KP_Subtract'], 'app.volume', GLib.Variant.new_int32(-5)),
-        # shortcut.Accel(_("Restart playback"), ['<Alt>Up'], 'app.absolute-jump', GLib.Variant.new_int32(0)),
-        # shortcut.Accel(_("End of song (-{} seconds)").format(15), ['<Alt>Down'], 'app.absolute-jump', GLib.Variant.new_int32(-15)),
-        # shortcut.Accel(_("Skip backwards ({} seconds)").format(5), ['<Alt>Left'], 'app.relative-jump', GLib.Variant.new_int32(-5)),
-        # shortcut.Accel(_("Skip forwards ({} seconds)").format(5), ['<Alt>Right'], 'app.relative-jump', GLib.Variant.new_int32(5)),
+        yield util.action.ActionInfo('volume-popup', self.volume_popup_cb, _("Adjust volume"), ['<Alt>v'])
+        volume = util.action.ActionInfo('volume', self.volume_cb, parameter_format='(ib)')
+        yield volume
+        yield volume.derive(_("Volume up"), ['<Control>plus', '<Control>KP_Add'], (5, True))
+        yield volume.derive(_("Volume down"), ['<Control>minus', '<Control>KP_Subtract'], (-5, True))
+        yield volume.derive(_("Mute"), ['<Control>AudioMute'], (0, False))
+        jump = util.action.ActionInfo('jump', self.jump_cb, parameter_format='(ib)')
+        yield jump
+        yield jump.derive(_("Restart playback"), ['<Alt>Up'], (0, False))
+        yield jump.derive(_("End of song (-{} seconds)").format(15), ['<Alt>Down'], (-15, False))
+        yield jump.derive(_("Skip backwards ({} seconds)").format(5), ['<Alt>Left'], (-5, True))
+        yield jump.derive(_("Skip forwards ({} seconds)").format(5), ['<Alt>Right'], (5, True))
 
+    @hold_app
     @ampd.task
     async def mpd_command_cb(self, caller, *data):
         if not self.unit_server.ampd_server_properties.state:
             await self.ampd.idle(ampd.IDLE)
         await getattr(self.ampd, caller.get_name())()
 
+    @hold_app
     @ampd.task
     async def play_or_pause_cb(self, action_, parameter):
         if not self.unit_server.ampd_server_properties.state:
@@ -94,6 +80,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
             await self.ampd.idle(ampd.IDLE)
         await (self.ampd.pause(1) if self.unit_server.ampd_server_properties.state == 'play' else self.ampd.play())
 
+    @hold_app
     @ampd.task
     async def fadeout_then_cb(self, action_, parameter):
         if self.fading:
@@ -136,19 +123,28 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
         finally:
             self.fading = False
 
-    def change_volume_cb(self, action_, parameter):
-        volume = self.unit_server.ampd_server_properties.volume + parameter.unpack()
+    def volume_popup_cb(self, action, parameter):
+        button = self.app.get_active_window().headerbar.volume_button
+        if button.is_sensitive() and not button.get_popup().get_mapped():
+            button.emit('popup')
+        else:
+            button.emit('popdown')
+
+    def volume_cb(self, action_, parameter):
+        volume, relative = parameter.unpack()
+        if relative:
+            volume += self.unit_server.ampd_server_properties.volume
         if volume < 0:
             volume = 0
         if volume > 100:
             volume = 100
         self.unit_server.ampd_server_properties.volume = volume
 
-    def absolute_jump_cb(self, action_, parameter):
-        target = parameter.unpack()
+    def jump_cb(self, action_, parameter):
+        target, relative = parameter.unpack()
         if self.unit_server.ampd_server_properties.state != 'stop':
-            self.unit_server.ampd_server_properties.elapsed = target if target >= 0 else self.unit_server.ampd_server_properties.duration + target
-
-    def relative_jump_cb(self, action_, parameter):
-        if self.unit_server.ampd_server_properties.state != 'stop':
-            self.unit_server.ampd_server_properties.elapsed += parameter.unpack()
+            if relative:
+                target += self.unit_server.ampd_server_properties.elapsed
+            elif target < 0:
+                target = self.unit_server.ampd_server_properties.duration + target
+            self.unit_server.ampd_server_properties.elapsed = target

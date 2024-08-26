@@ -20,7 +20,6 @@
 
 from gi.repository import GLib
 from gi.repository import Gio
-from gi.repository import Gdk
 from gi.repository import Gtk
 
 import sys
@@ -149,7 +148,7 @@ class App(Gtk.Application):
     def do_command_line(self, command_line):
         options = command_line.get_options_dict().end().unpack()
         if 'component' in options:
-            self.activate_action('component-start', GLib.Variant('(sbb)', (options['component'], True, True)))
+            self.unit_window.component_start(options['component'])
         elif GLib.OPTION_REMAINING in options:
             for option in options[GLib.OPTION_REMAINING]:
                 try:
@@ -183,15 +182,6 @@ class App(Gtk.Application):
             del sys.last_type, sys.last_value, sys.last_traceback
         except AttributeError:
             pass
-
-    def task_hold_app(self, f):
-        def g(*args, **kwargs):
-            retval = f(*args, **kwargs)
-            if isinstance(retval, asyncio.Future):
-                self.hold()
-                retval.add_done_callback(lambda future: self.release())
-            return retval
-        return g
 
     @ampd.task
     async def action_notify_cb(self, *args):
@@ -230,7 +220,7 @@ class App(Gtk.Application):
 
     def follow_action_group(self, action_group):
         for name in action_group.list_actions():
-            self.add_action(action_group.lookup_action())
+            self.add_action(action_group.lookup_action(name))
         action_group.connect('action-added', self.follow_action_added_cb)
         action_group.connect('action-removed', self.follow_action_removed_cb)
 

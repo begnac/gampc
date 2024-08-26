@@ -26,8 +26,6 @@ import re
 import asyncio
 
 from .. import util
-from ..util import resource
-from ..util import unit
 from ..ui import ssde
 
 
@@ -50,13 +48,13 @@ class Profile:
         return Profile(name, address)
 
     def get_action(self):
-        return resource.MenuActionMinimal(f'app.server-profile("{self}")', self.name)
+        return util.action.ActionInfo('server-profile', None, self.name, parameter_format='s', arg=repr(self))
 
     def __repr__(self):
         return f'{self.address}={self.name}'
 
 
-class __unit__(unit.UnitConfigMixin, unit.Unit):
+class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
     LOCAL_HOST_NAME = _("Local host")
     LOCAL_HOST_ADDRESS = 'localhost:6600'
 
@@ -79,27 +77,17 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
             },
         ]
 
-        self.zeroconf_profile_menu = Gio.Menu()
-        self.user_profile_menu = Gio.Menu()
-        self.zeroconf_profiles_setup()
-
         self.config.profiles._get(default=default_profiles)
-        self.user_profiles_setup()
 
         self.zeroconf_menu = Gio.Menu()
+        self.zeroconf_profiles_setup()
+
         self.user_menu = Gio.Menu()
+        self.user_profiles_setup()
+
         self.menu = Gio.Menu()
         self.menu.append_section(None, self.zeroconf_menu)
         self.menu.append_section(None, self.user_menu)
-
-        return
-        self.add_resources(
-            'app.menu',
-            resource.MenuPath('server/profiles/profiles_menu', _("_Profiles"), is_submenu=True),
-            resource.MenuPath('server/profiles/profiles_menu/zeroconf', instance=self.zeroconf_profile_menu),
-            resource.MenuPath('server/profiles/profiles_menu/user', instance=self.user_profile_menu),
-            resource.MenuAction('server/profiles/profiles_menu', 'app.edit-user-profiles', _("Edit profiles")),
-        )
 
     def shutdown(self):
         super().shutdown()
@@ -109,7 +97,7 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
         yield util.action.ActionInfo('edit-user-profiles', self.edit_user_profiles_cb, _("Edit profiles"))
 
     def zeroconf_profiles_setup(self):
-        self.zc_menu_actions = {}
+        self.zc_profiles = {}
         self.azc = zeroconf.asyncio.AsyncZeroconf()
         self.asb = zeroconf.asyncio.AsyncServiceBrowser(self.azc.zeroconf, ZEROCONF_MPD_TYPE, handlers=[lambda **kwargs: asyncio.create_task(self.zeroconf_profiles_handler(**kwargs))])
 
@@ -126,20 +114,19 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
     async def zeroconf_profiles_handler(self, *, service_type, name, state_change, **kwargs):
         match = re.fullmatch(ZEROCONF_NAME_REGEXP, name)
         short_name = match.group('name')
-        if state_change in (zeroconf.ServiceStateChange.Removed, zeroconf.ServiceStateChange.Updated) and short_name in self.zc_menu_actions:
-            menu_action = self.zc_menu_actions.pop(short_name)
-            menu_action.remove_from(self.zeroconf_profile_menu)
-        if state_change in (zeroconf.ServiceStateChange.Added, zeroconf.ServiceStateChange.Updated) and short_name not in self.zc_menu_actions:
+        if state_change in (zeroconf.ServiceStateChange.Removed, zeroconf.ServiceStateChange.Updated) and short_name in self.zc_profiles:
+            self.zc_profiles.pop(short_name)
+        if state_change in (zeroconf.ServiceStateChange.Added, zeroconf.ServiceStateChange.Updated) and short_name not in self.zc_profiles:
             info = await self.azc.async_get_service_info(service_type, name)
-            profile = Profile(short_name, f'{info.server[:-1]}:{info.port}')
-            menu_action = profile.get_action()
-            menu_action.insert_into(self.zeroconf_profile_menu)
-            self.zc_menu_actions[short_name] = menu_action
+            self.zc_profiles[short_name] = Profile(short_name, f'{info.server[:-1]}:{info.port}').get_action()
+        family = util.action.ActionInfoFamily('app', None, self.zc_profiles.values())
+        self.zeroconf_menu.remove_all()
+        self.zeroconf_menu.append_section(None, family.get_menu())
 
     def user_profiles_setup(self):
-        self.user_profile_menu.remove_all()
-        for profile in self.config.profiles._get():
-            Profile(**profile).get_action().insert_into(self.user_profile_menu)
+        family = util.action.ActionInfoFamily('app', None, (Profile(**profile).get_action() for profile in self.config.profiles._get()))
+        self.user_menu.remove_all()
+        self.user_menu.append_section(None, family.get_menu())
 
     def edit_user_profiles_cb(self, *args):
         value = self.user_profiles_struct.edit(None, self.config.profiles._get(), self.config.edit_dialog_size._get(default=[500, 500]))

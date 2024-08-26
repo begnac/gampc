@@ -305,7 +305,7 @@ class ItemViewInterface:
         self.remove_items = remove_items
 
 
-class ViewWithCopy(View):
+class ViewWithCopy(util.action.WidgetActionFamilyMixin, View):
     def __init__(self, *args, interface, **kwargs):
         super().__init__(*args, **kwargs)
         self.interface = interface
@@ -314,6 +314,7 @@ class ViewWithCopy(View):
         self.copy_paste_actions = self.copy_paste_family.insert_action_group(self)
         self.add_controller(self.copy_paste_family.get_shortcut_controller())
         # self.copy_paste_menu = util.action.Menu()
+        self.action_info_families.append(self.copy_paste_family)
 
         self.drag_source = dnd.ListDragSource(interface, actions=Gdk.DragAction.COPY)
         self.item_view.rows.add_controller(self.drag_source)

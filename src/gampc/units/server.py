@@ -25,16 +25,11 @@ from gi.repository import Gtk
 import asyncio
 import ampd
 
-from ..util import resource
-from ..util import unit
+from .. import util
 from ..util.logger import logger
 
 
-class ServerOption(GObject.Object):
-    value = GObject.Property(type=bool, default=False)
-
-
-class __unit__(unit.UnitConfigMixin, unit.Unit):
+class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
     SEPARATOR_FILE = 'separator.mp3'
 
     server_label = GObject.Property(type=str, default='')
@@ -45,7 +40,6 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.require('menubar_old')
         self.require('profiles')
         self.require('songlist')
 
@@ -61,9 +55,6 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
         self.ampd_server_properties.bind_property('current-song', self, 'current-song', GObject.BindingFlags.SYNC_CREATE)
         self.ampd_server_properties.connect('server-error', self.server_error_cb)
         self.ampd_server_properties.connect('notify::updating-db', self.set_server_label)
-        self.server_options = {name: ServerOption() for name in ampd.OPTION_NAMES}
-        for name in ampd.OPTION_NAMES:
-            self.ampd_server_properties.bind_property(name, self.server_options[name], 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
 
         self.want_to_connect = False
 
@@ -79,27 +70,6 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
         self.separator_song = {name: '----------' for name in self.unit_songlist.fields.basic_names if name != 'Time'}
         self.separator_song['file'] = self.SEPARATOR_FILE
 
-        self.add_resources(
-            'app.action',
-            resource.PropertyActionModel('server-profile', self),
-            resource.ActionModel('connect', self.ampd_connect),
-            resource.ActionModel('disconnect', self.ampd_disconnect),
-            resource.ActionModel('connect-to-previous', self.ampd_connect_to_previous),
-            resource.ActionModel('update', self.update_cb),
-            *(resource.PropertyActionModel(name, self.server_options[name], property_name='value') for name in ampd.OPTION_NAMES)
-        )
-
-        self.add_resources(
-            'app.menu',
-            resource.MenuPath('server/server/actions'),
-            resource.MenuPath('server/server/output'),
-            resource.MenuPath('server/server/connection'),
-            resource.MenuAction('server/server/actions', 'app.update', _("Update database")),
-            resource.MenuAction('server/server/connection', 'app.connect', _("Connect"), ['<Alt><Shift>c']),
-            resource.MenuAction('server/server/connection', 'app.disconnect', _("Disconnect"), ['<Alt><Shift>d']),
-            resource.MenuAction('server/server/connection', 'app.connect-to-previous', _("Connect to previous"), ['<Control><Alt>p']),
-        )
-
     def shutdown(self):
         # if self.current_song_hooks:
         #     raise RuntimeError
@@ -113,6 +83,17 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
         del self.ampd_client
         del self.ampd_server_properties
         super().shutdown()
+
+    def generate_database_actions(self):
+        yield util.action.ActionInfo('update', self.update_cb, _("Update database"))
+
+    def generate_connection_actions(self):
+        yield util.action.ActionInfo('connect', self.ampd_connect, _("Connect"), ['<Alt><Shift>c'])
+        yield util.action.ActionInfo('disconnect', self.ampd_disconnect, _("Disconnect"), ['<Alt><Shift>d'])
+        yield util.action.ActionInfo('connect-to-previous', self.ampd_connect_to_previous, _("Connect to previous"), ['<Control><Alt>p'])
+        yield util.action.PropertyActionInfo('server-profile', self)
+        for name in ampd.OPTION_NAMES:
+            yield util.action.PropertyActionInfo(name, self.ampd_server_properties, parameter_format='i')
 
     def ampd_connect(self, *args):
         self.want_to_connect = True

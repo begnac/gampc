@@ -37,8 +37,6 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.require('menubar_old')
-
         self.unit_server.ampd_server_properties.connect('notify::state', self.notify_protect_requested_cb)
         self.connect('notify::protect-requested', self.notify_protect_requested_cb)
         self.connect('notify::dark', self.notify_dark_cb)

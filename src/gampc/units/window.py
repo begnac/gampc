@@ -22,11 +22,7 @@ from gi.repository import GObject
 from gi.repository import Gtk
 
 from .. import util
-from ..util import resource
-from ..util import unit
-from ..util.logger import logger
-from ..ui import headerbar
-from ..ui import logging
+from .. import ui
 
 from .. import __application__
 
@@ -37,7 +33,7 @@ class Window(util.action.WidgetActionFamilyMixin, Gtk.ApplicationWindow):
 
         controller = Gtk.ShortcutController()
         self.add_controller(controller)
-        self.action_info_families = list(unit.action_info_families.values())
+        self.action_info_families = list(unit.action_info_families)
         for family in self.action_info_families:
             family.add_to_shortcut_controller(controller)
 
@@ -57,7 +53,7 @@ class Window(util.action.WidgetActionFamilyMixin, Gtk.ApplicationWindow):
         self.main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(self.main)
 
-        self.headerbar = headerbar.HeaderBar()
+        self.headerbar = ui.headerbar.HeaderBar()
         self.set_titlebar(self.headerbar)
 
         self.unit.unit_persistent.bind_property('protect-active', self.headerbar.option_buttons, 'sensitive', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
@@ -74,23 +70,27 @@ class Window(util.action.WidgetActionFamilyMixin, Gtk.ApplicationWindow):
         self.unit.unit_server.ampd_server_properties.connect('notify::state', self.set_time_scale_sensitive)
         self.unit.unit_persistent.connect('notify::protect-active', self.set_time_scale_sensitive)
 
-        self.add_action(resource.Action('toggle-fullscreen', self.action_toggle_fullscreen_cb))
-        self.add_action(resource.Action('volume-popup', self.action_volume_popup_cb))
-
-        self.logging_handler = logging.Handeler(self.unit.config.message_timeout._get() * 1000)
-        logger.addHandler(self.logging_handler)
+        self.logging_handler = ui.logging.Handler(self.unit.config.message_timeout._get() * 1000)
+        util.logger.logger.addHandler(self.logging_handler)
         self.main.append(self.logging_handler.box)
 
         self.update_title()
         self.update_subtitle()
 
+        # family = util.action.ActionInfoFamily('win', _("_Window"), self.generate_actions())
+        # self.action_info_families.append(family)
+        # family.add_to_action_map(self)
+        # self.add_controller(family.get_shortcut_controller())
+        # self.copy_paste_menu = util.action.Menu()
+        # self.action_info_families.append(self.copy_paste_family)
+
     def __del__(self):
-        logger.debug("Deleting {}".format(self))
+        util.logger.logger.debug("Deleting {}".format(self))
 
     def shutdown(self):
-        logger.debug("Destroying window: {}".format(self))
+        util.logger.logger.debug("Destroying window: {}".format(self))
         self.change_component(None)
-        logger.removeHandler(self.logging_handler)
+        util.logger.logger.removeHandler(self.logging_handler)
         self.logging_handler.shutdown()
         self.remove_action('toggle-fullscreen')
         self.remove_action('volume-popup')
@@ -151,12 +151,6 @@ class Window(util.action.WidgetActionFamilyMixin, Gtk.ApplicationWindow):
             chunks.append(self.unit.unit_server.server_label)
         self.headerbar.set_subtitle(' / '.join(chunks))
 
-    def action_toggle_fullscreen_cb(self, *args):
-        if self.is_fullscreen():
-            self.unfullscreen()
-        else:
-            self.fullscreen()
-
     @staticmethod
     def notify_default_size_cb(self, param):
         if not self.is_fullscreen():
@@ -164,61 +158,55 @@ class Window(util.action.WidgetActionFamilyMixin, Gtk.ApplicationWindow):
             self.unit.config.width._set(width)
             self.unit.config.height._set(height)
 
-    def action_volume_popup_cb(self, action, parameter):
-        if self.volume_button.is_sensitive() and not self.volume_button.get_popup().get_mapped():
-            self.volume_button.emit('popup')
-        else:
-            self.volume_button.emit('popdown')
 
-
-class __unit__(unit.UnitConfigMixin, unit.UnitServerMixin, unit.Unit):
+class __unit__(util.unit.UnitConfigMixin, util.unit.UnitServerMixin, util.unit.Unit):
     def __init__(self, manager):
         super().__init__(manager)
         self.require('persistent')
         self.require('component')
         self.config.message_timeout._get(default=5)
 
-    def new_window(self, app):
+    def new_window(self):
         return Window(self, application=self.app)
 
     def generate_actions(self):
         yield util.action.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])
         yield util.action.ActionInfo('close-window', self.close_window_cb, _("Close window"), ['<Control>w'])
-        yield util.action.ActionInfo('quit', self.quit_cb, _("Quit"), ['<Control>q'])
-
+        yield util.action.ActionInfo('toggle-fullscreen', self.action_toggle_fullscreen_cb, _("Fullscreen window"), ['<Alt>f'])
         # yield util.action.ActionInfo('notify', self.task_hold_app(self.action_notify_cb))
-        yield util.action.ActionInfo('component-start', self.component_start_cb, parameter_format='(sbb)')
-        # yield util.action.ActionInfo('component-start-new-window', self.component_start_cb, parameter_format='sb')
+        yield util.action.ActionInfo('component-start', self.component_start_cb, parameter_format='(sb)')
         yield util.action.ActionInfo('component-stop', self.component_stop_cb)
 
     def new_window_cb(self, action, parameter):
         component = self.unit_component.get_component('current', False)
-        self.display_component(component, True)
+        window = self.new_window()
+        window.change_component(component)
+        window.present()
 
     def close_window_cb(self, action, parameter):
         self.app.get_active_window().destroy()
 
-    @staticmethod
-    def quit_cb(action, parameter):
-        Gtk.Application.get_default().quit()
+    def action_toggle_fullscreen_cb(self, action, parameter):
+        window = self.app.get_active_window()
+        if window.is_fullscreen():
+            window.unfullscreen()
+        else:
+            window.fullscreen()
 
     def component_start_cb(self, action, parameter):
-        name, new_window, new_instance = parameter.unpack()
-        component = self.unit_component.get_component(name, new_instance)
-        self.display_component(component, action.get_name().endswith('new-window'))
+        self.component_start(parameter.unpack())
 
-    def display_component(self, component, new_window):
-        if new_window:
-            window = self.new_window(self)
-        else:
-            window = component.get_window() or self.app.get_active_window() or self.new_window(self)
-        if component.get_window() is None:
+    def component_start(self, name, new_instance=True):
+        component = self.unit_component.get_component(name, new_instance)
+        window = component.get_window()
+        if window is None:
+            window = self.app.get_active_window() or self.new_window()
             window.change_component(component)
         window.present()
 
     def component_stop_cb(self, action, parameter):
         window = self.app.get_active_window()
         component = window.component
-        if component:
-            window.change_component(self.unit_component.get_free_component())
+        if component is not None:
+            window.change_component(window.unit.unit_component.get_free_component())
             self.unit_component.remove_component(component)
