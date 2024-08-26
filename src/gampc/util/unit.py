@@ -52,8 +52,10 @@ class Unit(resource.ResourceProvider):
         logger.debug("Deleting {self}".format(self=self))
 
     def require(self, name):
-        setattr(self, 'unit_' + name, self.manager._use_unit(name))
+        unit = self.manager._use_unit(name)
+        setattr(self, 'unit_' + name, unit)
         self.loaded_required.append(name)
+        return unit
 
 
 def require_units(*names):

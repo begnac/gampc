@@ -25,25 +25,7 @@ from gi.repository import Gtk
 from .. import util
 
 
-class EditableMixin:
-    def __init__(self, *, unit_misc, **kwargs):
-        super().__init__(**kwargs)
-
-        self.focus = Gtk.EventControllerFocus()
-        self.add_controller(self.focus)
-        self.focus.connect('enter', self.focus_cb, unit_misc, True)
-        self.focus.connect('leave', self.focus_cb, unit_misc, False)
-
-    @staticmethod
-    def focus_cb(controller, unit_misc, block):
-        unit_misc.block_fragile_accels = block
-
-
-class Entry(EditableMixin, Gtk.Entry):
-    pass
-
-
-class EditableLabel(EditableMixin, Gtk.EditableLabel):
+class EditableLabel(Gtk.EditableLabel):
     label = GObject.Property(type=str, default='')
 
     __gsignals__ = {

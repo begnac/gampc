@@ -21,7 +21,7 @@
 from .. import util
 
 
-@util.unit.require_units('menubar')
+@util.unit.require_units('menubar_old')
 class __unit__(util.unit.UnitCssMixin, util.unit.Unit):
     CSS = """
     listview > row > treeexpander > box > label.modified {

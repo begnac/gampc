@@ -214,7 +214,7 @@ class ComponentEntryMixin:
     def __init__(self, unit):
         super().__init__(unit)
 
-        self.focus_widget = self.entry = ui.editable.Entry(unit_misc=unit.unit_misc)
+        self.focus_widget = self.entry = Gtk.Entry()
         self.signal_handler_connect(self.entry, 'activate', self.entry_activate_cb)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)

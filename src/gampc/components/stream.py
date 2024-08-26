@@ -83,8 +83,7 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
     def edit_stack_getter(item):
         return item.value
 
-    def factory_factory(self, name):
-        return StreamItemFactory(name, self.unit.unit_misc)
+    factory_factory = StreamItemFactory
 
     # def stream_changed_cb(self, *args):
     #     print(args)

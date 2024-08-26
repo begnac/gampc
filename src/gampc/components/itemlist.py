@@ -40,19 +40,19 @@ class ItemList(component.Component):
     factory_factory = ui.view.LabelItemFactory
     item_factory = util.item.Item
 
+    def _get_widget(self):
+        return ui.view.ViewWithCopy(self.fields, self.factory_factory, interface=self.get_item_interface(), sortable=self.__class__.sortable)
+
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.widget = self.view = ui.view.View(self.fields, self.factory_factory, self.__class__.sortable, unit_misc=unit.unit_misc)
+        self.widget = self.view = self._get_widget()
         self.view.item_view.add_css_class('itemlist')
         self.focus_widget = self.view.item_view
 
         self.itemlist_actions = self.add_actions_provider('itemlist')
         self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
-        self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
-
-        self.drag_source = ui.dnd.ListDragSource(self.get_item_interface(), actions=Gdk.DragAction.COPY)
-        self.view.item_view.rows.add_controller(self.drag_source)
+        # self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
 
         self.itemlist_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
 
@@ -65,14 +65,11 @@ class ItemList(component.Component):
 
     def shutdown(self):
         del self.itemlist_actions
-        # self.view.item_view.columns['file'].get_factory().disconnect_by_func(self.bind_cb)
         self.view.cleanup()
-        self.view.item_view.rows.remove_controller(self.drag_source)
-        del self.drag_source
         super().shutdown()
 
     def get_item_interface(self, content_formats=Gdk.ContentFormats.new_for_gtype(util.item.ItemKeyTransfer), **kwargs):
-        return util.item.ItemInterface(content_from_items=self.content_from_items, content_formats=content_formats, **kwargs)
+        return ui.view.ItemViewInterface(content_from_items=self.content_from_items, content_formats=content_formats, **kwargs)
 
     @staticmethod
     def content_from_items(items):
@@ -86,7 +83,7 @@ class ItemList(component.Component):
     async def view_activate_cb(self, view, position):
         if self.unit.unit_persistent.protect_active:
             return
-        filename = self.view.item_selection[position].get_key()
+        filename = self.view.item_store_selection[position].get_key()
         items = await self.ampd.playlistfind('file', filename)
         if items:
             item_id = sorted(items, key=lambda item: item['Pos'])[0]['Id']
@@ -156,55 +153,55 @@ class ItemList(component.Component):
 
 
 class ItemListEditableMixin:
-    sortable = False
+    def _get_widget(self):
+        return ui.view.ViewWithCopyPaste(self.fields, self.factory_factory, interface=self.get_item_interface())
 
-    def __init__(self, unit, *args, editable=True, **kwargs):
-        super().__init__(unit, *args, **kwargs)
+    # sortable = False
 
-        self.itemlist_actions.add_action(util.resource.Action('paste', self.action_paste_cb))
-        self.itemlist_actions.add_action(util.resource.Action('paste-before', self.action_paste_cb))
-        self.itemlist_actions.add_action(util.resource.Action('delete', self.action_copy_delete_cb))
-        self.itemlist_actions.add_action(util.resource.Action('cut', self.action_copy_delete_cb))
-        self.signal_handler_connect(self.view, 'notify::filtering', self.check_editable)
+    # def __init__(self, unit, *args, editable=True, **kwargs):
+    #     super().__init__(unit, *args, **kwargs)
 
-        self.drop_target = ui.dnd.ListDropTarget(self.get_item_interface())
-        self.view.item_view.rows.add_controller(self.drop_target)
+    #     self.itemlist_actions.add_action(util.resource.Action('paste', self.action_paste_cb))
+    #     self.itemlist_actions.add_action(util.resource.Action('paste-before', self.action_paste_cb))
+    #     self.itemlist_actions.add_action(util.resource.Action('delete', self.action_copy_delete_cb))
+    #     self.itemlist_actions.add_action(util.resource.Action('cut', self.action_copy_delete_cb))
+    #     self.signal_handler_connect(self.view, 'notify::filtering', self.check_editable)
 
-        self.set_editable(editable)
+    #     self.set_editable(editable)
 
-    def shutdown(self):
-        self.view.item_view.rows.remove_controller(self.drop_target)
-        # Cleanup ????
-        del self.drop_target
-        super().shutdown()
+    # def shutdown(self):
+    #     self.view.item_view.rows.remove_controller(self.drop_target)
+    #     # Cleanup ????
+    #     del self.drop_target
+    #     super().shutdown()
 
     def get_item_interface(self):
         return super().get_item_interface(add_items=self.add_items, remove_items=self.remove_items)
 
-    def get_editable(self):
-        return self._editable
+    # def get_editable(self):
+    #     return self._editable
 
-    def set_editable(self, editable):
-        self._editable = editable
-        self.check_editable()
+    # def set_editable(self, editable):
+    #     self._editable = editable
+    #     self.check_editable()
 
-    def check_editable(self, *args):
-        editable = self._editable and not self.view.filtering
-        for name in ['paste', 'paste-before', 'delete', 'cut']:
-            self.itemlist_actions.lookup(name).set_enabled(editable)
-        self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
+    # def check_editable(self, *args):
+    #     editable = self._editable and not self.view.filtering
+    #     for name in ['paste', 'paste-before', 'delete', 'cut']:
+    #         self.itemlist_actions.lookup(name).set_enabled(editable)
+    #     self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
-    def action_paste_cb(self, action, parameter):
-        util.misc.get_clipboard().read_value_async(util.item.ItemKeyTransfer, 0, None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
+    # def action_paste_cb(self, action, parameter):
+    #     util.misc.get_clipboard().read_value_async(util.item.ItemKeyTransfer, 0, None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
 
-    def action_paste_finish_cb(self, clipboard, result, before):
-        values = clipboard.read_value_finish(result).values
-        row = self.view.item_view.rows.get_focus_child()
-        if values is not None and row is not None:
-            pos = row.get_first_child().get_first_child().pos
-            if not before:
-                pos += 1
-            self.add_items(values, pos)
+    # def action_paste_finish_cb(self, clipboard, result, before):
+    #     values = clipboard.read_value_finish(result).values
+    #     row = self.view.item_view.rows.get_focus_child()
+    #     if values is not None and row is not None:
+    #         pos = row.get_first_child().get_first_child().pos
+    #         if not before:
+    #             pos += 1
+    #         self.add_items(values, pos)
 
 
 class ItemListEditStackMixin(ItemListEditableMixin):
@@ -253,16 +250,16 @@ class ItemListEditStackMixin(ItemListEditableMixin):
         if focus is not None:
             self.view.item_view.scroll_to(focus, None, Gtk.ListScrollFlags.FOCUS, None)
         if selection is not None:
-            self.view.item_selection.unselect_all()
+            self.view.item_store_selection.unselect_all()
             for pos in selection:
-                self.view.item_selection.select_item(pos, False)
+                self.view.item_store_selection.select_item(pos, False)
         self.edit_stack_changed()
 
     def remove_items(self, items):
         if not items:
             return
         indices = []
-        for i, item in enumerate(self.view.item_selection):
+        for i, item in enumerate(self.view.item_store_selection):
             if item in items:
                 indices.append(i)
                 items.remove(item)
@@ -273,7 +270,7 @@ class ItemListEditStackMixin(ItemListEditableMixin):
         for k in indices[1:] + [0]:
             j += 1
             if j != k:
-                values = [self.edit_stack_getter(item) for item in self.view.item_selection[i:j]]
+                values = [self.edit_stack_getter(item) for item in self.view.item_store_selection[i:j]]
                 deltas.append(util.editstack.SimpleDelta(values, i, True))
                 i = j = k
         self.edit_stack.set_from_here([util.editstack.MetaDelta(deltas, False)])
@@ -375,7 +372,7 @@ class ItemListTreeListMixin(component.ComponentPaneTreeMixin):
             row.set_expanded(not row.get_expanded())
 
 
-@util.unit.require_units('misc', 'itemlist')
+@util.unit.require_units('itemlist')
 class UnitItemListMixin(component.UnitComponentMixin):
     def __init__(self, *args, menus=[]):
         super().__init__(*args, menus=menus + ['context'])

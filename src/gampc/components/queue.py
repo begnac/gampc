@@ -78,7 +78,7 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
         self.actions.add_action(util.resource.Action('shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
         self.actions.add_action(util.resource.Action('go-to-current', self.action_go_to_current_cb))
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
-        self.signal_handler_connect(self.view.item_selection, 'selection-changed', self.selection_changed_cb)
+        self.signal_handler_connect(self.view.item_store_selection, 'selection-changed', self.selection_changed_cb)
 
         for name in self.itemlist_actions.list_actions():
             if name.startswith('queue-ext-'):
@@ -135,7 +135,7 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
         Id = self.unit.unit_server.ampd_server_properties.current_song.get('Id')
         if Id is None:
             return
-        for position, item in enumerate(self.view.item_store_filter):
+        for position, item in enumerate(self.view.item_store_selection):
             if item.Id == Id:
                 self.view.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
                 view_height = self.view.item_view.rows.get_allocation().height
@@ -167,4 +167,4 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
     @ampd.task
     async def view_activate_cb(self, view, position):
         if not self.unit.unit_persistent.protect_active:
-            await self.ampd.playid(self.view.item_store_filter[position].Id)
+            await self.ampd.playid(self.view.item_store_selection[position].Id)

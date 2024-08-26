@@ -60,15 +60,13 @@ class App(Gtk.Application):
         self.sigint_source = GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda: self.quit() or True)
         self.excepthook_orig, sys.excepthook = sys.excepthook, self.excepthook
 
-        self.menubar = Gio.Menu()
-        self.set_menubar(self.menubar)
-
         self.unit_manager = util.unit.UnitManager()
         # self.unit_manager.set_target('config')
         # self.unit_config = self.unit_manager.get_unit('config')
 
         default_units = [
-            'menubar', 'help', 'misc', 'profiles', 'server',
+            'menubar_old',
+            'menubar', 'help', 'profiles', 'server',
             'output', 'persistent',
             'playback', 'window',
             'current', 'queue', 'browser', 'search', 'stream', 'playlist', 'tanda',
@@ -79,22 +77,12 @@ class App(Gtk.Application):
         # self.unit_config.config.units =
         self.unit_manager.set_target(*default_units)
 
-        self.unit_misc = self.unit_manager.get_unit('misc')
         self.unit_server = self.unit_manager.get_unit('server')
         self.unit_persistent = self.unit_manager.get_unit('persistent')
         self.unit_component = self.unit_manager.get_unit('component')
         self.unit_window = self.unit_manager.get_unit('window')
 
-        self.action_aggregator = util.resource.ActionAggregator(['app.action'], self, self.task_hold_app, self.unit_persistent)
-        self.unit_manager.add_aggregator(self.action_aggregator)
-
-        self.fragile_accels = {}
-        self.menu_aggregator = util.resource.MenuAggregator(['app.menu'], self.menubar)
-        self.menu_aggregator.connect('resource-added', self.menubar_item_added_cb)
-        self.menu_aggregator.connect('resource-removed', self.menubar_item_removed_cb)
-        self.unit_manager.add_aggregator(self.menu_aggregator)
-
-        self.unit_misc.connect('notify::block-fragile-accels', self.notify_block_fragile_accels_cb)
+        self.unit_window.app = self
 
         self.ampd = self.unit_server.ampd.sub_executor()
 
@@ -105,14 +93,6 @@ class App(Gtk.Application):
         self.systemd_inhibit_fd = None
         self.unit_server.ampd_server_properties.connect('notify::state', self.set_inhibit)
 
-        self.add_action(util.resource.Action('new-window', self.new_window_cb))
-        self.add_action(util.resource.Action('close-window', self.close_window_cb))
-        self.add_action(util.resource.Action('notify', self.task_hold_app(self.action_notify_cb)))
-        self.add_action(util.resource.Action('quit', self.quit))
-        self.add_action(util.resource.Action('component-start', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
-        self.add_action(util.resource.Action('component-start-new-window', self.component_start_cb, parameter_type=GLib.VariantType.new('s')))
-        self.add_action(util.resource.Action('component-stop', self.component_stop_cb))
-
         self.unit_server.ampd_connect()
 
         self.connect('window-removed', lambda self, window: window.shutdown())
@@ -120,25 +100,23 @@ class App(Gtk.Application):
     def do_shutdown(self):
         util.logger.logger.debug("Shutting down")
 
+        for win in self.get_windows():
+            win.destroy()
+
         util.misc.get_clipboard().set_content(None)
 
         self.unit_server.ampd_server_properties.disconnect_by_func(self.set_inhibit)
-        self.unit_misc.disconnect_by_func(self.notify_block_fragile_accels_cb)
         self.unit_manager.set_target()
         del self.unit_manager
-        del self.menu_aggregator
-        del self.action_aggregator
 
-        del self.unit_window
-        del self.unit_component
-        del self.unit_persistent
-        del self.unit_server
-        del self.unit_misc
+        del self.unit_window.app
+        # del self.unit_window
+        # del self.unit_component
+        # del self.unit_persistent
+        # del self.unit_server
 
         for name in self.list_actions():
             self.remove_action(name)
-        self.set_menubar()
-        del self.menubar
         sys.excepthook = self.excepthook_orig
         del self.excepthook_orig
 
@@ -172,7 +150,7 @@ class App(Gtk.Application):
     def do_command_line(self, command_line):
         options = command_line.get_options_dict().end().unpack()
         if 'component' in options:
-            self.activate_action('component-start-new-window', GLib.Variant.new_string(options['component']))
+            self.activate_action('component-start', GLib.Variant('(sbb)', (options['component'], True, True)))
         elif GLib.OPTION_REMAINING in options:
             for option in options[GLib.OPTION_REMAINING]:
                 try:
@@ -194,7 +172,7 @@ class App(Gtk.Application):
         if win:
             win.present()
         else:
-            self.new_window_cb(None, None)
+            self.activate_action('new-window')
 
     @staticmethod
     def excepthook(*args):
@@ -215,59 +193,6 @@ class App(Gtk.Application):
                 retval.add_done_callback(lambda future: self.release())
             return retval
         return g
-
-    def notify_block_fragile_accels_cb(self, unit_misc, param):
-        for action in self.fragile_accels:
-            self.set_accels_for_action(action, [] if self.unit_misc.block_fragile_accels else self.fragile_accels[action])
-
-    def menubar_item_added_cb(self, aggregator, target, menu_item):
-        if isinstance(menu_item, util.resource.MenuAction) and menu_item.accels:
-            if menu_item.accels_fragile:
-                if menu_item.action in self.fragile_accels:
-                    raise ValueError
-                self.fragile_accels[menu_item.action] = menu_item.accels
-            if not (self.unit_misc.block_fragile_accels and menu_item.accels_fragile):
-                self.set_accels_for_action(menu_item.action, menu_item.accels)
-
-    def menubar_item_removed_cb(self, aggregator, target, menu_item):
-        if isinstance(menu_item, util.resource.MenuAction) and menu_item.accels:
-            if menu_item.accels_fragile:
-                del self.fragile_accels[menu_item.action]
-            self.set_accels_for_action(menu_item.action, [])
-
-    def new_window_cb(self, action, parameter):
-        component = self.unit_component.get_component('current', False)
-        self.display_component(component, True)
-
-    def close_window_cb(self, action, parameter):
-        self.get_active_window().destroy()
-
-    def component_start_cb(self, action, parameter):
-        component = self.unit_component.get_component(parameter.unpack(), True if util.misc.get_modifier_state() & Gdk.ModifierType.CONTROL_MASK else False)
-        self.display_component(component, action.get_name().endswith('new-window'))
-
-    def display_component(self, component, new_window):
-        if new_window:
-            window = self.unit_window.new_window(self)
-        else:
-            window = component.get_window() or self.get_active_window() or self.unit_window.new_window(self)
-        if component.get_window() is None:
-            window.change_component(component)
-        window.present()
-
-    def component_stop_cb(self, action, parameter):
-        window = self.get_active_window()
-        component = window.component
-        if component:
-            window.change_component(self.unit_component.get_free_component())
-            self.unit_component.remove_component(component)
-
-    def quit(self, *args):
-        util.logger.logger.debug("Quit")
-        for win in self.get_windows():
-            win.destroy()
-        super().quit()
-        return True
 
     @ampd.task
     async def action_notify_cb(self, *args):

@@ -20,10 +20,7 @@
 
 from gi.repository import Gtk
 
-from ..util import resource
-from ..util import unit
-from ..ui import shortcut
-
+from .. import util
 from .. import __program_name__, __version__, __program_description__, __copyright__, __license_type__, __website__
 
 
@@ -33,71 +30,59 @@ def iterate_children(widget):
         yield from iterate_children(child)
 
 
-class ShortcutsGroup(Gtk.ShortcutsGroup):
-    def __init__(self, items, **kwargs):
-        super().__init__(**kwargs)
-        for item in items:
-            self.add_shortcut(Gtk.ShortcutsShortcut(title=item.label.replace('_', ''), accelerator=' '.join(item.accels)))
+def iterate_action_families(widget):
+    for child in iterate_children(widget):
+        for controller in child.observe_controllers():
+            if isinstance(controller, util.action.ShortcutController):
+                for family in controller.action_families:
+                    yield family, controller.is_global
 
 
 class ShortcutsWindow(Gtk.ShortcutsWindow):
-    def __init__(self, resources, window):
+    def __init__(self, window):
         super().__init__(modal=True)
-        section = Gtk.ShortcutsSection()
 
-        for child in iterate_children(window):
-            for controller in child.observe_controllers():
-                if isinstance(controller, shortcut.ShortcutController):
-                    group = Gtk.ShortcutsGroup(title=controller.title)
-                    for accel in controller.accels:
-                        group.add_shortcut(Gtk.ShortcutsShortcut(title=accel.title.replace('_', ''), accelerator=' '.join(accel.accels)))
-                    section.add_group(group)
+        groups_app = {}
+        groups_other = {}
 
-        groups = []
-        groups_by_name = {}
-        for menu_item in resources:
-            path_components = menu_item.path.split('/', 1)
-            name = path_components[0]
-            if len(path_components) == 1:
-                group = {'name': name, 'title': menu_item.label.replace('_', ''), 'items': []}
-                groups.append(group)
-                groups_by_name[name] = group
-            elif isinstance(menu_item, resource.MenuAction) and menu_item.accels:
-                groups_by_name[name]['items'].append(menu_item)
+        section_app = Gtk.ShortcutsSection(title=_("Application shortcuts"), section_name='app')
+        section_other = Gtk.ShortcutsSection(title=_("Window shortcuts"), section_name='win')
+        self.add_section(section_app)
+        self.add_section(section_other)
 
-        for group in groups:
-            section.add_group(ShortcutsGroup(**group))
-        self.add_section(section)
+        for family, is_global in iterate_action_families(window):
+            if is_global:
+                groups, section = groups_app, section_app
+            else:
+                groups, section = groups_other, section_other
+            for action_info in family.action_infos:
+                if action_info.accels is not None:
+                    section = section
+                    name = family.label.replace('_', '')
+                    group = groups.get(name)
+                    if group is None:
+                        groups[name] = group = Gtk.ShortcutsGroup(title=name)
+                        section.add_group(group)
+                    group.add_shortcut(Gtk.ShortcutsShortcut(title=action_info.label.replace('_', ''), accelerator=' '.join(action_info.accels)))
 
 
-class __unit__(unit.UnitServerMixin, unit.Unit):
+class __unit__(util.unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.aggregator = resource.MenuAggregator(['app.menu'])
-        self.manager.add_aggregator(self.aggregator)
+    def generate_actions(self):
+        # yield util.action.ActionInfo('app', 'BAD', self.BAD_cb, _("BAD"), ['<Control><Shift>b'])
+        yield util.action.ActionInfo('help', self.help_cb, _("Help"), ['<Control>h', 'F1'])
+        yield util.action.ActionInfo('about', self.about_cb, _("About"), ['<Control><Shift>h'])
 
-        self.add_resources(
-            'app.action',
-            # resource.ActionModel('BAD', self.BAD_cb),
-            resource.ActionModel('help', self.help_cb),
-            resource.ActionModel('about', self.about_cb),
-        )
-
-        self.add_resources(
-            'app.menu',
-            # resource.MenuAction('help', 'app.BAD', _("BAD"), ['<Control><Shift>b']),
-            resource.MenuAction('help', 'app.help', _("Help"), ['<Control>h', 'F1']),
-            resource.MenuAction('help', 'app.about', _("About"), ['<Control><Shift>h']),
-        )
-
-    # def BAD_cb(self, *args):
-    #     print(self.get_active_window().get_focus())
+    def BAD_cb(self, *args):
+        print(Gtk.Application.get_default().get_active_window().get_focus())
 
     def about_cb(self, *args):
         dialog = Gtk.AboutDialog(program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=__license_type__, logo_icon_name='face-cool-gampc', website=__website__)
         dialog.present()
 
     def help_cb(self, *args):
-        window = Gtk.Application.get_default().get_active_window()
-        ShortcutsWindow(self.aggregator.get_all_resources(), window).present()
+        app = Gtk.Application.get_default()
+        window = app.get_active_window()
+        ShortcutsWindow(window).present()

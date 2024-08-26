@@ -76,3 +76,13 @@ def add_unique_css_class(widget, prefix, suffix):
             widget.remove_css_class(css_class)
     if suffix is not None:
         widget.add_css_class(f'{prefix}-{suffix}')
+
+
+def generator_set_attribute(name, value):
+    def decorator(gen):
+        def generator(*args, **kwargs):
+            for obj in gen(*args, **kwargs):
+                setattr(obj, name, value)
+                yield obj
+        return generator
+    return decorator

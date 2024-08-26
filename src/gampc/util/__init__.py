@@ -18,8 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from . import action
 from . import cache
 from . import editstack
 from . import item
 from . import logger
+from . import misc
 from . import unit

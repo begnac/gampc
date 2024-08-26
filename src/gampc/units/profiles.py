@@ -62,7 +62,7 @@ class __unit__(unit.UnitConfigMixin, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.require('menubar')
+        self.require('menubar_old')
 
         default_profiles = [
             {

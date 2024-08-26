@@ -99,7 +99,6 @@ class Search(component.ComponentEntryMixin, itemlist.ItemListDatabaseMixin, song
             yield token
 
 
-@util.unit.require_units('misc')
 class __unit__(songlist.UnitSongListMixin, util.unit.Unit):
     title = _("Search")
     key = '3'

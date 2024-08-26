@@ -43,7 +43,6 @@ class Command(component.ComponentEntryMixin, _Command):
     pass
 
 
-@unit.require_units('misc')
 class __unit__(component.UnitComponentMixin, unit.Unit):
     title = _("Execute MPD commands")
     key = '7'

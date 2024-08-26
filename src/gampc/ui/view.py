@@ -29,6 +29,7 @@ from .. import util
 
 from . import listviewsearch
 from . import editable
+from . import dnd
 
 
 class ItemFactory(Gtk.SignalListItemFactory):
@@ -96,14 +97,12 @@ class LabelItemFactory(ItemFactory):
 
 
 class EditableItemFactory(ItemFactory):
-    def __init__(self, name, unit_misc, always_editable=False):
+    def __init__(self, name, always_editable=False):
         super().__init__(name)
-
-        self.unit_misc = unit_misc
         self.always_editable = always_editable
 
     def make_widget(self):
-        return editable.EditableLabel(always_editable=self.always_editable, unit_misc=self.unit_misc)
+        return editable.EditableLabel(always_editable=self.always_editable)
 
     def bind(self, widget, item):
         super().bind(widget, item)
@@ -211,51 +210,47 @@ class ItemView(Gtk.ColumnView):
 class View(Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, factory_factory, sortable, *, selection_model=Gtk.MultiSelection, unit_misc):
+    def __init__(self, fields, factory_factory, *, sortable, selection_model=Gtk.MultiSelection):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
-
-        self.unit_misc = unit_misc
 
         self.filter_filter = Gtk.CustomFilter()
         self.filter_filter.set_filter_func(self.filter_func)
 
         self.filter_item = util.item.Item(value={})
         self.filter_store = Gio.ListStore()
-        self.filter_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = ItemView(fields, self.filter_factory_factory, sortable=False, model=self.filter_selection)
+        self.filter_store_selection = Gtk.NoSelection(model=self.filter_store)
+        self.filter_view = ItemView(fields, self.filter_factory_factory, sortable=False, model=self.filter_store_selection)
         self.filter_view.add_css_class('filter')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
         self.append(self.scrolled_filter_view)
         self.filter_item.connect('notify::value', self.notify_filter_cb)
 
-        self.item_selection = selection_model()
-        self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_selection, vexpand=True, enable_rubberband=False)
+        self.item_store_selection = selection_model()
+        self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_store_selection, vexpand=True, enable_rubberband=False)
         self.item_view.add_css_class('items')
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view, focusable=False)
         self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_item_view)
+
+        self.item_store = Gio.ListStore(item_type=util.item.Item)
+        self.item_store_filter = Gtk.FilterListModel(model=self.item_store)
+        if sortable:
+            self.item_store_selection.set_model(Gtk.SortListModel(model=self.item_store_filter, sorter=self.item_view.get_sorter()))
+        else:
+            self.item_store_selection.set_model(self.item_store_filter)
 
         clean_shortcuts_below(self)
 
         self.bind_property('filtering', self.filter_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE)
         self.bind_property('filtering', self.item_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
 
-        self.item_store = Gio.ListStore(item_type=util.item.Item)
-        # self.item_selection.set_model(self.item_store)
-
-        self.item_store_filter = Gtk.FilterListModel(model=self.item_store)
-
-        if sortable:
-            self.item_store_sort = Gtk.SortListModel(model=self.item_store_filter, sorter=self.item_view.get_sorter())
-            self.item_selection.set_model(self.item_store_sort)
-        else:
-            self.item_selection.set_model(self.item_store_filter)
-            self.item_view.sort_by_column(None, 0)
-
         self.view_search = listviewsearch.ListViewSearch(self.item_view.rows, lambda text, item: any(text.lower() in item.get_field(name).lower() for name in fields.fields))
 
         self.connect('notify::filtering', self.notify_filtering_cb)
+
+        # self.actions = Gio.SimplActionGroup()
+        # self.insert_action_group('view', self.actions)
 
     def cleanup(self):
         self.filter_item.disconnect_by_func(self.notify_filter_cb)
@@ -266,7 +261,7 @@ class View(Gtk.Box):
         self.view_search.cleanup()
 
     def filter_factory_factory(self, name):
-        return EditableItemFactory(name, always_editable=True, unit_misc=self.unit_misc)
+        return EditableItemFactory(name, always_editable=True)
 
     def notify_filter_cb(self, item, param):
         self.filter_filter.changed(Gtk.FilterChange.DIFFERENT)
@@ -282,29 +277,117 @@ class View(Gtk.Box):
 
     def filter_func(self, item):
         for name, value in self.filter_item.value.items():
-            if re.search(value, self.item_get_field(item, name), re.IGNORECASE) is None:
+            if re.search(value, item.get_field(name), re.IGNORECASE) is None:
                 return False
         return True
 
     def _get_selection(self):
-        return util.misc.get_selection(self.item_selection)
+        return util.misc.get_selection(self.item_store_selection)
 
     def get_selection(self):
         return list(self._get_selection())
 
     def get_selection_items(self):
-        return list(map(lambda i: self.item_selection[i], self._get_selection()))
+        return list(map(lambda i: self.item_store_selection[i], self._get_selection()))
 
     # def get_filenames(self, selection):
     #     if selection:
-    #         return list(map(lambda i: self.item_selection[i].file, self._get_selection()))
+    #         return list(map(lambda i: self.item_store_selection[i].file, self._get_selection()))
     #     else:
-    #         return list(map(lambda item: item.file, self.item_selection))
+    #         return list(map(lambda item: item.file, self.item_store_selection))
 
 
 class ItemViewInterface:
-    def __init__(self, content_from_items, content_type=None, add_items=None, remove_items=None):
+    def __init__(self, content_from_items, content_formats=None, add_items=None, remove_items=None):
         self.content_from_items = content_from_items
-        self.content_type = content_type
+        self.content_formats = content_formats
         self.add_items = add_items
         self.remove_items = remove_items
+
+
+class ViewWithCopy(View):
+    def __init__(self, *args, interface, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.interface = interface
+
+        # self.copy_paste_menu = util.action.Menu()
+
+        self.copy_paste_actions = util.action.ActionInfoFamily('view', _("Cut and Paste"), self.generate_actions()).add_to_widget(self)
+
+        self.drag_source = dnd.ListDragSource(interface, actions=Gdk.DragAction.COPY)
+        self.item_view.rows.add_controller(self.drag_source)
+
+    def generate_actions(self):
+        yield util.action.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
+
+    def action_copy_cb(self, action, parameter):
+        print(777)
+        self.copy_items(self.get_selection_items())
+
+    def copy_items(self, items):
+        self.get_clipboard().set_content(self.interface.content_from_items(items))
+
+    # def cleanup(self):
+    #     del self.interface
+    #     super().cleanup()
+
+
+class ViewWithCopyPaste(ViewWithCopy):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, sortable=False, **kwargs)
+
+        self.connect('notify::filtering', self.check_editable)
+
+        self.drop_target = dnd.ListDropTarget(self.interface)
+        self.item_view.rows.add_controller(self.drop_target)
+
+        self.set_editable(True)
+
+    # def shutdown(self):
+    #     self.view.item_view.rows.remove_controller(self.drop_target)
+    #     # Cleanup ????
+    #     del self.drop_target
+    #     super().shutdown()
+
+    def get_editable(self):
+        return self._editable
+
+    def set_editable(self, editable):
+        self._editable = editable
+        self.check_editable()
+
+    def check_editable(self, *args):
+        editable = self._editable and not self.filtering
+        for name in ['paste', 'delete', 'cut']:
+            self.copy_paste_actions.lookup(name).set_enabled(editable)
+        self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
+
+    def generate_actions(self):
+        yield util.action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'])
+        yield from super().generate_actions()
+        paste_after = util.action.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True, parameter_format='b')
+        yield paste_after
+        yield paste_after.derive(_("Paste before"), ['<Control>b'], False)
+        yield util.action.ActionInfo('delete', self.action_cut_cb, _("Delete"), ['Delete'])
+
+    def action_cut_cb(self, action, parameter):
+        items = self.get_selection_items()
+        self.copy_items(items)
+        self.interface.remove_items(items)
+
+    def action_delete_cb(self, action, parameter):
+        self.interface.remove_items(self.get_selection_items())
+
+    def action_paste_cb(self, action, parameter):
+        row = self.item_view.rows.get_focus_child()
+        if row is None:
+            return
+        pos = row.get_first_child().get_first_child().pos
+        if parameter.unpack():
+            pos += 1
+        self.get_clipboard().read_value_async(util.item.ItemKeyTransfer, 0, None, self.action_paste_finish_cb, pos)
+
+    def action_paste_finish_cb(self, clipboard, result, pos):
+        values = clipboard.read_value_finish(result).values
+        if values is not None:
+            self.interface.add_items(values, pos)

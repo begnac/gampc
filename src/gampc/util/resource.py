@@ -94,12 +94,11 @@ class MenuActionMinimal(MenuPathBase):
 
 
 class MenuAction(MenuActionMinimal):
-    def __init__(self, path, action, label, accels=[], accels_fragile=False):
+    def __init__(self, path, action, label, accels=[]):
         self.path = path
         self.action = action
         self.label = label
         self.accels = accels
-        self.accels_fragile = accels_fragile
         super().__init__(f'{path}/{action}', label)
 
 

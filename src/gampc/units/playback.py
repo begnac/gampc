@@ -23,14 +23,15 @@ from gi.repository import GLib
 import ampd
 
 from ..util import resource
-from ..util import unit
-from ..ui import shortcut
+from .. import util
 
 
-class __unit__(unit.UnitServerMixin, unit.Unit):
+class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
+        self.fading = False
 
+        return
         self.add_resources(
             'app.action',
             resource.ActionModel('play-or-pause', self.play_or_pause_cb, dangerous=True),
@@ -61,23 +62,24 @@ class __unit__(unit.UnitServerMixin, unit.Unit):
             resource.MenuAction('playback/jump', 'app.relative-jump(5)', _("Skip forwards ({} seconds)").format(5)),
         )
 
-        self.add_resources(
-            'win.accel',
-            shortcut.Accel(_("_Play/pause"), ['<Control>Up', 'AudioPlay', 'space'], 'app.play-or-pause'),
-            shortcut.Accel(_("_Stop"), ['<Control>Down', 'AudioStop'], 'app.stop'),
-            shortcut.Accel(_("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], 'app.fadeout-then', GLib.Variant.new_boolean(True)),
-            shortcut.Accel(_("_Previous"), ['<Control>Left', 'AudioPrev'], 'app.previous'),
-            shortcut.Accel(_("_Next"), ['<Control>Right', 'AudioNext'], 'app.next'),
-            shortcut.Accel(_("Next [fadeout]"), ['<Control><Shift>Right'], 'app.fadeout-then', GLib.Variant.new_boolean(False)),
-            shortcut.Accel(_("Volume up"), ['<Control>plus', '<Control>KP_Add'], 'app.volume', GLib.Variant.new_int32(5)),
-            shortcut.Accel(_("Volume down"), ['<Control>minus', '<Control>KP_Subtract'], 'app.volume', GLib.Variant.new_int32(-5)),
-            shortcut.Accel(_("Restart playback"), ['<Alt>Up'], 'app.absolute-jump', GLib.Variant.new_int32(0)),
-            shortcut.Accel(_("End of song (-{} seconds)").format(15), ['<Alt>Down'], 'app.absolute-jump', GLib.Variant.new_int32(-15)),
-            shortcut.Accel(_("Skip backwards ({} seconds)").format(5), ['<Alt>Left'], 'app.relative-jump', GLib.Variant.new_int32(-5)),
-            shortcut.Accel(_("Skip forwards ({} seconds)").format(5), ['<Alt>Right'], 'app.relative-jump', GLib.Variant.new_int32(5)),
-        )
 
-        self.fading = False
+    def generate_actions(self):
+        yield util.action.ActionInfo('play-or-pause', self.play_or_pause_cb, _("_Play/pause"), ['<Control>Up', 'AudioPlay', 'space'], dangerous=True)
+        yield util.action.ActionInfo('play', self.mpd_command_cb, dangerous=True)
+        yield util.action.ActionInfo('stop', self.mpd_command_cb, _("_Stop"), ['<Control>Down', 'AudioStop'], dangerous=True)
+        yield util.action.ActionInfo('next', self.mpd_command_cb, _("_Next"), ['<Control>Right', 'AudioNext'], dangerous=True)
+        yield util.action.ActionInfo('previous', self.mpd_command_cb, _("_Previous"), ['<Control>Left', 'AudioPrev'], dangerous=True)
+        fadeout = util.action.ActionInfo('fadeout-then', self.fadeout_then_cb, parameter_format='b')
+        yield fadeout
+        yield fadeout.derive(_("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], True)
+        yield fadeout.derive(_("Next [fadeout]"), ['<Control><Shift>Right'], False)
+        return
+        # shortcut.Accel(_("Volume up"), ['<Control>plus', '<Control>KP_Add'], 'app.volume', GLib.Variant.new_int32(5)),
+        # shortcut.Accel(_("Volume down"), ['<Control>minus', '<Control>KP_Subtract'], 'app.volume', GLib.Variant.new_int32(-5)),
+        # shortcut.Accel(_("Restart playback"), ['<Alt>Up'], 'app.absolute-jump', GLib.Variant.new_int32(0)),
+        # shortcut.Accel(_("End of song (-{} seconds)").format(15), ['<Alt>Down'], 'app.absolute-jump', GLib.Variant.new_int32(-15)),
+        # shortcut.Accel(_("Skip backwards ({} seconds)").format(5), ['<Alt>Left'], 'app.relative-jump', GLib.Variant.new_int32(-5)),
+        # shortcut.Accel(_("Skip forwards ({} seconds)").format(5), ['<Alt>Right'], 'app.relative-jump', GLib.Variant.new_int32(5)),
 
     @ampd.task
     async def mpd_command_cb(self, caller, *data):

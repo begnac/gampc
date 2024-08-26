@@ -18,36 +18,34 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from ..util import resource
-from ..util import unit
+from gi.repository import Gio
+
+from .. import util
 
 
-class __unit__(unit.Unit):
+class __unit__(util.unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.add_resources(
-            'app.menu',
-            resource.MenuPath('gampc', _("_GAMPC"), is_submenu=True),
-            resource.MenuPath('edit', _("_Edit"), is_submenu=True),
-            resource.MenuPath('playback', _("_Playback"), is_submenu=True),
-            resource.MenuPath('server', _("_Server"), is_submenu=True),
-            resource.MenuPath('components', _("_Components"), is_submenu=True),
-            resource.MenuPath('help', _("_Help"), is_submenu=True),
+        self.require('window')
 
-            resource.MenuPath('gampc/window'),
-            resource.MenuPath('gampc/persistent'),
-            resource.MenuPath('gampc/app'),
+        self.families = self.unit_window.action_info_families = {}
+        self.menubar = Gio.Menu()
+        app = Gio.Application.get_default()
+        app.set_menubar(self.menubar)
 
-            resource.MenuPath('edit/global'),
-            resource.MenuPath('edit/component'),
+        app_menu = Gio.Menu()
+        self.menubar.append_submenu(_("_Application"), app_menu)
+        self.load_actions('persistent', _("Persistent"), app, app_menu, True)
+        self.load_actions('window', _("_Window"), app, app_menu, True)
+        self.load_actions('playback', _("_Playback"), app, self.menubar)
+        self.load_actions('help', _("_Help"), app, self.menubar)
 
-            resource.MenuPath('server/server'),
-            resource.MenuPath('server/profiles'),
-
-            resource.MenuAction('gampc/window', 'app.new-window', _("New window"), ['<Control>n']),
-            resource.MenuAction('gampc/window', 'app.close-window', _("Close window"), ['<Control>w']),
-            resource.MenuAction('gampc/window', 'win.toggle-fullscreen', _("Fullscreen window"), ['<Alt>f']),
-            resource.MenuAction('gampc/window', 'win.volume-popup', _("Adjust volume"), ['<Alt>v']),
-            resource.MenuAction('gampc/app', 'app.quit', _("Quit"), ['<Control>q']),
-        )
+    def load_actions(self, unit_name, label, action_map, menu, section=False):
+        unit = self.require(unit_name)
+        family = self.families[unit_name] = util.action.ActionInfoFamily('app', label, unit.generate_actions())
+        if section:
+            menu.append_section(None, family.get_menu())
+        else:
+            menu.append_submenu(label, family.get_menu())
+        family.add_to_action_map(action_map)

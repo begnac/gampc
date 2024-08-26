@@ -21,11 +21,11 @@
 from gi.repository import GObject
 from gi.repository import Gtk
 
+from .. import util
 from ..util import resource
 from ..util import unit
 from ..util.logger import logger
 from ..ui import headerbar
-from ..ui import shortcut
 from ..ui import logging
 
 from .. import __application__
@@ -35,9 +35,13 @@ class Window(Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
         super().__init__(show_menubar=True, **kwargs)
 
-        self.shortcut_accregator = shortcut.ShortcutAggregator(['win.accel'], _("Global shortcuts"))
-        unit.manager.add_aggregator(self.shortcut_accregator)
-        self.add_controller(self.shortcut_accregator.controller)
+        # self.shortcut_accregator = shortcut.ShortcutAggregator(['win.accel'], _("Global shortcuts"))
+        # unit.manager.add_aggregator(self.shortcut_accregator)
+        # self.add_controller(self.shortcut_accregator.controller)
+
+        controller = util.action.ShortcutController(self, is_global=True)
+        for family in unit.action_info_families.values():
+            family.add_to_shortcut_controller(controller)
 
         self.unit = unit
         self.component = None
@@ -169,11 +173,53 @@ class Window(Gtk.ApplicationWindow):
             self.volume_button.emit('popdown')
 
 
-@unit.require_units('persistent')
+@unit.require_units('persistent', 'component')
 class __unit__(unit.UnitConfigMixin, unit.UnitServerMixin, unit.Unit):
     def __init__(self, manager, name):
         super().__init__(manager, name)
         self.config.message_timeout._get(default=5)
 
     def new_window(self, app):
-        return Window(self, application=app)
+        return Window(self, application=self.app)
+
+    def generate_actions(self):
+        yield util.action.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])
+        yield util.action.ActionInfo('close-window', self.close_window_cb, _("Close window"), ['<Control>w'])
+        yield util.action.ActionInfo('quit', self.quit_cb, _("Quit"), ['<Control>q'])
+
+        # yield util.action.ActionInfo('notify', self.task_hold_app(self.action_notify_cb))
+        yield util.action.ActionInfo('component-start', self.component_start_cb, parameter_format='(sbb)')
+        # yield util.action.ActionInfo('component-start-new-window', self.component_start_cb, parameter_format='sb')
+        yield util.action.ActionInfo('component-stop', self.component_stop_cb)
+
+    def new_window_cb(self, action, parameter):
+        component = self.unit_component.get_component('current', False)
+        self.display_component(component, True)
+
+    def close_window_cb(self, action, parameter):
+        self.app.get_active_window().destroy()
+
+    @staticmethod
+    def quit_cb(action, parameter):
+        Gtk.Application.get_default().quit()
+
+    def component_start_cb(self, action, parameter):
+        name, new_window, new_instance = parameter.unpack()
+        component = self.unit_component.get_component(name, new_instance)
+        self.display_component(component, action.get_name().endswith('new-window'))
+
+    def display_component(self, component, new_window):
+        if new_window:
+            window = self.new_window(self)
+        else:
+            window = component.get_window() or self.app.get_active_window() or self.new_window(self)
+        if component.get_window() is None:
+            window.change_component(component)
+        window.present()
+
+    def component_stop_cb(self, action, parameter):
+        window = self.app.get_active_window()
+        component = window.component
+        if component:
+            window.change_component(self.unit_component.get_free_component())
+            self.unit_component.remove_component(component)

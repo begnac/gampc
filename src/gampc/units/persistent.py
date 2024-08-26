@@ -24,12 +24,10 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import resource
-from ..util import unit
-from ..util.logger import logger
+from .. import util
 
 
-class __unit__(unit.UnitServerMixin, unit.Unit):
+class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     STICKER_PROPERTIES = ('protect-requested', 'dark')
 
     protect_requested = GObject.Property(type=bool, default=False)
@@ -39,34 +37,28 @@ class __unit__(unit.UnitServerMixin, unit.Unit):
     def __init__(self, name, manager):
         super().__init__(name, manager)
 
-        self.require('menubar')
+        self.require('menubar_old')
 
         self.unit_server.ampd_server_properties.connect('notify::state', self.notify_protect_requested_cb)
         self.connect('notify::protect-requested', self.notify_protect_requested_cb)
-        self.connect('notify::protect-active', self.notify_protect_active_cb)
         self.connect('notify::dark', self.notify_dark_cb)
         self.connect('notify', self.notify_sticker_cb)
         for option in ampd.OPTION_NAMES:
             self.unit_server.ampd_server_properties.connect('notify::' + option, self.notify_option_cb)
 
-        self.add_resources(
-            'app.action',
-            *(resource.PropertyActionModel(name, self) for name in self.STICKER_PROPERTIES),
-        )
-
-        self.add_resources(
-            'app.menu',
-            resource.MenuAction('gampc/persistent', 'app.protect-requested', _("Protected mode"), ['<Control><Alt>r']),
-            resource.MenuAction('gampc/persistent', 'app.dark', _("Dark interface"), ['<Control><Alt>d']),
-        )
-
     def shutdown(self):
         self.disconnect_by_func(self.notify_sticker_cb)
         self.disconnect_by_func(self.notify_dark_cb)
-        self.disconnect_by_func(self.notify_protect_active_cb)
         self.disconnect_by_func(self.notify_protect_requested_cb)
         self.unit_server.ampd_server_properties.disconnect_by_func(self.notify_protect_requested_cb)
         super().shutdown()
+
+    def generate_actions(self):
+        yield util.action.PropertyActionInfo('dark', self, _("Dark interface"), ['<Control><Alt>d'])
+        yield util.action.PropertyActionInfo('protect-requested', self, _("Protected mode"), ['<Control><Alt>r'])
+
+    def protect(self, action):
+        self.bind_property('protect-active', action, 'enabled', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
 
     def client_connected_cb(self, client):
         self.idle_sticker()
@@ -84,7 +76,7 @@ class __unit__(unit.UnitServerMixin, unit.Unit):
             await self.ampd.idle(ampd.PLAYER)
             if self.protect_requested and (await self.ampd.status())['state'] == 'pause':
                 await self.ampd.play()
-                logger.info(_("Paused while protected.  Playing."))
+                util.logger.logger.info(_("Paused while protected.  Playing."))
 
     @ampd.task
     async def read_sticker_properties(self):
@@ -100,10 +92,7 @@ class __unit__(unit.UnitServerMixin, unit.Unit):
 
     def notify_protect_requested_cb(self, o, param):
         self.protect_active = self.protect_requested and self.unit_server.ampd_server_properties.state == 'play'
-
-    @staticmethod
-    def notify_protect_active_cb(self, param):
-        if self.protect_active:
+        if self.protect_requested:
             for option in ampd.OPTION_NAMES:
                 self.unit_server.ampd_server_properties.set_property(option, False)
 
@@ -116,7 +105,7 @@ class __unit__(unit.UnitServerMixin, unit.Unit):
 
     @ampd.task
     async def notify_option_cb(self, properties, param):
-        if self.protect_active:
+        if self.protect_requested:
             await getattr(self.ampd, param.name)(0)
 
     @staticmethod
