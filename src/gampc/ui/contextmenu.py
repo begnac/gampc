@@ -24,14 +24,31 @@ from gi.repository import Gtk
 from .. import util
 
 
-class ContextMenuMixin:
+class ContextMenuMixin(util.action.ActionInfoFamiliesMixin):
     def __init__(self, *args, **kwargs):
         self.context_menu = Gio.Menu()
+        self.actions = {}
+
         super().__init__(*args, **kwargs)
 
         controller = Gtk.GestureClick(button=3)
         controller.connect('pressed', self.context_menu_pressed_cb)
         self.add_controller(controller)
+
+    def cleanup(self):
+        for prefix in list(self.actions):
+            self.insert_action_group(prefix, None)
+        del self.actions
+        super().cleanup()
+
+    def add_to_context_menu(self, generator, prefix, label):
+        if prefix in self.actions:
+            raise RuntimeError
+        family = util.action.ActionInfoFamily(generator, prefix, label)
+        self.actions[prefix] = family.insert_action_group(self)
+        self.add_controller(family.get_shortcut_controller())
+        self.action_info_families.append(family)
+        self.context_menu.append_section(None, family.get_menu())
 
     @staticmethod
     def context_menu_pressed_cb(controller, n_press, x, y):

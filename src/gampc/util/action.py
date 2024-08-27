@@ -141,7 +141,7 @@ class ActionInfoFamily:
         return controller
 
 
-class WidgetActionFamilyMixin:
+class ActionInfoFamiliesMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.action_info_families = []

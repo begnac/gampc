@@ -210,7 +210,7 @@ class ItemView(Gtk.ColumnView):
         columns.handler_unblock_by_func(self.columns_changed_cb)
 
 
-class View(contextmenu.ContextMenuMixin, Gtk.Box):
+class View(Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
     def __init__(self, fields, factory_factory, *, sortable, selection_model=Gtk.MultiSelection):
@@ -305,24 +305,17 @@ class ItemViewInterface:
         self.remove_items = remove_items
 
 
-class ViewWithCopy(util.action.WidgetActionFamilyMixin, View):
+class ViewWithCopy(contextmenu.ContextMenuMixin, View):
     def __init__(self, *args, interface, **kwargs):
         super().__init__(*args, **kwargs)
         self.interface = interface
 
-        self.editing_family = util.action.ActionInfoFamily(self.generate_editing_actions(), 'view-edit', _("Edit"))
-        self.editing_actions = self.editing_family.insert_action_group(self)
-        self.add_controller(self.editing_family.get_shortcut_controller())
-        self.action_info_families.append(self.editing_family)
-        self.context_menu.append_section(None, self.editing_family.get_menu())
+        self.add_to_context_menu(self.generate_editing_actions(), 'view-edit', _("Edit"))
 
         self.drag_source = dnd.ListDragSource(interface, actions=Gdk.DragAction.COPY)
         self.item_view.rows.add_controller(self.drag_source)
 
     def cleanup(self):
-        self.insert_action_group('view-edit', None)
-        del self.editing_family
-        del self.editing_actions
         del self.interface
         self.item_view.rows.remove_controller(self.drag_source)
         del self.drag_source
@@ -364,9 +357,10 @@ class ViewWithCopyPaste(ViewWithCopy):
 
     def check_editable(self, *args):
         editable = self._editable and not self.filtering
-        for name in self.editing_actions.list_actions():
+        actions = self.actions['view-edit']
+        for name in actions.list_actions():
             if name != 'copy':
-                self.editing_actions.lookup_action(name).set_enabled(editable)
+                actions.lookup_action(name).set_enabled(editable)
         self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
     def generate_editing_actions(self):

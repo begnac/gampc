@@ -32,7 +32,7 @@ def iterate_children(widget):
 
 def iterate_action_families(widget):
     for child in iterate_children(widget):
-        if isinstance(child, util.action.WidgetActionFamilyMixin):
+        if isinstance(child, util.action.ActionInfoFamiliesMixin):
             for family in child.action_info_families:
                 yield family
 

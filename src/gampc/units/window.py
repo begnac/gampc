@@ -28,7 +28,7 @@ from .. import ui
 from .. import __application__
 
 
-class Window(util.action.WidgetActionFamilyMixin, Gtk.ApplicationWindow):
+class Window(util.action.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
         super().__init__(show_menubar=True, **kwargs)
 
