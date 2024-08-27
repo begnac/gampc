@@ -24,10 +24,13 @@ from gi.repository import Gtk
 
 import ampd
 
-from .. import util
+from ..util import actions
+from ..util import unit
+
+from . import mixins
 
 
-class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
+class __unit__(mixins.UnitServerMixin, unit.Unit):
     STICKER_PROPERTIES = ('protect-requested', 'dark')
 
     protect_requested = GObject.Property(type=bool, default=False)
@@ -54,8 +57,8 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
         super().shutdown()
 
     def generate_actions(self):
-        yield util.action.PropertyActionInfo('dark', self, _("Dark interface"), ['<Control><Alt>d'])
-        yield util.action.PropertyActionInfo('protect-requested', self, _("Protected mode"), ['<Control><Alt>r'])
+        yield actions.PropertyActionInfo('dark', self, _("Dark interface"), ['<Control><Alt>d'])
+        yield actions.PropertyActionInfo('protect-requested', self, _("Protected mode"), ['<Control><Alt>r'])
 
     def protect(self, action):
         self.bind_property('protect-active', action, 'enabled', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
@@ -76,7 +79,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
             await self.ampd.idle(ampd.PLAYER)
             if self.protect_requested and (await self.ampd.status())['state'] == 'pause':
                 await self.ampd.play()
-                util.logger.logger.info(_("Paused while protected.  Playing."))
+                logger.info(_("Paused while protected.  Playing."))
 
     @ampd.task
     async def read_sticker_properties(self):

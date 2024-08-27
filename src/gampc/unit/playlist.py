@@ -23,10 +23,15 @@ from gi.repository import Gtk
 
 import ampd
 
-from .. import util
+from ..util import cache
+from ..util import editstack
+from ..util import unit
+
 from .. import ui
-from ..components import songlist
+
 from ..components import playlist
+
+from . import mixins
 
 
 class PlaylistCacheItem:
@@ -77,7 +82,7 @@ class ChoosePathDialog(ui.dialog.TextDialogAsync):
         return True
 
 
-class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
+class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
     title = _("Playlists")
     key = '5'
 
@@ -85,12 +90,22 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
 
     TEMPNAME = '$$TEMP$$'
 
+    CSS = """
+    listview > row > treeexpander > box > label.modified {
+      font-style: italic;
+      font-weight: bold;
+    }
+    """
+
     def __init__(self, *args):
-        self.playlist_cache = util.cache.AsyncCache(self.playlist_retrieve)
+        super().__init__(*args)
+        self.require('database')
+        self.require('songlist')
+
+        self.playlist_cache = cache.AsyncCache(self.playlist_retrieve)
         self.playlists = {}
         self.root = ui.treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node), fill_contents_cb=self.fill_contents_cb)
 
-        super().__init__(*args)
 
         return
         self.add_resources(
@@ -156,7 +171,7 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
     async def fill_contents_cb(self, node):
         if node.kind == playlist.NODE_PLAYLIST:
             item = await self.playlist_cache.get_async(playlist.PSEUDO_SEPARATOR.join(node.path))
-            node.edit_stack = util.editstack.EditStack(item.files)
+            node.edit_stack = editstack.EditStack(item.files)
 
     def get_pseudo_folder_contents(self, path):
         prefix = ''.join(folder + playlist.PSEUDO_SEPARATOR for folder in path)

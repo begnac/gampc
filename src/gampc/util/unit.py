@@ -19,8 +19,6 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gdk
-from gi.repository import Gtk
 
 import importlib
 import collections
@@ -56,45 +54,6 @@ class Unit(GObject.Object):
         return unit
 
 
-class UnitCssMixin:
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.css_provider = Gtk.CssProvider()
-        self.css_provider.load_from_data(self.CSS, -1)
-        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
-    def shutdown(self):
-        Gtk.StyleContext.remove_provider_for_display(Gdk.Display.get_default(), self.css_provider)
-        super().shutdown()
-
-
-class UnitConfigMixin:
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.require('config')
-        self.config = self.unit_config.load_config(self.name)
-
-
-class UnitServerMixin:
-    def __init__(self, *args):
-        super().__init__(*args)
-
-        self.require('server')
-        self.ampd = self.unit_server.ampd_client.executor.sub_executor()
-        self.unit_server.ampd_client.connect('client-connected', self.client_connected_cb)
-        if self.ampd.get_is_connected():
-            self.client_connected_cb(self.unit_server.ampd_client)
-
-    def shutdown(self):
-        self.unit_server.ampd_client.disconnect_by_func(self.client_connected_cb)
-        self.ampd.close()
-        super().shutdown()
-
-    @staticmethod
-    def client_connected_cb(client):
-        pass
-
-
 class UnitManager(GObject.Object):
     def __init__(self):
         GObject.Object.__init__(self)
@@ -122,7 +81,7 @@ class UnitManager(GObject.Object):
         if name in self._units:
             unit = self._units[name]
         else:
-            unit_module = importlib.import_module('gampc.units.' + name)
+            unit_module = importlib.import_module('gampc.unit.' + name)
             unit = self._units[name] = unit_module.__unit__(self)
             unit.use_count = 0
             for aggregator in self._aggregators:

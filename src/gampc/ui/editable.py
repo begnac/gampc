@@ -64,6 +64,6 @@ class EditableLabel(Gtk.EditableLabel):
 
     @staticmethod
     def pressed_cb(click, *args):
-        if util.misc.get_modifier_state() & Gdk.ModifierType.CONTROL_MASK and \
+        if misc.get_modifier_state() & Gdk.ModifierType.CONTROL_MASK and \
            click.set_state(Gtk.EventSequenceState.CLAIMED):
             click.get_widget().really_start_editing()

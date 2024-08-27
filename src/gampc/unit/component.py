@@ -22,25 +22,27 @@ from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import Gtk
 
-from .. import util
+from ..util import actions
+from ..util import unit
 
 
-class __unit__(util.unit.UnitCssMixin, util.unit.Unit):
-    CSS = """
-    listview > row > treeexpander > box > label.modified {
-      font-style: italic;
-      font-weight: bold;
-    }
-    """
+class Component:
+    def __init__(self, name, title, key, factory):
+        self.name = name
+        self.title = title
+        self.key = key
+        self.factory = factory
 
+
+class __unit__(unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
         self._registered_components = {}
         self._components = {}
 
         self.label = _("_Component")
-        self.start_family = util.action.ActionInfoFamily(self.generate_start_actions(), 'app', self.label)
-        self.stop_family = util.action.ActionInfoFamily(self.generate_stop_actions(), 'app', self.label)
+        self.start_family = actions.ActionInfoFamily(self.generate_start_actions(), 'app', self.label)
+        self.stop_family = actions.ActionInfoFamily(self.generate_stop_actions(), 'app', self.label)
 
         self.start_menu = Gio.Menu()
 
@@ -59,19 +61,19 @@ class __unit__(util.unit.UnitCssMixin, util.unit.Unit):
         super().shutdown()
 
     def generate_start_actions(self):
-        start = util.action.ActionInfo('component-start', self.component_start_cb, parameter_format='(sb)')
+        start = actions.ActionInfo('component-start', self.component_start_cb, parameter_format='(sb)')
         yield start
         for component in self._registered_components.values():
             yield start.derive(component.title, ['<Alt>' + component.key], arg=GLib.Variant('(sb)', (component.name, False)))
             yield start.derive(None, ['<Control><Alt>' + component.key], arg=GLib.Variant('(sb)', (component.name, True)))
 
     def generate_stop_actions(self):
-        yield util.action.ActionInfo('component-stop', self.component_stop_cb, _("Stop component"), ['<Control><Shift>w'])
+        yield actions.ActionInfo('component-stop', self.component_stop_cb, _("Stop component"), ['<Control><Shift>w'])
 
-    def register_component(self, component):
-        if component.name in self._registered_components:
+    def register_component(self, name, title, key, factory):
+        if name in self._registered_components:
             raise RuntimeError
-        self._registered_components[component.name] = component
+        self._registered_components[name] = Component(name, title, key, factory)
         self.regenerate_start()
 
     def unregister_component(self, name):
@@ -85,7 +87,7 @@ class __unit__(util.unit.UnitCssMixin, util.unit.Unit):
 
     def get_component(self, name, new_instance):
         if not self._components.setdefault(name, []) or new_instance:
-            component = self._registered_components[name].new_component()
+            component = self._registered_components[name].factory()
         else:
             component = self._components[name].pop(0)
         self._components[name].append(component)

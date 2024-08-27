@@ -18,13 +18,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from .. import util
+from ..util import db
+from ..util import field
+from ..util import unit
 
-from ..components import itemlist
 from ..components import stream
 
+from . import mixins
 
-class StreamDatabase(util.db.Database):
+
+class StreamDatabase(db.Database):
     def __init__(self, name, fields):
         self.fields = fields
         super().__init__(name)
@@ -44,7 +47,7 @@ class StreamDatabase(util.db.Database):
                                                                                                        ':' + ',:'.join(self.fields.basic_names)), stream_)
 
 
-class __unit__(itemlist.UnitItemListMixin, util.unit.UnitCssMixin, util.unit.Unit):
+class __unit__(mixins.UnitComponentMixin, mixins.UnitCssMixin, unit.Unit):
     title = _("Internet Streams")
     key = '4'
 
@@ -68,10 +71,10 @@ class __unit__(itemlist.UnitItemListMixin, util.unit.UnitCssMixin, util.unit.Uni
 
         self.require('database')
 
-        self.fields = util.field.FieldFamily(self.config.fields)
-        self.fields.register_field(util.field.Field('Name', _("Name")))
-        self.fields.register_field(util.field.Field('file', _("URL"), editable=True))
-        self.fields.register_field(util.field.Field('Comment', _("Comment")))
+        self.fields = field.FieldFamily(self.config.fields)
+        self.fields.register_field(field.Field('Name', _("Name")))
+        self.fields.register_field(field.Field('file', _("URL"), editable=True))
+        self.fields.register_field(field.Field('Comment', _("Comment")))
 
         self.db = StreamDatabase(self.name, self.fields)
         for song in self.db.get_streams():

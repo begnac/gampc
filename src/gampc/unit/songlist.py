@@ -20,10 +20,14 @@
 
 from gi.repository import GLib
 
-from .. import util
+from ..util import field
+from ..util import misc
+from ..util import unit
+
+from . import mixins
 
 
-class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
+class __unit__(mixins.UnitConfigMixin, unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
         self.require('itemlist')
@@ -40,24 +44,24 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
 
         self.config.music_dir._get(default=GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC))
 
-        self.fields = util.field.FieldFamily(self.config.fields)
-        self.fields.register_field(util.field.Field('Album', _("Album")))
-        self.fields.register_field(util.field.Field('AlbumArtist', _("Album artist")))
-        self.fields.register_field(util.field.Field('Artist', _("Artist")))
-        self.fields.register_field(util.field.Field('Composer', _("Composer")))
-        self.fields.register_field(util.field.Field('Date', _("Date")))
-        self.fields.register_field(util.field.Field('Disc', _("Disc")))
-        self.fields.register_field(util.field.Field('file', _("File")))
-        self.fields.register_field(util.field.Field('Genre', _("Genre")))
-        self.fields.register_field(util.field.Field('Last_Modified', _("Last modified")))
-        self.fields.register_field(util.field.Field('Performer', _("Performer")))
-        self.fields.register_field(util.field.Field('Time', _("Seconds"), visible=False))
-        self.fields.register_field(util.field.Field('FormattedTime', _("Duration"), get_value=lambda song: util.misc.format_time(song['Time']) if 'Time' in song else ''))
-        self.fields.register_field(util.field.Field('Title', _("Title")))
-        # self.fields.register_field(util.field.Field('Title', _("Title (partial)")))
-        # self.fields.register_field(util.field.Field('FullTitle', _("Title"), get_value=self.song_title))
-        self.fields.register_field(util.field.Field('Track', _("Track")))
-        self.fields.register_field(util.field.FieldWithTable(
+        self.fields = field.FieldFamily(self.config.fields)
+        self.fields.register_field(field.Field('Album', _("Album")))
+        self.fields.register_field(field.Field('AlbumArtist', _("Album artist")))
+        self.fields.register_field(field.Field('Artist', _("Artist")))
+        self.fields.register_field(field.Field('Composer', _("Composer")))
+        self.fields.register_field(field.Field('Date', _("Date")))
+        self.fields.register_field(field.Field('Disc', _("Disc")))
+        self.fields.register_field(field.Field('file', _("File")))
+        self.fields.register_field(field.Field('Genre', _("Genre")))
+        self.fields.register_field(field.Field('Last_Modified', _("Last modified")))
+        self.fields.register_field(field.Field('Performer', _("Performer")))
+        self.fields.register_field(field.Field('Time', _("Seconds"), visible=False))
+        self.fields.register_field(field.Field('FormattedTime', _("Duration"), get_value=lambda song: misc.format_time(song['Time']) if 'Time' in song else ''))
+        self.fields.register_field(field.Field('Title', _("Title")))
+        # self.fields.register_field(field.Field('Title', _("Title (partial)")))
+        # self.fields.register_field(field.Field('FullTitle', _("Title"), get_value=self.song_title))
+        self.fields.register_field(field.Field('Track', _("Track")))
+        self.fields.register_field(field.FieldWithTable(
             'Extension', _("Extension"),
             table=[
                 [
@@ -71,7 +75,7 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
                     '\\1'
                 ]
             ]))
-        self.fields.register_field(util.field.FieldWithTable(
+        self.fields.register_field(field.FieldWithTable(
             'agenre', visible=False,
             table=[
                 [
@@ -115,7 +119,7 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
                     'z'
                 ]
             ]))
-        self.fields.register_field(util.field.FieldWithTable(
+        self.fields.register_field(field.FieldWithTable(
             'ArtistSortName', visible=False,
             table=[
                 [
@@ -154,7 +158,7 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
                     '\\1'
                 ]
             ]))
-        performer_last_name = util.field.FieldWithTable(
+        performer_last_name = field.FieldWithTable(
             'PerformerLastName', visible=False,
             table=[
                 [
@@ -173,7 +177,7 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
                     '\\1'
                 ]
             ])
-        self.fields.register_field(util.field.Field(
+        self.fields.register_field(field.Field(
             'PerformersLastNames', visible=False,
             get_value=lambda song: ', '.join(performer_last_name.get_value({'Performer': name}) for name in song.get('Performer').split(', ')) if song.get('Performer') else None))
 

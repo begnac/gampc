@@ -22,9 +22,11 @@ from gi.repository import GLib
 
 import ampd
 
-from .. import util
-from ..components import songlist
+from ..util import unit
+
 from ..components import queue
+
+from . import mixins
 
 
 @ampd.task
@@ -48,7 +50,7 @@ async def action_queue_add_high_priority_cb(songlist_, action, parameter):
     await songlist_.ampd.prioid(255, *Ids)
 
 
-class __unit__(songlist.UnitSongListMixin, util.unit.UnitCssMixin, util.unit.Unit):
+class __unit__(mixins.UnitComponentMixin, mixins.UnitCssMixin, unit.Unit):
     title = _("Play Queue")
     key = '1'
 
@@ -61,8 +63,13 @@ class __unit__(songlist.UnitSongListMixin, util.unit.UnitCssMixin, util.unit.Uni
     }}
     '''
 
-    def xxx__init__(self, *args):
+    def __init__(self, *args):
         super().__init__(*args)
+        self.require('database')
+        self.require('songlist')
+        self.require('persistent')
+
+        return
 
         self.add_resources(
             'itemlist.action',

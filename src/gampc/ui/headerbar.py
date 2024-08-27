@@ -23,7 +23,7 @@ from gi.repository import GLib
 from gi.repository import Gdk
 from gi.repository import Gtk
 
-from ..util.misc import format_time, get_modifier_state
+from ..util import misc
 
 
 class PlaybackButtons(Gtk.Box):
@@ -70,8 +70,8 @@ class TimeScale(Gtk.Box):
         self.elapsed_binding = None
         self.set_elapsed_binding()
 
-        self.scale.get_adjustment().bind_property('value', self.elapsed_label, 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: format_time(value + 0.5))
-        self.scale.get_adjustment().bind_property('upper', self.duration_label, 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: ' / ' + format_time(value))
+        self.scale.get_adjustment().bind_property('value', self.elapsed_label, 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: misc.format_time(value + 0.5))
+        self.scale.get_adjustment().bind_property('upper', self.duration_label, 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: ' / ' + misc.format_time(value))
         self.scale.get_adjustment().bind_property('upper', self.label_box, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value != 0.0)
 
         self.connect('notify::sensitive', self.notify_sensitive_cb)
@@ -111,7 +111,7 @@ class TimeScale(Gtk.Box):
 
     def scale_released_cb(self, controller, n_pressed, x, y):
         if not self.elapsed_binding:
-            if controller.get_current_button() == 1 and get_modifier_state() & (Gdk.ModifierType.SHIFT_MASK | Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK) == 0:
+            if controller.get_current_button() == 1 and misc.get_modifier_state() & (Gdk.ModifierType.SHIFT_MASK | Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK) == 0:
                 self.elapsed = self.scale.get_value()
                 self.set_elapsed_binding()
             else:

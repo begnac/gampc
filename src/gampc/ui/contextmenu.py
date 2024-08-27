@@ -21,10 +21,10 @@
 from gi.repository import Gio
 from gi.repository import Gtk
 
-from .. import util
+from ..util import actions
 
 
-class ContextMenuMixin(util.action.ActionInfoFamiliesMixin):
+class ContextMenuMixin(actions.ActionInfoFamiliesMixin):
     def __init__(self, *args, **kwargs):
         self.context_menu = Gio.Menu()
         self.actions = {}
@@ -44,7 +44,7 @@ class ContextMenuMixin(util.action.ActionInfoFamiliesMixin):
     def add_to_context_menu(self, generator, prefix, label, *, submenu=False, protect=None):
         if prefix in self.actions:
             raise RuntimeError
-        family = util.action.ActionInfoFamily(generator, prefix, label)
+        family = actions.ActionInfoFamily(generator, prefix, label)
         self.actions[prefix] = family.insert_action_group(self, protect=protect)
         self.add_controller(family.get_shortcut_controller())
         self.action_info_families.append(family)
@@ -58,6 +58,6 @@ class ContextMenuMixin(util.action.ActionInfoFamiliesMixin):
         self = controller.get_widget()
         if self.context_menu.get_n_items() == 0:
             return
-        menu = Gtk.PopoverMenu(menu_model=self.context_menu, has_arrow=False, pointing_to=util.misc.Rectangle(x, y), halign=Gtk.Align.START)
+        menu = Gtk.PopoverMenu(menu_model=self.context_menu, flags=Gtk.PopoverMenuFlags.NESTED, has_arrow=False, pointing_to=misc.Rectangle(x, y), halign=Gtk.Align.START)
         menu.set_parent(self)
         menu.popup()

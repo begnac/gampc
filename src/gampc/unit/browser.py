@@ -23,9 +23,13 @@ import os
 import ampd
 
 from ..util import unit
+
 from ..ui import treelist
+
 from ..components import itemlist
 from ..components import songlist
+
+from . import mixins
 
 
 DIRECTORY = 'directory'
@@ -49,7 +53,7 @@ class Browser(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, so
             self.left_selection[0].set_expanded(True)
 
 
-class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
+class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
     title = _("Database Browser")
     key = '2'
 
@@ -57,11 +61,14 @@ class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.require('database')
+        self.require('songlist')
+
         self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)
 
     def shutdown(self):
-        super().shutdown()
         del self.root
+        super().shutdown()
 
     @ampd.task
     async def client_connected_cb(self, client):

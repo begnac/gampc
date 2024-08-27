@@ -284,7 +284,7 @@ class TandaSubComponent(component.Component):
                 return
 
     def tandaid_selection_changed_cb(self, model, *args):
-        selection = list(util.misc.get_selection(model))
+        selection = list(misc.get_selection(model))
         self.current_tandaid = model[selection[0]]._tandaid if selection else None
 
 
@@ -569,7 +569,7 @@ class TandaView(TandaSubComponent, songlist.SongList):
         self.view.record_store[:] = records
 
 
-class TandaDatabase(GObject.Object, util.db.Database):
+class TandaDatabase(GObject.Object, db.Database):
     __gsignals__ = {
         'changed': (GObject.SIGNAL_RUN_LAST, None, (int,)),
         'verify-progress': (GObject.SIGNAL_RUN_LAST, None, (float,)),
@@ -581,7 +581,7 @@ class TandaDatabase(GObject.Object, util.db.Database):
     def __init__(self, fields, unit):
         self.fields = fields
         self.unit = unit
-        util.db.Database.__init__(self, unit.name)
+        db.Database.__init__(self, unit.name)
         super().__init__()
         self.ampd = unit.ampd.sub_executor()
 
@@ -821,7 +821,7 @@ for p in range(5):
     '''
 
 
-class __unit__(songlist.UnitPanedSongListMixin, util.unit.UnitCssMixin, util.unit.Unit):
+class __unit__(mixins.UnitPanedComponentMixin, unit.UnitCssMixin, unit.Unit):
     title = _("Tandas")
     key = '6'
 
@@ -832,31 +832,31 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.UnitCssMixin, util.uni
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.fields = util.field.FieldFamily(self.config.fields)
-        self.fields.register_field(util.field.Field('Artist', _("Artist")))
-        self.fields.register_field(util.field.Field('Genre', _("Genre")))
-        self.fields.register_field(util.field.Field('Years_Min', visible=False, get_value=lambda tanda: min(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
-        self.fields.register_field(util.field.Field('Years_Max', visible=False, get_value=lambda tanda: max(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
-        self.fields.register_field(util.field.Field('Years', _("Years"), get_value=lambda tanda: ('\'{}'.format(tanda['Years_Min'][2:]) if tanda['Years_Min'] == tanda['Years_Max'] else '\'{}-\'{}'.format(tanda['Years_Min'][2:], tanda['Years_Max'][2:])) if 'Years_Min' in tanda and 'Years_Max' in tanda else '????'))
-        self.fields.register_field(util.field.Field('First_Song', _("First song"), get_value=lambda tanda: tanda['_songs'][0]['Title'] if '_songs' in tanda else '???'))
-        self.fields.register_field(util.field.Field('Performer', _("Performer")))
-        self.fields.register_field(util.field.Field('Comment', _("Comment")))
-        self.fields.register_field(util.field.Field('Description', _("Description")))
-        self.fields.register_field(util.field.Field('Note', _("Note"), min_width=30))
-        self.fields.register_field(util.field.Field('Rhythm', _("Rhythm"), min_width=30))
-        self.fields.register_field(util.field.Field('Energy', _("Energy"), min_width=30))
-        self.fields.register_field(util.field.Field('Speed', _("Speed"), min_width=30))
-        self.fields.register_field(util.field.Field('Emotion', _("Emotion"), min_width=30))
+        self.fields = field.FieldFamily(self.config.fields)
+        self.fields.register_field(field.Field('Artist', _("Artist")))
+        self.fields.register_field(field.Field('Genre', _("Genre")))
+        self.fields.register_field(field.Field('Years_Min', visible=False, get_value=lambda tanda: min(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
+        self.fields.register_field(field.Field('Years_Max', visible=False, get_value=lambda tanda: max(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
+        self.fields.register_field(field.Field('Years', _("Years"), get_value=lambda tanda: ('\'{}'.format(tanda['Years_Min'][2:]) if tanda['Years_Min'] == tanda['Years_Max'] else '\'{}-\'{}'.format(tanda['Years_Min'][2:], tanda['Years_Max'][2:])) if 'Years_Min' in tanda and 'Years_Max' in tanda else '????'))
+        self.fields.register_field(field.Field('First_Song', _("First song"), get_value=lambda tanda: tanda['_songs'][0]['Title'] if '_songs' in tanda else '???'))
+        self.fields.register_field(field.Field('Performer', _("Performer")))
+        self.fields.register_field(field.Field('Comment', _("Comment")))
+        self.fields.register_field(field.Field('Description', _("Description")))
+        self.fields.register_field(field.Field('Note', _("Note"), min_width=30))
+        self.fields.register_field(field.Field('Rhythm', _("Rhythm"), min_width=30))
+        self.fields.register_field(field.Field('Energy', _("Energy"), min_width=30))
+        self.fields.register_field(field.Field('Speed', _("Speed"), min_width=30))
+        self.fields.register_field(field.Field('Emotion', _("Emotion"), min_width=30))
 
-        # self.fields.register_field(util.field.Field('Drama', _("Drama"), min_width=30))
-        # self.fields.register_field(util.field.Field('Romance', _("Romance"), min_width=30))
-        self.fields.register_field(util.field.Field('Level', _("Level"), min_width=30))
+        # self.fields.register_field(field.Field('Drama', _("Drama"), min_width=30))
+        # self.fields.register_field(field.Field('Romance', _("Romance"), min_width=30))
+        self.fields.register_field(field.Field('Level', _("Level"), min_width=30))
 
-        self.fields.register_field(util.field.Field('Last_Modified', _("Last modified")))
-        self.fields.register_field(util.field.Field('Last_Played', _("Last played")))
-        self.fields.register_field(util.field.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=get_last_played_weeks))
-        self.fields.register_field(util.field.Field('n_songs', _("Number of songs"), min_width=30, get_value=lambda tanda: 0 if not tanda.get('_songs') else None if (len(tanda.get('_songs')) == 4 and tanda.get('Genre').startswith('Tango')) or (len(tanda.get('_songs')) == 3 and tanda.get('Genre') in {'Vals', 'Milonga'}) else len(tanda.get('_songs'))))
-        self.fields.register_field(util.field.Field('Duration', _("Duration"), get_value=lambda tanda: util.misc.format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
+        self.fields.register_field(field.Field('Last_Modified', _("Last modified")))
+        self.fields.register_field(field.Field('Last_Played', _("Last played")))
+        self.fields.register_field(field.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=get_last_played_weeks))
+        self.fields.register_field(field.Field('n_songs', _("Number of songs"), min_width=30, get_value=lambda tanda: 0 if not tanda.get('_songs') else None if (len(tanda.get('_songs')) == 4 and tanda.get('Genre').startswith('Tango')) or (len(tanda.get('_songs')) == 3 and tanda.get('Genre') in {'Vals', 'Milonga'}) else len(tanda.get('_songs'))))
+        self.fields.register_field(field.Field('Duration', _("Duration"), get_value=lambda tanda: misc.format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
 
         self.db = TandaDatabase(self.fields, self)
 

@@ -23,7 +23,10 @@ from gi.repository import Gtk
 import asyncio
 import ampd
 
-from .. import util
+from ..util import actions
+from ..util import unit
+
+from . import mixins
 
 
 def hold_app(f):
@@ -37,28 +40,28 @@ def hold_app(f):
     return g
 
 
-class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
+class __unit__(mixins.UnitServerMixin, unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
         self.fading = False
 
     def generate_actions(self):
-        yield util.action.ActionInfo('play-or-pause', self.play_or_pause_cb, _("_Play/pause"), ['<Control>Up', 'AudioPlay', 'space'], dangerous=True)
-        yield util.action.ActionInfo('play', self.mpd_command_cb, dangerous=True)
-        yield util.action.ActionInfo('stop', self.mpd_command_cb, _("_Stop"), ['<Control>Down', 'AudioStop'], dangerous=True)
-        yield util.action.ActionInfo('next', self.mpd_command_cb, _("_Next"), ['<Control>Right', 'AudioNext'], dangerous=True)
-        yield util.action.ActionInfo('previous', self.mpd_command_cb, _("_Previous"), ['<Control>Left', 'AudioPrev'], dangerous=True)
-        fadeout = util.action.ActionInfo('fadeout-then', self.fadeout_then_cb, parameter_format='b')
+        yield actions.ActionInfo('play-or-pause', self.play_or_pause_cb, _("_Play/pause"), ['<Control>Up', 'AudioPlay', 'space'], dangerous=True)
+        yield actions.ActionInfo('play', self.mpd_command_cb, dangerous=True)
+        yield actions.ActionInfo('stop', self.mpd_command_cb, _("_Stop"), ['<Control>Down', 'AudioStop'], dangerous=True)
+        yield actions.ActionInfo('next', self.mpd_command_cb, _("_Next"), ['<Control>Right', 'AudioNext'], dangerous=True)
+        yield actions.ActionInfo('previous', self.mpd_command_cb, _("_Previous"), ['<Control>Left', 'AudioPrev'], dangerous=True)
+        fadeout = actions.ActionInfo('fadeout-then', self.fadeout_then_cb, parameter_format='b')
         yield fadeout
         yield fadeout.derive(_("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], True)
         yield fadeout.derive(_("Next [fadeout]"), ['<Control><Shift>Right'], False)
-        yield util.action.ActionInfo('volume-popup', self.volume_popup_cb, _("Adjust volume"), ['<Alt>v'])
-        volume = util.action.ActionInfo('volume', self.volume_cb, parameter_format='(ib)')
+        yield actions.ActionInfo('volume-popup', self.volume_popup_cb, _("Adjust volume"), ['<Alt>v'])
+        volume = actions.ActionInfo('volume', self.volume_cb, parameter_format='(ib)')
         yield volume
         yield volume.derive(_("Volume up"), ['<Control>plus', '<Control>KP_Add'], (5, True))
         yield volume.derive(_("Volume down"), ['<Control>minus', '<Control>KP_Subtract'], (-5, True))
         yield volume.derive(_("Mute"), ['<Control>AudioMute'], (0, False))
-        jump = util.action.ActionInfo('jump', self.jump_cb, parameter_format='(ib)')
+        jump = actions.ActionInfo('jump', self.jump_cb, parameter_format='(ib)')
         yield jump
         yield jump.derive(_("Restart playback"), ['<Alt>Up'], (0, False))
         yield jump.derive(_("End of song (-{} seconds)").format(15), ['<Alt>Down'], (-15, False))

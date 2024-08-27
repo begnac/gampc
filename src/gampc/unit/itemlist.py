@@ -18,8 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from .. import util
-from .. import ui
+from ..util import unit
+
+from ..ui import dnd
+
+from . import mixins
 
 
 CSS = ''
@@ -30,7 +33,7 @@ columnview.filter > listview > row {
 }
 '''
 
-CSS += ui.dnd.CSS
+CSS += dnd.CSS
 
 N = 4
 for d in range(N ** 3):
@@ -42,10 +45,10 @@ for d in range(N ** 3):
     '''
 
 
-class __unit__(util.unit.UnitConfigMixin, util.unit.UnitCssMixin, util.unit.Unit):
+class __unit__(mixins.UnitConfigMixin, mixins.UnitCssMixin, unit.Unit):
     CSS = CSS
 
-    def __init__(self, *args):
+    def xxxx__init__(self, *args):
         super().__init__(*args)
 
         items = [

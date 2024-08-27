@@ -30,7 +30,8 @@ import asyncio
 import gasyncio
 import ampd
 
-from . import util
+from .util import unit
+from .util.logger import logger
 
 from . import __application__, __program_name__, __version__, __copyright__, __license_type__
 
@@ -47,19 +48,19 @@ class App(Gtk.Application):
         self.add_main_option(GLib.OPTION_REMAINING, 0, GLib.OptionFlags.NONE, GLib.OptionArg.STRING_ARRAY, '', _("[ACTION...]"))
 
     def __del__(self):
-        util.logger.logger.debug(f'Deleting {self}')
+        logger.debug(f'Deleting {self}')
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
 
-        util.logger.logger.debug("Starting")
+        logger.debug("Starting")
 
         gasyncio.start_slave_loop()
 
         self.sigint_source = GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda: self.quit() or True)
         self.excepthook_orig, sys.excepthook = sys.excepthook, self.excepthook
 
-        self.unit_manager = util.unit.UnitManager()
+        self.unit_manager = unit.UnitManager()
         # self.unit_manager.set_target('config')
         # self.unit_config = self.unit_manager.get_unit('config')
 
@@ -96,12 +97,12 @@ class App(Gtk.Application):
         self.connect('window-removed', lambda self, window: window.shutdown())
 
     def do_shutdown(self):
-        util.logger.logger.debug("Shutting down")
+        logger.debug("Shutting down")
 
         for win in self.get_windows():
             win.destroy()
 
-        util.misc.get_clipboard().set_content(None)
+        # misc.get_clipboard().set_content(None)
 
         self.unit_server.ampd_server_properties.disconnect_by_func(self.set_inhibit)
         self.unit_manager.set_target()
@@ -153,10 +154,10 @@ class App(Gtk.Application):
                 try:
                     success, name, target = Gio.Action.parse_detailed_name(option)
                 except Exception as e:
-                    util.logger.logger.error(e)
+                    logger.error(e)
                     continue
                 if not self.has_action(name):
-                    util.logger.logger.error(_("Action '{name}' does not exist").format(name=name))
+                    logger.error(_("Action '{name}' does not exist").format(name=name))
                 else:
                     self.activate_action(name, target)
         else:
@@ -174,9 +175,9 @@ class App(Gtk.Application):
     @staticmethod
     def excepthook(*args):
         if args[0] == ampd.errors.ReplyError:
-            util.logger.logger.error(args[1])
+            logger.error(args[1])
         else:
-            util.logger.logger.error(args[1], exc_info=args)
+            logger.error(args[1], exc_info=args)
         try:
             del sys.last_type, sys.last_value, sys.last_traceback
         except AttributeError:

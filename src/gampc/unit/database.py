@@ -18,22 +18,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GLib
-from gi.repository import Gtk
-
-from .. import util
-from .. import ui
-
 import ampd
 
+from ..util import unit
+from ..util import cache
 
-class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
+from .. import ui
+
+from . import mixins
+
+
+class __unit__(mixins.UnitServerMixin, unit.Unit):
     SEPARATOR_FILE = 'separator.mp3'
 
     def __init__(self, *args):
         super().__init__(*args)
         self.require('songlist')
-        self.cache = util.cache.AsyncCache(self.cache_retrieve)
+        self.cache = cache.AsyncCache(self.cache_retrieve)
 
     def shutdown(self):
         super().shutdown()
@@ -46,7 +47,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
                 await self.separator_missing()
             await self.ampd.idle(ampd.DATABASE)
             self.cache.clear()
-            util.logger.logger.info(_("Database changed"))
+            logger.info(_("Database changed"))
 
     async def separator_missing(self):
         await ui.dialog.MessageDialogAsync(cancel_button=False,

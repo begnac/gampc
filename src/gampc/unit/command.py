@@ -23,7 +23,10 @@ from gi.repository import Gtk
 import ampd
 
 from ..util import unit
+
 from ..components import component
+
+from . import mixins
 
 
 class _Command(component.Component):
@@ -43,7 +46,7 @@ class Command(component.ComponentEntryMixin, _Command):
     pass
 
 
-class __unit__(component.UnitComponentMixin, unit.Unit):
+class __unit__(mixins.UnitComponentMixin, unit.Unit):
     title = _("Execute MPD commands")
     key = '7'
 

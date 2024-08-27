@@ -30,8 +30,12 @@ import os
 # import ampd
 
 from ..util import unit
+
 from ..components import component
+
 from .. import __application__
+
+from . import mixins
 
 
 class PixbufCache(dict):
@@ -257,7 +261,7 @@ class Current(component.Component):
         self.set_size()
 
 
-class __unit__(component.UnitComponentMixin, unit.Unit):
+class __unit__(mixins.UnitComponentMixin, unit.Unit):
     title = _("Current Song")
     key = '0'
 

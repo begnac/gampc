@@ -22,7 +22,9 @@ from gi.repository import Gtk
 
 # import ampd
 
-from .. import util
+from ..util import editstack
+from ..util import misc
+
 from .. import ui
 
 from . import itemlist
@@ -38,7 +40,7 @@ def encode_url(url):
 class StreamItemFactory(ui.view.EditableItemFactory):
     @staticmethod
     def value_binder(widget, item, name):
-        util.misc.add_unique_css_class(widget.get_parent(), STREAM_URL_CSS_PREFIX, encode_url(item.get_key()))
+        misc.add_unique_css_class(widget.get_parent(), STREAM_URL_CSS_PREFIX, encode_url(item.get_key()))
         ui.view.EditableItemFactory.value_binder(widget, item, name)
 
 
@@ -89,7 +91,7 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
     #     print(args)
 
     # def item_factory(self):
-    #     return util.item.ItemWithDict()
+    #     return item.ItemWithDict()
 
     # def record_current_song_hook(self, label, record):
     #     if self.unit.unit_server.ampd_server_properties.state != 'stop' and record.file == self.unit.unit_server.ampd_server_properties.current_song.get('file'):
@@ -105,7 +107,7 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
                 if stream[key] is None:
                     stream[key] = ''
         # self.set_songs(streams)
-        self.set_edit_stack(util.editstack.EditStack(streams))
+        self.set_edit_stack(editstack.EditStack(streams))
 
     def action_save_cb(self, action, parameter):
         raise NotImplementedError

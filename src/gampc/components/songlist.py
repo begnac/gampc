@@ -17,11 +17,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-from .. import util
+from ..util import misc
 
 from . import itemlist
-from . import component
 
 
 class SongList(itemlist.ItemList):
@@ -39,7 +37,6 @@ class SongList(itemlist.ItemList):
             self.unit.unit_songlist.fields.set_derived_fields(song)
             self.cache[song['file']] = song
         self.set_values(songs)
-
 
     # def get_filenames(self, selection):
     #     return self.view.get_filenames(selection)
@@ -61,16 +58,4 @@ class SongListTotalsMixin:
 
     def set_totals(self, store, *args):
         time = sum(int(item.get_field('Time', '0')) for item in store)
-        self.status = '{} / {}'.format(store.get_n_items(), util.misc.format_time(time))
-
-
-class UnitSongListMixin(itemlist.UnitItemListMixin):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.require('songlist')
-        self.require('database')
-
-
-class UnitPanedSongListMixin(UnitSongListMixin, component.UnitPanedComponentMixin):
-    def __init__(self, *args, menus=[]):
-        super().__init__(*args, menus=menus + ['left-context'])
+        self.status = '{} / {}'.format(store.get_n_items(), misc.format_time(time))

@@ -23,10 +23,14 @@ from gi.repository import GObject
 import asyncio
 import ampd
 
-from .. import util
+from ..util import actions
+from ..util import unit
+from ..util.logger import logger
+
+from . import mixins
 
 
-class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
+class __unit__(mixins.UnitConfigMixin, unit.Unit):
     server_label = GObject.Property(type=str, default='')
     server_profile = GObject.Property(type=str)
 
@@ -77,15 +81,15 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
         super().shutdown()
 
     def generate_database_actions(self):
-        yield util.action.ActionInfo('update', self.update_cb, _("Update database"))
+        yield actions.ActionInfo('update', self.update_cb, _("Update database"))
 
     def generate_connection_actions(self):
-        yield util.action.ActionInfo('connect', self.ampd_connect, _("Connect"), ['<Alt><Shift>c'])
-        yield util.action.ActionInfo('disconnect', self.ampd_disconnect, _("Disconnect"), ['<Alt><Shift>d'])
-        yield util.action.ActionInfo('connect-to-previous', self.ampd_connect_to_previous, _("Connect to previous"), ['<Control><Alt>p'])
-        yield util.action.PropertyActionInfo('server-profile', self)
+        yield actions.ActionInfo('connect', self.ampd_connect, _("Connect"), ['<Alt><Shift>c'])
+        yield actions.ActionInfo('disconnect', self.ampd_disconnect, _("Disconnect"), ['<Alt><Shift>d'])
+        yield actions.ActionInfo('connect-to-previous', self.ampd_connect_to_previous, _("Connect to previous"), ['<Control><Alt>p'])
+        yield actions.PropertyActionInfo('server-profile', self)
         for name in ampd.OPTION_NAMES:
-            yield util.action.PropertyActionInfo(name, self.ampd_server_properties, parameter_format='i')
+            yield actions.PropertyActionInfo(name, self.ampd_server_properties, parameter_format='i')
 
     def ampd_connect(self, *args):
         self.want_to_connect = True
@@ -108,19 +112,19 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
         await self.ampd.update()
 
     def client_connected_cb(self, client):
-        util.logger.logger.info(_("Connected to {address} [protocol version {protocol}]").format(address=self.profile.name, protocol=self.ampd.get_protocol_version()))
+        logger.info(_("Connected to {address} [protocol version {protocol}]").format(address=self.profile.name, protocol=self.ampd.get_protocol_version()))
         self.set_server_label()
 
     def client_disconnected_cb(self, client, reason, message):
         if reason == ampd.Client.DISCONNECT_RECONNECT:
             return
         elif reason == ampd.Client.DISCONNECT_PASSWORD:
-            util.logger.logger.error(_("Invalid password"))
+            logger.error(_("Invalid password"))
             return
         elif reason == ampd.Client.DISCONNECT_FAILED_CONNECT:
-            util.logger.logger.error(_("Connection failed: {message}").format(message=message or _("reason unknown")))
+            logger.error(_("Connection failed: {message}").format(message=message or _("reason unknown")))
         else:
-            util.logger.logger.info(_("Disconnected"))
+            logger.info(_("Disconnected"))
         if self.want_to_connect:
             self._reconnect()
         self.set_server_label()
@@ -131,7 +135,7 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
         await self.ampd_client.connect_to_server(self.profile.address)
 
     def server_error_cb(self, client, error):
-        util.logger.logger.error(_("Server error: {error}").format(error=error))
+        logger.error(_("Server error: {error}").format(error=error))
 
     def set_server_label(self, *args):
         if not self.want_to_connect:

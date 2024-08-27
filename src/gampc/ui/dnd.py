@@ -21,7 +21,7 @@
 from gi.repository import Gdk
 from gi.repository import Gtk
 
-from .. import util
+from ..util import misc
 
 
 CSS = '''
@@ -34,7 +34,7 @@ columnview > listview:drop(active) > row.drop-row {
 class ListDragSource(Gtk.DragSource):
     def __init__(self, interface, **kwargs):
         super().__init__(**kwargs)
-        icon = Gtk.IconTheme.get_for_display(util.misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
+        icon = Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
         self.set_icon(icon, 5, 5)
         self.connect('prepare', self.prepare_cb, interface.content_from_items)
         # self.connect('drag-begin', self.drag_begin_cb)
@@ -44,12 +44,12 @@ class ListDragSource(Gtk.DragSource):
     @staticmethod
     def prepare_cb(self, x, y, content_from_items):
         widget = self.get_widget()
-        row, x, y = util.misc.find_descendant_at_xy(widget, x, y, 1)
+        row, x, y = misc.find_descendant_at_xy(widget, x, y, 1)
         if row is None:
             return
 
         model = widget.get_model()
-        self.selection = list(util.misc.get_selection(model))
+        self.selection = list(misc.get_selection(model))
         pos = row.get_first_child().get_first_child().pos
         if pos not in self.selection:
             model.select_item(pos, True)
@@ -89,7 +89,7 @@ class ListDropTarget(Gtk.DropTarget):
 
     @staticmethod
     def action_cb(self, x, y):
-        row, x, y = util.misc.find_descendant_at_xy(self.get_widget(), x, y, 1)
+        row, x, y = misc.find_descendant_at_xy(self.get_widget(), x, y, 1)
         if row is None:
             row = self.get_widget().get_last_child()
         elif y < row.get_height() / 2:

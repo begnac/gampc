@@ -20,10 +20,14 @@
 
 import ampd
 
-from .. import util
+from ..util import actions
+from ..util import unit
+
 from ..components import component
 from ..components import itemlist
 from ..components import songlist
+
+from . import mixins
 
 
 class Search(component.ComponentEntryMixin, itemlist.ItemListDatabaseMixin, songlist.SongList):
@@ -39,7 +43,13 @@ class Search(component.ComponentEntryMixin, itemlist.ItemListDatabaseMixin, song
         # for name in self.fields.names:
         #     self.field_choice.append_text(name)
 
-        self.actions.add_action(util.resource.Action('search', self.action_search_cb))
+    def _get_widget(self):
+        widget = super()._get_widget()
+        widget.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
+        return widget
+
+    def generate_actions(self):
+        yield actions.ActionInfo('search', self.action_search_cb, _("Search"), ['<Control><Alt>f'])
 
     def action_search_cb(self, *args):
         self.entry.grab_focus()
@@ -50,10 +60,10 @@ class Search(component.ComponentEntryMixin, itemlist.ItemListDatabaseMixin, song
             self.entry.activate()
             await self.ampd.idle(ampd.DATABASE)
 
-    def action_reset_cb(self, action, parameter):
-        super().action_reset_cb(action, parameter)
-        self.field_choice.set_active(0)
-        self.entry.activate()
+    # def action_reset_cb(self, action, parameter):
+    #     super().action_reset_cb(action, parameter)
+    #     self.field_choice.set_active(0)
+    #     self.entry.activate()
 
     @ampd.task
     async def entry_activate_cb(self, entry):
@@ -99,15 +109,13 @@ class Search(component.ComponentEntryMixin, itemlist.ItemListDatabaseMixin, song
             yield token
 
 
-class __unit__(songlist.UnitSongListMixin, util.unit.Unit):
+class __unit__(mixins.UnitComponentMixin, unit.Unit):
     title = _("Search")
     key = '3'
 
     COMPONENT_CLASS = Search
 
-    def xxxx__init__(self, *args):
+    def __init__(self, *args):
         super().__init__(*args)
-        self.add_resources(
-            'app.menu',
-            util.resource.MenuAction('edit/component', 'search.search', _("Search"), ['<Control><Alt>f']),
-        )
+        self.require('database')
+        self.require('songlist')

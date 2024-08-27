@@ -24,7 +24,10 @@ from gi.repository import Gtk
 import logging
 
 from ..util import unit
+
 from ..components import component
+
+from . import mixins
 
 
 class Handler(logging.Handler, GObject.Object):
@@ -63,7 +66,7 @@ class Log(component.Component):
         adjustment.set_value(adjustment.get_upper())
 
 
-class __unit__(component.UnitComponentMixin, unit.Unit):
+class __unit__(mixins.UnitComponentMixin, unit.Unit):
     title = _("View log")
     key = '8'
 

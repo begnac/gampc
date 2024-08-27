@@ -20,7 +20,9 @@
 
 from gi.repository import Gtk
 
-from .. import util
+from ..util import actions
+from ..util import unit
+
 from .. import __program_name__, __version__, __program_description__, __copyright__, __license_type__, __website__
 
 
@@ -32,7 +34,7 @@ def iterate_children(widget):
 
 def iterate_action_families(widget):
     for child in iterate_children(widget):
-        if isinstance(child, util.action.ActionInfoFamiliesMixin):
+        if isinstance(child, actions.ActionInfoFamiliesMixin):
             for family in child.action_info_families:
                 yield family
 
@@ -65,14 +67,14 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
                     group.add_shortcut(Gtk.ShortcutsShortcut(title=action_info.label.replace('_', ''), accelerator=' '.join(action_info.accels)))
 
 
-class __unit__(util.unit.Unit):
+class __unit__(unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
 
     def generate_actions(self):
-        # yield util.action.ActionInfo('app', 'BAD', self.BAD_cb, _("BAD"), ['<Control><Shift>b'])
-        yield util.action.ActionInfo('help', self.help_cb, _("Help"), ['<Control>h', 'F1'])
-        yield util.action.ActionInfo('about', self.about_cb, _("About"), ['<Control><Shift>h'])
+        # yield actions.ActionInfo('app', 'BAD', self.BAD_cb, _("BAD"), ['<Control><Shift>b'])
+        yield actions.ActionInfo('help', self.help_cb, _("Help"), ['<Control>h', 'F1'])
+        yield actions.ActionInfo('about', self.about_cb, _("About"), ['<Control><Shift>h'])
 
     def BAD_cb(self, *args):
         print(Gtk.Application.get_default().get_active_window().get_focus())

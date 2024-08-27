@@ -24,10 +24,14 @@ from gi.repository import Gdk
 
 import ampd
 
-from .. import util
+from ..util import actions
+from ..util import misc
+from ..util import unit
+
+from . import mixins
 
 
-class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
+class __unit__(mixins.UnitServerMixin, unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
 
@@ -51,7 +55,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
             while True:
                 self.clean_outputs()
                 outputs = await self.ampd.outputs()
-                family = util.action.ActionInfoFamily(self.generate_output_actions(outputs), 'app')
+                family = actions.ActionInfoFamily(self.generate_output_actions(outputs), 'app')
                 self.menu.append_section(None, family.get_menu())
                 family.add_to_action_map(self.actions, protect=self.unit_persistent.protect)
                 await self.ampd.idle(ampd.OUTPUT)
@@ -70,12 +74,12 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
                 continue
             self.outputs.append(output)
             output['action'] = 'output-' + output['outputid']
-            yield util.action.ActionInfo(output['action'], self.action_output_activate_cb, output['outputname'], state=GLib.Variant.new_boolean(int(output['outputenabled'])), dangerous=True)
+            yield actions.ActionInfo(output['action'], self.action_output_activate_cb, output['outputname'], state=GLib.Variant.new_boolean(int(output['outputenabled'])), dangerous=True)
 
     @ampd.task
     async def action_output_activate_cb(self, action, parameter):
         output_id = action.get_name().split('-', 1)[1]
-        if util.misc.get_modifier_state() & Gdk.ModifierType.CONTROL_MASK:
+        if misc.get_modifier_state() & Gdk.ModifierType.CONTROL_MASK:
             await self.ampd.toggleoutput(output_id)
         elif all(map(lambda output: output['outputid'] == output_id or output['outputenabled'] == '0', await self.ampd.outputs())) and self.unit_server.ampd_server_properties.state == 'play':
             await self.ampd.command_list([self.ampd.pause(1), self.ampd.disableoutput(output_id), self.ampd.enableoutput(output_id), self.ampd.pause(0)])

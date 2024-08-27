@@ -22,13 +22,18 @@ from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gtk
 
-from .. import util
+from ..util import actions
+from ..util import unit
+from ..util.logger import logger
+
 from .. import ui
 
 from .. import __application__
 
+from . import mixins
 
-class Window(util.action.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
+
+class Window(actions.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
         super().__init__(show_menubar=True, **kwargs)
 
@@ -72,26 +77,26 @@ class Window(util.action.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
         self.unit.unit_persistent.connect('notify::protect-active', self.set_time_scale_sensitive)
 
         self.logging_handler = ui.logging.Handler(self.unit.config.message_timeout._get() * 1000)
-        util.logger.logger.addHandler(self.logging_handler)
+        logger.addHandler(self.logging_handler)
         self.main.append(self.logging_handler.box)
 
         self.update_title()
         self.update_subtitle()
 
-        # family = util.action.ActionInfoFamily('win', _("_Window"), self.generate_actions())
+        # family = actions.ActionInfoFamily('win', _("_Window"), self.generate_actions())
         # self.action_info_families.append(family)
         # family.add_to_action_map(self)
         # self.add_controller(family.get_shortcut_controller())
-        # self.copy_paste_menu = util.action.Menu()
+        # self.copy_paste_menu = actions.Menu()
         # self.action_info_families.append(self.copy_paste_family)
 
     def __del__(self):
-        util.logger.logger.debug("Deleting {}".format(self))
+        logger.debug("Deleting {}".format(self))
 
     def shutdown(self):
-        util.logger.logger.debug("Destroying window: {}".format(self))
+        logger.debug("Destroying window: {}".format(self))
         self.change_component(None)
-        util.logger.logger.removeHandler(self.logging_handler)
+        logger.removeHandler(self.logging_handler)
         self.logging_handler.shutdown()
         # self.remove_action('toggle-fullscreen')
         # self.remove_action('volume-popup')
@@ -158,7 +163,7 @@ class Window(util.action.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
             self.unit.config.height._set(height)
 
 
-class __unit__(util.unit.UnitConfigMixin, util.unit.UnitServerMixin, util.unit.Unit):
+class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
     def __init__(self, manager):
         super().__init__(manager)
         self.require('persistent')
@@ -166,10 +171,10 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.UnitServerMixin, util.unit.U
         self.config.message_timeout._get(default=5)
 
     def generate_actions(self):
-        yield util.action.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])
-        yield util.action.ActionInfo('close-window', self.close_window_cb, _("Close window"), ['<Control>w'])
-        yield util.action.ActionInfo('toggle-fullscreen', self.action_toggle_fullscreen_cb, _("Fullscreen window"), ['<Alt>f'])
-        # yield util.action.ActionInfo('notify', self.task_hold_app(self.action_notify_cb))
+        yield actions.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])
+        yield actions.ActionInfo('close-window', self.close_window_cb, _("Close window"), ['<Control>w'])
+        yield actions.ActionInfo('toggle-fullscreen', self.action_toggle_fullscreen_cb, _("Fullscreen window"), ['<Alt>f'])
+        # yield actions.ActionInfo('notify', self.task_hold_app(self.action_notify_cb))
 
     def new_window(self, name='current'):
         Window(self, application=self.app).activate_action('app.component-start', GLib.Variant('(sb)', (name, False)))

@@ -18,7 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gio
 from gi.repository import Gdk
 from gi.repository import Gtk
 
@@ -26,7 +25,9 @@ import asyncio
 
 import ampd
 
-from .. import util
+from ..util import editstack
+from ..util import item
+
 from .. import ui
 from . import component
 
@@ -38,7 +39,7 @@ class ItemList(component.Component):
     duplicate_extra_items = None
 
     factory_factory = ui.view.LabelItemFactory
-    item_factory = util.item.Item
+    item_factory = item.Item
 
     def _get_widget(self):
         return ui.view.ViewWithCopy(self.fields, self.factory_factory, interface=self.get_item_interface(), sortable=self.__class__.sortable)
@@ -62,12 +63,12 @@ class ItemList(component.Component):
         self.view.cleanup()
         super().shutdown()
 
-    def get_item_interface(self, content_formats=Gdk.ContentFormats.new_for_gtype(util.item.ItemKeyTransfer), **kwargs):
+    def get_item_interface(self, content_formats=Gdk.ContentFormats.new_for_gtype(item.ItemKeyTransfer), **kwargs):
         return ui.view.ItemViewInterface(content_from_items=self.content_from_items, content_formats=content_formats, **kwargs)
 
     @staticmethod
     def content_from_items(items):
-        return util.item.transfer_union(items, util.item.ItemKeyTransfer, util.item.ItemStringTransfer)
+        return item.transfer_union(items, item.ItemKeyTransfer, item.ItemStringTransfer)
 
     # def bind_cb(self, factory, listitem):
     #     listitem.row = listitem.get_child().get_parent().get_parent()
@@ -106,23 +107,20 @@ class ItemList(component.Component):
 
         marker = 0
         firsts = {}
-        for i, item in enumerate(items):
-            if item.get_key() == self.unit.unit_database.SEPARATOR_FILE:
+        for i, item_ in enumerate(items):
+            if item_.get_key() == self.unit.unit_database.SEPARATOR_FILE:
                 continue
-            test = tuple(item.get_field(name) for name in self.duplicate_test_columns)
+            test = tuple(item_.get_field(name) for name in self.duplicate_test_columns)
             first = firsts.get(test)
             if first is None:
                 firsts[test] = i
-                if item.duplicate is not None:
-                    item.duplicate = None
-                    # item.rebind()
+                if item_.duplicate is not None:
+                    item_.duplicate = None
             else:
                 if items[first].duplicate is None:
                     items[first].duplicate = marker
-                    # items[first].rebind()
                     marker += 1
-                item.duplicate = items[first].duplicate
-                # item.rebind()
+                item_.duplicate = items[first].duplicate
 
     def action_reset_cb(self, action, parameter):
         self.view.filter_item.set_data({})
@@ -134,7 +132,7 @@ class ItemList(component.Component):
         items = self.view.get_selection_items()
         self.clipboard_content = self.content_from_items(items)
         if action.get_name() in ['copy', 'cut']:
-            util.misc.get_clipboard().set_content(self.clipboard_content)
+            self.view.get_clipboard().set_content(self.clipboard_content)
         if action.get_name() in ['delete', 'cut']:
             self.remove_items(items)
 
@@ -165,7 +163,7 @@ class ItemListEditStackMixin(ItemListEditableMixin):
     #     self.view.item_edited_hooks.remove(self.item_edited_hook)
 
     # def item_edited_hook(self, item, key, item):
-    #     new_item = util.item.Item(item.get_data())
+    #     new_item = item.Item(item.get_data())
     #     if item:
     #         new_item[key] = item
     #     else:
@@ -202,10 +200,10 @@ class ItemListEditStackMixin(ItemListEditableMixin):
         if not items:
             return
         indices = []
-        for i, item in enumerate(self.view.item_store_selection):
-            if item in items:
+        for i, item_ in enumerate(self.view.item_store_selection):
+            if item_ in items:
                 indices.append(i)
-                items.remove(item)
+                items.remove(item_)
         if items:
             raise RuntimeError
         deltas = []
@@ -214,15 +212,15 @@ class ItemListEditStackMixin(ItemListEditableMixin):
             j += 1
             if j != k:
                 values = [self.edit_stack_getter(item) for item in self.view.item_store_selection[i:j]]
-                deltas.append(util.editstack.SimpleDelta(values, i, True))
+                deltas.append(editstack.SimpleDelta(values, i, True))
                 i = j = k
-        self.edit_stack.set_from_here([util.editstack.MetaDelta(deltas, False)])
+        self.edit_stack.set_from_here([editstack.MetaDelta(deltas, False)])
         self.step_edit_stack(True)
 
     def add_items(self, values, position):
         if not values:
             return
-        self.edit_stack.set_from_here([util.editstack.SimpleDelta(values, position, True)])
+        self.edit_stack.set_from_here([editstack.SimpleDelta(values, position, True)])
         self.step_edit_stack(True)
 
     def edit_stack_changed(self):
@@ -315,9 +313,3 @@ class ItemListTreeListMixin(component.ComponentPaneTreeMixin):
         row = view.get_model()[position]
         if row.is_expandable():
             row.set_expanded(not row.get_expanded())
-
-
-class UnitItemListMixin(component.UnitComponentMixin):
-    def __init__(self, *args, menus=[]):
-        super().__init__(*args, menus=menus + ['context'])
-        self.require('itemlist')

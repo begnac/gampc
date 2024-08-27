@@ -18,13 +18,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gtk
 
 import ampd
 
-from .. import util
+from ..util import actions
+from ..util import item
+from ..util import misc
+
 from .. import ui
 
 from . import itemlist
@@ -35,7 +37,7 @@ QUEUE_ID_CSS_PREFIX = 'queue-Id'
 QUEUE_PRIORITY_CSS_PREFIX = 'queue-priority'
 
 
-class QueueItem(util.item.Item):
+class QueueItem(item.Item):
     Id = GObject.Property()
     Prio = GObject.Property()
 
@@ -55,12 +57,12 @@ class QueueItemFactory(ui.view.LabelItemFactory):
 
     @staticmethod
     def id_binder(widget, item):
-        util.misc.add_unique_css_class(widget.get_parent(), QUEUE_ID_CSS_PREFIX, item.Id)
+        misc.add_unique_css_class(widget.get_parent(), QUEUE_ID_CSS_PREFIX, item.Id)
 
     @staticmethod
     def prio_binder(widget, item, name):
         if name == 'FormattedTime':
-            util.misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
+            misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
 class QueueView(ui.view.ViewWithCopyPasteSongs):
@@ -93,10 +95,10 @@ class QueueView(ui.view.ViewWithCopyPasteSongs):
         self.css_provider.load_from_string(PLAYING_CSS)
 
     def generate_queue_actions(self):
-        yield util.action.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
+        yield actions.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
 
     def generate_priority_actions(self):
-        priority = util.action.ActionInfo('priority', self.action_priority_cb, parameter_format='i')
+        priority = actions.ActionInfo('priority', self.action_priority_cb, parameter_format='i')
         yield priority
         yield priority.derive(_("High"), arg=255)
         yield priority.derive(_("Normal"), arg=0)
@@ -105,8 +107,8 @@ class QueueView(ui.view.ViewWithCopyPasteSongs):
     def action_go_to_current_cb(self, action, parameter):
         if self.current_Id is None:
             return
-        for position, item in enumerate(self.item_store_selection):
-            if item.Id == self.current_Id:
+        for position, item_ in enumerate(self.item_store_selection):
+            if item_.Id == self.current_Id:
                 self.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
                 view_height = self.item_view.rows.get_allocation().height
                 # row_height = self.view.item_view.rows.get_focus_child().get_allocation().height
@@ -126,7 +128,7 @@ class QueueView(ui.view.ViewWithCopyPasteSongs):
             if priority is None:
                 return
 
-        await self.ampd.prioid(priority, *(item.Id for item in items))
+        await self.ampd.prioid(priority, *(item_.Id for item_ in items))
 
 
 class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songlist.SongList):
@@ -151,11 +153,11 @@ class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songli
 
     def _get_widget(self):
         widget = QueueView(self.fields, self.factory_factory, interface=self.get_item_interface(), separator_file=self.unit.unit_database.SEPARATOR_FILE, ampd=self.ampd)
-        widget.add_to_context_menu(self.generate_queue_actions(), 'queue-unit', _("General queue operations"), protect=self.unit.unit_persistent.protect)
+        widget.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit.unit_persistent.protect)
         return widget
 
     def generate_queue_actions(self):
-        yield util.action.ActionInfo('shuffle', self.action_shuffle_cb, _("Shuffle"), dangerous=True)
+        yield actions.ActionInfo('shuffle', self.action_shuffle_cb, _("Shuffle"), dangerous=True)
 
     @ampd.task
     async def action_shuffle_cb(self, action, parameter):
@@ -175,7 +177,7 @@ class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songli
             await self.ampd.idle(ampd.PLAYLIST)
 
     def selection_changed_cb(self, selection, *args):
-        selection = list(util.misc.get_selection(selection))
+        selection = list(misc.get_selection(selection))
         if len(selection) == 1:
             self.cursor_by_profile[self.unit.unit_server.server_profile] = selection[0]
 

@@ -181,7 +181,7 @@ class SearchDatabase(db.Database):
         self.connection.cursor().execute('DELETE FROM searches WHERE name=?', (name,))
 
 
-class __unit__(songlist.UnitPanedSongListMixin, unit.Unit):
+class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
     COMPONENT_CLASS = SavedSearch
 
     def __init__(self, name, manager):

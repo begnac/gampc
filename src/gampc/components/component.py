@@ -19,12 +19,11 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gio
 from gi.repository import Gtk
 
-import types
+from ..util import misc
+from ..util.logger import logger
 
-from .. import util
 from .. import ui
 
 
@@ -50,7 +49,7 @@ class Component(GObject.Object):
             self.client_connected_cb(unit.unit_server.ampd_client)
 
     def __del__(self):
-        util.logger.logger.debug('Deleting {}'.format(self))
+        logger.debug('Deleting {}'.format(self))
 
     def shutdown(self):
         if self.get_window() is not None:
@@ -164,7 +163,7 @@ class ComponentPaneMixin:
         config.pane_separator._set(paned.get_position())
 
     def left_selection_changed_cb(self, selection, position, n_items):
-        self.left_selection_pos = list(util.misc.get_selection(selection))
+        self.left_selection_pos = list(misc.get_selection(selection))
 
 
 class ComponentPaneTreeMixin(ComponentPaneMixin):
@@ -185,8 +184,8 @@ class ComponentPaneTreeMixin(ComponentPaneMixin):
 
 
 class ComponentEntryMixin:
-    def __init__(self, unit):
-        super().__init__(unit)
+    def __init__(self, *args):
+        super().__init__(*args)
 
         self.focus_widget = self.entry = Gtk.Entry()
         self.signal_handler_connect(self.entry, 'activate', self.entry_activate_cb)
@@ -195,36 +194,3 @@ class ComponentEntryMixin:
         box.append(self.widget)
         box.append(self.entry)
         self.widget = box
-
-
-class UnitComponentMixin(util.unit.UnitConfigMixin, util.unit.UnitServerMixin):
-    def __init__(self, *args, menus=[]):
-        super().__init__(*args)
-        self.require('component')
-        self.require('persistent')
-
-        self.unit_component.register_component(self)
-
-        # for menu in menus:
-        #     self.setup_menu(self.name, menu, self.COMPONENT_CLASS.use_resources)
-
-    def shutdown(self):
-        # for aggregator in self.menu_aggregators.values():
-        #     self.manager.remove_aggregator(aggregator)
-        # del self.menu_aggregators
-        self.unit_component.unregister_component(self.name)
-        super().shutdown()
-
-    def new_component(self):
-        return self.COMPONENT_CLASS(self)
-
-    # def setup_menu(self, name, kind, providers=[]):
-    #     aggregator = util.resource.MenuAggregator([f'{provider}.{kind}.menu' for provider in [name] + providers])
-    #     self.manager.add_aggregator(aggregator)
-    #     self.menu_aggregators[f'{name}.{kind}'] = aggregator
-
-
-class UnitPanedComponentMixin(UnitComponentMixin, util.unit.UnitConfigMixin):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.config.pane_separator._get(default=100)

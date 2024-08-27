@@ -26,7 +26,9 @@ from gi.repository import Gtk
 import re
 import ampd
 
-from .. import util
+from ..util import actions
+from ..util import item
+from ..util import misc
 
 from . import contextmenu
 from . import dnd
@@ -90,7 +92,7 @@ class ItemFactory(Gtk.SignalListItemFactory):
             suffix = None
         else:
             suffix = str(item.duplicate % 64)
-        util.misc.add_unique_css_class(widget.get_parent(), 'duplicate', suffix)
+        misc.add_unique_css_class(widget.get_parent(), 'duplicate', suffix)
 
 
 class LabelItemFactory(ItemFactory):
@@ -145,6 +147,8 @@ class FieldItemColumn(Gtk.ColumnViewColumn):
 
 
 def clean_shortcuts(widget):
+    if widget is None:   # Very odd but can happen.  Gtk bug?
+        return
     for controller in list(widget.observe_controllers()):
         if isinstance(controller, Gtk.ShortcutController):
             new_controller = Gtk.ShortcutController()
@@ -219,7 +223,7 @@ class View(Gtk.Box):
         self.filter_filter = Gtk.CustomFilter()
         self.filter_filter.set_filter_func(self.filter_func)
 
-        self.filter_item = util.item.Item(value={})
+        self.filter_item = item.Item(value={})
         self.filter_store = Gio.ListStore()
         self.filter_store_selection = Gtk.NoSelection(model=self.filter_store)
         self.filter_view = ItemView(fields, self.filter_factory_factory, sortable=False, model=self.filter_store_selection)
@@ -236,7 +240,7 @@ class View(Gtk.Box):
         self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_item_view)
 
-        self.item_store = Gio.ListStore(item_type=util.item.Item)
+        self.item_store = Gio.ListStore(item_type=item.Item)
         self.item_store_filter = Gtk.FilterListModel(model=self.item_store)
         if sortable:
             self.item_store_selection.set_model(Gtk.SortListModel(model=self.item_store_filter, sorter=self.item_view.get_sorter()))
@@ -282,7 +286,7 @@ class View(Gtk.Box):
         return True
 
     def _get_selection(self):
-        return util.misc.get_selection(self.item_store_selection)
+        return misc.get_selection(self.item_store_selection)
 
     def get_selection(self):
         return list(self._get_selection())
@@ -308,10 +312,10 @@ class ItemViewInterface:
 class ViewWithContextMenu(contextmenu.ContextMenuMixin, View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_to_context_menu(self.generate_editing_actions(), 'view', _("View actions"))
+        self.add_to_context_menu(self.generate_view_actions(), 'view', _("View actions"))
 
     def generate_view_actions(self):
-        yield util.action.PropertyActionInfo('filtering', self, _("Filter view"), ['<Control><Shift>f'])
+        yield actions.PropertyActionInfo('filtering', self, _("Filter view"), ['<Control><Shift>f'])
         # util.resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
         # util.resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
 
@@ -333,7 +337,7 @@ class ViewWithCopy(ViewWithContextMenu):
         super().cleanup()
 
     def generate_editing_actions(self):
-        yield util.action.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
+        yield actions.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
 
     def action_copy_cb(self, action, parameter):
         self.copy_items(self.get_selection_items())
@@ -375,12 +379,12 @@ class ViewWithCopyPaste(ViewWithCopy):
         self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
     def generate_editing_actions(self):
-        yield util.action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'])
+        yield actions.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'])
         yield from super().generate_editing_actions()
-        paste_after = util.action.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True, parameter_format='b')
+        paste_after = actions.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True, parameter_format='b')
         yield paste_after
         yield paste_after.derive(_("Paste before"), ['<Control>b'], False)
-        yield util.action.ActionInfo('delete', self.action_cut_cb, _("Delete"), ['Delete'])
+        yield actions.ActionInfo('delete', self.action_cut_cb, _("Delete"), ['Delete'])
 
     def action_cut_cb(self, action, parameter):
         items = self.get_selection_items()
@@ -397,7 +401,7 @@ class ViewWithCopyPaste(ViewWithCopy):
         pos = row.get_first_child().get_first_child().pos
         if parameter.unpack():
             pos += 1
-        self.get_clipboard().read_value_async(util.item.ItemKeyTransfer, 0, None, self.action_paste_finish_cb, pos)
+        self.get_clipboard().read_value_async(item.ItemKeyTransfer, 0, None, self.action_paste_finish_cb, pos)
 
     def action_paste_finish_cb(self, clipboard, result, pos):
         values = clipboard.read_value_finish(result).values
@@ -412,11 +416,11 @@ class ViewWithCopyPasteSongs(ViewWithCopyPaste):
 
     def generate_editing_actions(self):
         yield from super().generate_editing_actions()
-        yield util.action.ActionInfo('add-separator', self.action_add_separator_cb, _("Add separator"))
-        yield util.action.ActionInfo('add-url', self.action_add_url_cb, _("Add URL or filename"))
+        yield actions.ActionInfo('add-separator', self.action_add_separator_cb, _("Add separator"))
+        yield actions.ActionInfo('add-url', self.action_add_url_cb, _("Add URL or filename"))
 
     # def generate_special_actions(self):
-    #     yield util.action.ActionInfo('delete-file', self.action_delete_file_cb, _("Move files to trash"), ['<Control>Delete'])
+    #     yield actions.ActionInfo('delete-file', self.action_delete_file_cb, _("Move files to trash"), ['<Control>Delete'])
 
     def action_add_separator_cb(self, action, parameter):
         selection = self.get_selection()
@@ -438,7 +442,6 @@ class ViewWithCopyPasteSongs(ViewWithCopyPaste):
         if url:
             self.interface.add_items([url], pos)
 
-
     # def action_delete_file_cb(self, action, parameter):
     #     store, paths = self.treeview.get_selection().get_selected_rows()
     #     deleted = [self.store.get_record(self.store.get_iter(p)) for p in paths]
@@ -455,4 +458,3 @@ class ViewWithCopyPasteSongs(ViewWithCopyPaste):
     #             if song._gfile is not None:
     #                 song._gfile.trash()
     #                 song._status = self.RECORD_MODIFIED
-
