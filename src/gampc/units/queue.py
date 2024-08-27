@@ -22,8 +22,7 @@ from gi.repository import GLib
 
 import ampd
 
-from ..util import resource
-from ..util import unit
+from .. import util
 from ..components import songlist
 from ..components import queue
 
@@ -49,7 +48,7 @@ async def action_queue_add_high_priority_cb(songlist_, action, parameter):
     await songlist_.ampd.prioid(255, *Ids)
 
 
-class __unit__(songlist.UnitSongListMixin, unit.UnitCssMixin, unit.Unit):
+class __unit__(songlist.UnitSongListMixin, util.unit.UnitCssMixin, util.unit.Unit):
     title = _("Play Queue")
     key = '1'
 
@@ -62,14 +61,8 @@ class __unit__(songlist.UnitSongListMixin, unit.UnitCssMixin, unit.Unit):
     }}
     '''
 
-    def __init__(self, *args):
+    def xxx__init__(self, *args):
         super().__init__(*args)
-
-        self.add_resources(
-            'app.menu',
-            resource.MenuAction('edit/component', 'queue.shuffle', _("Shuffle")),
-            resource.MenuAction('edit/component', 'queue.go-to-current', _("Go to current song"), ['<Control>z'])
-        )
 
         self.add_resources(
             'itemlist.action',
@@ -87,12 +80,3 @@ class __unit__(songlist.UnitSongListMixin, unit.UnitCssMixin, unit.Unit):
                 resource.MenuAction('action', 'itemlist.queue-ext-replace' + parameter, _("Replace play queue")),
                 resource.MenuAction('action', 'itemlist.queue-ext-add-high-priority' + parameter, _("Add to play queue with high priority")),
             )
-
-        self.add_resources(
-            self.name + '.context.menu',
-            resource.MenuPath('other/queue-priority', _("Priority for random mode"), is_submenu=True),
-            resource.MenuAction('other/queue-priority', 'queue.priority(255)', _("High")),
-            resource.MenuAction('other/queue-priority', 'queue.priority(0)', _("Normal")),
-            resource.MenuAction('other/queue-priority', 'queue.priority(-1)', _("Choose")),
-            resource.MenuAction('other', 'queue.shuffle', _("Shuffle")),
-        )

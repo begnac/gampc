@@ -41,14 +41,17 @@ class ContextMenuMixin(util.action.ActionInfoFamiliesMixin):
         del self.actions
         super().cleanup()
 
-    def add_to_context_menu(self, generator, prefix, label):
+    def add_to_context_menu(self, generator, prefix, label, *, submenu=False, protect=None):
         if prefix in self.actions:
             raise RuntimeError
         family = util.action.ActionInfoFamily(generator, prefix, label)
-        self.actions[prefix] = family.insert_action_group(self)
+        self.actions[prefix] = family.insert_action_group(self, protect=protect)
         self.add_controller(family.get_shortcut_controller())
         self.action_info_families.append(family)
-        self.context_menu.append_section(None, family.get_menu())
+        if submenu:
+            self.context_menu.append_submenu(label, family.get_menu())
+        else:
+            self.context_menu.append_section(None, family.get_menu())
 
     @staticmethod
     def context_menu_pressed_cb(controller, n_press, x, y):

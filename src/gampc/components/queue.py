@@ -63,6 +63,72 @@ class QueueItemFactory(ui.view.LabelItemFactory):
             util.misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
+class QueueView(ui.view.ViewWithCopyPasteSongs):
+    def __init__(self, *args, ampd, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
+        self.add_to_context_menu(self.generate_priority_actions(), 'priority', _("Priority for random mode"), submenu=True)
+        self.ampd = ampd
+        self.current_Id = None
+
+        self.css_provider = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(self.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+    def cleanup(self):
+        Gtk.StyleContext.remove_provider_for_display(self.get_display(), self.css_provider)
+        super().cleanup()
+
+    def set_current_Id(self, Id):
+        self.current_Id = Id
+        if Id is None:
+            PLAYING_CSS = ''
+        else:
+            PLAYING_CSS = f'''
+            columnview.queue > listview > row > cell.{QUEUE_ID_CSS_PREFIX}-{Id} {{
+              background: rgba(128,128,128,0.1);
+              font-style: italic;
+              font-weight: bold;
+            }}
+            '''
+        self.css_provider.load_from_string(PLAYING_CSS)
+
+    def generate_queue_actions(self):
+        yield util.action.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
+
+    def generate_priority_actions(self):
+        priority = util.action.ActionInfo('priority', self.action_priority_cb, parameter_format='i')
+        yield priority
+        yield priority.derive(_("High"), arg=255)
+        yield priority.derive(_("Normal"), arg=0)
+        # yield priority.derive(_("Choose"), arg=-1)
+
+    def action_go_to_current_cb(self, action, parameter):
+        if self.current_Id is None:
+            return
+        for position, item in enumerate(self.item_store_selection):
+            if item.Id == self.current_Id:
+                self.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
+                view_height = self.item_view.rows.get_allocation().height
+                # row_height = self.view.item_view.rows.get_focus_child().get_allocation().height
+                self.scrolled_item_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
+
+    @ampd.task
+    async def action_priority_cb(self, action, parameter):
+        items = self.get_selection_items()
+        if not items:
+            return
+
+        priority = parameter.unpack()
+        if priority == -1:
+            priority = sum(int(item.Prio or '0') for item in items) // len(items)
+            struct = ui.ssde.Integer(default=priority, min_value=0, max_value=255)
+            priority = await struct.edit(self.get_root())
+            if priority is None:
+                return
+
+        await self.ampd.prioid(priority, *(item.Id for item in items))
+
+
 class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songlist.SongList):
     editable = True
     duplicate_test_columns = ['Title']
@@ -74,9 +140,6 @@ class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songli
         super().__init__(unit)
         self.widget.item_view.add_css_class('queue')
 
-        self.actions.add_action(util.resource.Action('priority', self.action_priority_cb, parameter_type=GLib.VariantType.new('i')))
-        self.actions.add_action(util.resource.Action('shuffle', self.action_shuffle_cb, dangerous=True, protector=unit.unit_persistent))
-        self.actions.add_action(util.resource.Action('go-to-current', self.action_go_to_current_cb))
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.signal_handler_connect(self.view.item_store_selection, 'selection-changed', self.selection_changed_cb)
 
@@ -86,15 +149,17 @@ class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songli
         self.cursor_by_profile = {}
         self.set_cursor = False
 
-        self.css_provider = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(self.widget.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
-    def shutdown(self):
-        Gtk.StyleContext.remove_provider_for_display(self.widget.get_display(), self.css_provider)
-        super().shutdown()
-
     def _get_widget(self):
-        return ui.view.ViewWithCopyPasteSongs(self.fields, self.factory_factory, interface=self.get_item_interface(), separator_file=self.unit.unit_database.SEPARATOR_FILE)
+        widget = QueueView(self.fields, self.factory_factory, interface=self.get_item_interface(), separator_file=self.unit.unit_database.SEPARATOR_FILE, ampd=self.ampd)
+        widget.add_to_context_menu(self.generate_queue_actions(), 'queue-unit', _("General queue operations"), protect=self.unit.unit_persistent.protect)
+        return widget
+
+    def generate_queue_actions(self):
+        yield util.action.ActionInfo('shuffle', self.action_shuffle_cb, _("Shuffle"), dangerous=True)
+
+    @ampd.task
+    async def action_shuffle_cb(self, action, parameter):
+        await self.ampd.shuffle()
 
     @ampd.task
     async def client_connected_cb(self, client):
@@ -114,50 +179,8 @@ class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songli
         if len(selection) == 1:
             self.cursor_by_profile[self.unit.unit_server.server_profile] = selection[0]
 
-    @ampd.task
-    async def action_priority_cb(self, action, parameter):
-        items = self.view.get_selection_items()
-        if not items:
-            return
-
-        priority = parameter.unpack()
-        if priority == -1:
-            priority = sum(int(item.Prio or '0') for item in items) // len(items)
-            struct = ui.ssde.Integer(default=priority, min_value=0, max_value=255)
-            priority = await struct.edit_async(self.widget.get_root())
-            if priority is None:
-                return
-
-        await self.ampd.prioid(priority, *(item.Id for item in items))
-
-    @ampd.task
-    async def action_shuffle_cb(self, action, parameter):
-        await self.ampd.shuffle()
-
-    def action_go_to_current_cb(self, action, parameter):
-        Id = self.unit.unit_server.ampd_server_properties.current_song.get('Id')
-        if Id is None:
-            return
-        for position, item in enumerate(self.view.item_store_selection):
-            if item.Id == Id:
-                self.view.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
-                view_height = self.view.item_view.rows.get_allocation().height
-                # row_height = self.view.item_view.rows.get_focus_child().get_allocation().height
-                self.view.scrolled_item_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
-
     def notify_current_song_cb(self, server_properties, pspec):
-        Id = server_properties.current_song.get('Id')
-        if Id is None:
-            PLAYING_CSS = ''
-        else:
-            PLAYING_CSS = f'''
-            columnview.queue > listview > row > cell.{QUEUE_ID_CSS_PREFIX}-{Id} {{
-              background: rgba(128,128,128,0.1);
-              font-style: italic;
-              font-weight: bold;
-            }}
-            '''
-        self.css_provider.load_from_string(PLAYING_CSS)
+        self.view.set_current_Id(server_properties.current_song.get('Id'))
 
     @ampd.task
     async def remove_items(self, items):
