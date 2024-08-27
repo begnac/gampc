@@ -27,7 +27,8 @@ from ..util import actions
 from ..util import item
 from ..util import misc
 
-from .. import ui
+from ..ui import ssde
+from ..ui import view
 
 from . import itemlist
 from . import songlist
@@ -48,7 +49,7 @@ class QueueItem(item.Item):
         super().load(value)
 
 
-class QueueItemFactory(ui.view.LabelItemFactory):
+class QueueItemFactory(view.LabelItemFactory):
     def __init__(self, name):
         super().__init__(name)
 
@@ -65,7 +66,7 @@ class QueueItemFactory(ui.view.LabelItemFactory):
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
-class QueueView(ui.view.ViewWithCopyPasteSongs):
+class QueueView(view.ViewWithCopyPasteSongs):
     def __init__(self, *args, ampd, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
@@ -123,7 +124,7 @@ class QueueView(ui.view.ViewWithCopyPasteSongs):
         priority = parameter.unpack()
         if priority == -1:
             priority = sum(int(item.Prio or '0') for item in items) // len(items)
-            struct = ui.ssde.Integer(default=priority, min_value=0, max_value=255)
+            struct = ssde.Integer(default=priority, min_value=0, max_value=255)
             priority = await struct.edit(self.get_root())
             if priority is None:
                 return

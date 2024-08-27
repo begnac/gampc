@@ -24,7 +24,7 @@ from gi.repository import Gtk
 from ..util import misc
 from ..util.logger import logger
 
-from .. import ui
+from ..ui import listviewsearch
 
 
 class Component(GObject.Object):
@@ -141,7 +141,7 @@ class ComponentPaneMixin:
         self.focus_widget = self.left_view = Gtk.ListView(model=self.left_selection, factory=self.get_left_factory())
         self.left_scrolled = Gtk.ScrolledWindow()
         self.left_scrolled.set_child(self.left_view)
-        self.left_view_search = ui.listviewsearch.ListViewSearch(self.left_view, lambda text, row: text.lower() in row.get_item().name.lower())
+        self.left_view_search = listviewsearch.ListViewSearch(self.left_view, lambda text, row: text.lower() in row.get_item().name.lower())
 
         self.left_selection_pos = []
         self.signal_handler_connect(self.left_selection, 'selection_changed', self.left_selection_changed_cb)

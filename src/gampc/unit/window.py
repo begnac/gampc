@@ -26,7 +26,8 @@ from ..util import actions
 from ..util import unit
 from ..util.logger import logger
 
-from .. import ui
+from ..ui import headerbar
+from ..ui import logging
 
 from .. import __application__
 
@@ -59,7 +60,7 @@ class Window(actions.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
         self.main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(self.main)
 
-        self.headerbar = ui.headerbar.HeaderBar()
+        self.headerbar = headerbar.HeaderBar()
         self.set_titlebar(self.headerbar)
 
         self.unit.unit_persistent.bind_property('protect-active', self.headerbar.option_buttons, 'sensitive', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
@@ -76,7 +77,7 @@ class Window(actions.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
         self.unit.unit_server.ampd_server_properties.connect('notify::state', self.set_time_scale_sensitive)
         self.unit.unit_persistent.connect('notify::protect-active', self.set_time_scale_sensitive)
 
-        self.logging_handler = ui.logging.Handler(self.unit.config.message_timeout._get() * 1000)
+        self.logging_handler = logging.Handler(self.unit.config.message_timeout._get() * 1000)
         logger.addHandler(self.logging_handler)
         self.main.append(self.logging_handler.box)
 

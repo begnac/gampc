@@ -27,7 +27,8 @@ from ..util import cache
 from ..util import editstack
 from ..util import unit
 
-from .. import ui
+from ..ui import dialog
+from ..ui import treelist
 
 from ..components import playlist
 
@@ -40,7 +41,7 @@ class PlaylistCacheItem:
         self.last_modified = last_modified
 
 
-class ChoosePathDialog(ui.dialog.TextDialogAsync):
+class ChoosePathDialog(dialog.TextDialogAsync):
     def __init__(self, *args, paths, init=None, path_ok=False, **kwargs):
         super().__init__(*args, text=init, **kwargs)
         self.paths = list(paths)
@@ -104,7 +105,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
 
         self.playlist_cache = cache.AsyncCache(self.playlist_retrieve)
         self.playlists = {}
-        self.root = ui.treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node), fill_contents_cb=self.fill_contents_cb)
+        self.root = treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node), fill_contents_cb=self.fill_contents_cb)
 
 
         return
@@ -164,9 +165,9 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
         if node.kind == playlist.NODE_FOLDER:
             folders, playlists = self.get_pseudo_folder_contents(node.path)
             for name in folders:
-                node.append_sub_node(ui.treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER))
+                node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER))
             for name in playlists:
-                node.append_sub_node(ui.treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_PLAYLIST], kind=playlist.NODE_PLAYLIST))
+                node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_PLAYLIST], kind=playlist.NODE_PLAYLIST))
 
     async def fill_contents_cb(self, node):
         if node.kind == playlist.NODE_PLAYLIST:
@@ -212,7 +213,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
     async def save_playlist(self, playlist_path, filenames, win):
         playlist_name = playlist_path.replace('/', playlist.PSEUDO_SEPARATOR)
 
-        if playlist_name in self.playlists and not await ui.dialog.MessageDialogAsync(transient_for=win, message=_("Replace existing playlist {name}?").format(name=playlist_path)).run():
+        if playlist_name in self.playlists and not await dialog.MessageDialogAsync(transient_for=win, message=_("Replace existing playlist {name}?").format(name=playlist_path)).run():
             return False
 
         try:
@@ -254,7 +255,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
     async def action_playlist_add_saveas_cb(self, songlist_, action, parameter):
         filenames = list(songlist_.get_filenames(parameter.get_boolean()))
         if not filenames:
-            await ui.dialog.MessageDialogAsync(message=_("Nothing to save!"), transient_for=songlist_.widget.get_root(), title="", cancel_button=False).run()
+            await dialog.MessageDialogAsync(message=_("Nothing to save!"), transient_for=songlist_.widget.get_root(), title="", cancel_button=False).run()
             return
 
         saveas = '-saveas' in action.get_name()

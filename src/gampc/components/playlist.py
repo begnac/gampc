@@ -20,7 +20,7 @@
 
 import ampd
 
-from .. import ui
+from ..ui import dialog
 
 from . import itemlist
 from . import songlist
@@ -114,7 +114,7 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
         if not self.left_selected_item:
             return
         playlist_path = self.left_selected_item.joined_path
-        if not await ui.dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Delete playlist {name}?").format(name=playlist_path)).run():
+        if not await dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Delete playlist {name}?").format(name=playlist_path)).run():
             return
         await self.ampd.rm(playlist_path.replace('/', PSEUDO_SEPARATOR))
 

@@ -28,7 +28,9 @@ import ampd
 from ..util import editstack
 from ..util import item
 
-from .. import ui
+from ..ui import dialog
+from ..ui import view
+
 from . import component
 
 
@@ -38,11 +40,11 @@ class ItemList(component.Component):
     duplicate_test_columns = []
     duplicate_extra_items = None
 
-    factory_factory = ui.view.LabelItemFactory
+    factory_factory = view.LabelItemFactory
     item_factory = item.Item
 
     def _get_widget(self):
-        return ui.view.ViewWithCopy(self.fields, self.factory_factory, interface=self.get_item_interface(), sortable=self.__class__.sortable)
+        return view.ViewWithCopy(self.fields, self.factory_factory, interface=self.get_item_interface(), sortable=self.__class__.sortable)
 
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
@@ -64,7 +66,7 @@ class ItemList(component.Component):
         super().shutdown()
 
     def get_item_interface(self, content_formats=Gdk.ContentFormats.new_for_gtype(item.ItemKeyTransfer), **kwargs):
-        return ui.view.ItemViewInterface(content_from_items=self.content_from_items, content_formats=content_formats, **kwargs)
+        return view.ItemViewInterface(content_from_items=self.content_from_items, content_formats=content_formats, **kwargs)
 
     @staticmethod
     def content_from_items(items):
@@ -139,7 +141,7 @@ class ItemList(component.Component):
 
 class ItemListEditableMixin:
     def _get_widget(self):
-        return ui.view.ViewWithCopyPaste(self.fields, self.factory_factory, interface=self.get_item_interface())
+        return view.ViewWithCopyPaste(self.fields, self.factory_factory, interface=self.get_item_interface())
 
     def get_item_interface(self):
         return super().get_item_interface(add_items=self.add_items, remove_items=self.remove_items)
@@ -243,7 +245,7 @@ class ItemListEditStackMixin(ItemListEditableMixin):
     async def action_reset_cb(self, action, parameter):
         if not self.edit_stack or not self.edit_stack.deltas:
             return
-        if not await ui.dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Reset and lose all modifications?")).run():
+        if not await dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Reset and lose all modifications?")).run():
             return
         self.edit_stack.undo()
         self.edit_stack.reset()

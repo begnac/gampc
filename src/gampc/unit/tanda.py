@@ -31,8 +31,11 @@ import asyncio
 
 import ampd
 
-from .. import util
-from .. import ui
+from ..util import db
+from ..util import field
+from ..util import misc
+
+from ..ui import view
 
 from ..components import component
 from ..components import songlist
@@ -120,9 +123,9 @@ class Tanda(component.ComponentPaneMixin, component.Component):
         self.signal_handler_connect(self.unit.db, 'verify-progress', self.db_verify_progress_cb)
         self.signal_handler_connect(self.unit.db, 'missing-song', self.db_missing_song_cb)
 
-        self.actions.add_action(util.resource.Action('switch-subcomponent', self.action_subcomponent_next_cb))
-        self.actions.add_action(util.resource.Action('verify', self.unit.db.action_tanda_verify_cb))
-        self.actions.add_action(util.resource.Action('cleanup-db', self.unit.db.action_cleanup_db_cb))
+        self.actions.add_action(resource.Action('switch-subcomponent', self.action_subcomponent_next_cb))
+        self.actions.add_action(resource.Action('verify', self.unit.db.action_tanda_verify_cb))
+        self.actions.add_action(resource.Action('cleanup-db', self.unit.db.action_cleanup_db_cb))
 
         self.actions_dict['tanda-edit'] = self.edit.actions
         self.subcomponent_actions_names = 'itemlist', 'songlist'
@@ -297,12 +300,12 @@ class TandaEdit(TandaSubComponent, itemlist.ItemListEditStackMixin, songlist.Son
         self.current_tanda = None
         self.current_tanda_pos = None
 
-        self.actions.add_action(util.resource.Action('delete', self.action_tanda_delete_cb))
-        self.actions.add_action(util.resource.Action('reset', self.action_tanda_reset_cb))
-        self.actions.add_action(util.resource.Action('reset-field', self.action_tanda_field_cb))
-        self.actions.add_action(util.resource.Action('fill-field', self.action_tanda_field_cb))
+        self.actions.add_action(resource.Action('delete', self.action_tanda_delete_cb))
+        self.actions.add_action(resource.Action('reset', self.action_tanda_reset_cb))
+        self.actions.add_action(resource.Action('reset-field', self.action_tanda_field_cb))
+        self.actions.add_action(resource.Action('fill-field', self.action_tanda_field_cb))
 
-        self.tanda_view = ui.view.View(self.unit.db.fields, True, unit.unit_misc)
+        self.tanda_view = view.View(self.unit.db.fields, True, unit.unit_misc)
         self.tanda_view.record_view.add_css_class('tanda-edit')
         self.tanda_view.bind_hooks.append(self.tanda_bind_hook)
 
@@ -862,34 +865,34 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.UnitCssMixin, unit.Unit):
 
         self.add_resources(
             'app.action',
-            util.resource.ActionModel('tanda-verify', self.db.action_tanda_verify_cb),
-            util.resource.ActionModel('tanda-cleanup-db', self.db.action_cleanup_db_cb),
+            resource.ActionModel('tanda-verify', self.db.action_tanda_verify_cb),
+            resource.ActionModel('tanda-cleanup-db', self.db.action_cleanup_db_cb),
         )
 
         self.add_resources(
             'app.menu',
-            # util.resource.MenuAction('edit/component', 'tanda-edit.fill-field', _("Fill tanda field"), ['<Control>z']),
-            # util.resource.MenuAction('edit/component', 'tanda-edit.reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
-            util.resource.MenuAction('edit/component', 'tanda-edit.reset', _("Reset tanda"), ['<Control><Shift>r']),
-            util.resource.MenuAction('edit/component', 'tanda-edit.delete', _("Delete tanda"), ['<Control>Delete']),
-            util.resource.MenuAction('edit/component', 'tanda.switch-subcomponent', _("Switch tanda view mode"), ['<Control>Tab']),
-            util.resource.MenuAction('edit/component', 'tanda.verify', _("Verify tanda database"), ['<Control><Shift>d']),
-            util.resource.MenuAction('edit/component', 'tanda.cleanup-db', _("Cleanup database")),
+            # resource.MenuAction('edit/component', 'tanda-edit.fill-field', _("Fill tanda field"), ['<Control>z']),
+            # resource.MenuAction('edit/component', 'tanda-edit.reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
+            resource.MenuAction('edit/component', 'tanda-edit.reset', _("Reset tanda"), ['<Control><Shift>r']),
+            resource.MenuAction('edit/component', 'tanda-edit.delete', _("Delete tanda"), ['<Control>Delete']),
+            resource.MenuAction('edit/component', 'tanda.switch-subcomponent', _("Switch tanda view mode"), ['<Control>Tab']),
+            resource.MenuAction('edit/component', 'tanda.verify', _("Verify tanda database"), ['<Control><Shift>d']),
+            resource.MenuAction('edit/component', 'tanda.cleanup-db', _("Cleanup database")),
         )
 
         self.add_resources(
             'songlist.action',
-            util.resource.ActionModel('tanda-define', self.db.action_tanda_define_cb),
+            resource.ActionModel('tanda-define', self.db.action_tanda_define_cb),
         )
 
         self.add_resources(
             'songlist.context.menu',
-            util.resource.MenuAction('other', 'songlist.tanda-define', _("Define tanda")),
+            resource.MenuAction('other', 'songlist.tanda-define', _("Define tanda")),
         )
 
         self.add_resources(
             'tanda-edit.left-context.menu',
-            util.resource.MenuAction('edit', 'tanda-edit.delete', _("Delete tanda")),
+            resource.MenuAction('edit', 'tanda-edit.delete', _("Delete tanda")),
         )
 
         self.setup_menu('tanda-edit', 'context', ['itemlist', 'songlist'])
