@@ -36,7 +36,7 @@ class EditorRow(GObject.Object):
         self.subrows = []
 
 
-class DialogEditor(dialog.AsyncDialog):
+class DialogEditor(dialog.DialogAsync):
     valid = GObject.Property(type=bool, default=True)
     editing = GObject.Property(type=bool, default=False)
 

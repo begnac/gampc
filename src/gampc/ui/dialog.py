@@ -23,7 +23,7 @@ from gi.repository import Gtk
 import asyncio
 
 
-class AsyncDialog(Gtk.Window):
+class DialogAsync(Gtk.Window):
     def __init__(self, **kwargs):
         super().__init__(modal=True, destroy_with_parent=True, **kwargs)
         self.future = asyncio.Future()
@@ -34,6 +34,8 @@ class AsyncDialog(Gtk.Window):
         self.main_box.append(self.button_box)
 
         self.set_child(self.main_box)
+
+        self.connect('close-request', self.button_clicked_cb, self.future, Gtk.ResponseType.CANCEL)
 
     def add_button(self, label, response):
         button = Gtk.Button.new_with_mnemonic(label)
@@ -54,7 +56,7 @@ class AsyncDialog(Gtk.Window):
         return result
 
 
-class AsyncMessageDialog(AsyncDialog):
+class MessageDialogAsync(DialogAsync):
     def __init__(self, *, message, cancel_button=True, title=None, **kwargs):
         super().__init__(title=title or message, **kwargs)
         self.main_box.prepend(Gtk.Label(label=message))
@@ -66,7 +68,7 @@ class AsyncMessageDialog(AsyncDialog):
         return await super().run(**kwargs) == Gtk.ResponseType.OK
 
 
-class AsyncTextDialog(AsyncDialog):
+class TextDialogAsync(DialogAsync):
     def __init__(self, text=None, **kwargs):
         super().__init__(**kwargs)
 

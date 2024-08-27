@@ -37,6 +37,8 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
 
+        self.require('database')
+
         self.unit_server.ampd_server_properties.connect('notify::state', self.notify_protect_requested_cb)
         self.connect('notify::protect-requested', self.notify_protect_requested_cb)
         self.connect('notify::dark', self.notify_dark_cb)
@@ -80,7 +82,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     async def read_sticker_properties(self):
         self.handler_block_by_func(self.notify_sticker_cb)
         try:
-            stickers = await self.ampd.sticker_list('song', self.unit_server.SEPARATOR_FILE)
+            stickers = await self.ampd.sticker_list('song', self.unit_database.SEPARATOR_FILE)
         except (ampd.errors.ReplyError, ampd.errors.ConnectionError):
             stickers = []
         pdict = dict(sticker.split('=', 1) for sticker in stickers)
@@ -110,4 +112,4 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     @ampd.task
     async def notify_sticker_cb(self, param):
         if param.name in self.STICKER_PROPERTIES:
-            await self.ampd.sticker_set('song', self.unit_server.SEPARATOR_FILE, param.name, str(self.get_property(param.name)))
+            await self.ampd.sticker_set('song', self.unit_database.SEPARATOR_FILE, param.name, str(self.get_property(param.name)))

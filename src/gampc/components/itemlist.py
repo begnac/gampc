@@ -56,7 +56,7 @@ class ItemList(component.Component):
 
         self.itemlist_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
 
-        self.setup_context_menu(f'{self.name}.context', self.view)
+        # self.setup_context_menu(f'{self.name}.context', self.view)
         self.signal_handler_connect(self.view.item_view, 'activate', self.view_activate_cb)
         if self.duplicate_test_columns:
             self.signal_handler_connect(self.view.item_store, 'items-changed', self.mark_duplicates)
@@ -113,7 +113,7 @@ class ItemList(component.Component):
         marker = 0
         firsts = {}
         for i, item in enumerate(items):
-            if item.get_key() == self.unit.unit_server.SEPARATOR_FILE:
+            if item.get_key() == self.unit.unit_database.SEPARATOR_FILE:
                 continue
             test = tuple(item.get_field(name) for name in self.duplicate_test_columns)
             first = firsts.get(test)
@@ -144,64 +144,13 @@ class ItemList(component.Component):
         if action.get_name() in ['delete', 'cut']:
             self.remove_items(items)
 
-    # @staticmethod
-    # def row_get_position(row, *, after=False):
-    #     pos = row.pos
-    #     if after:
-    #         pos += 1
-    #     return pos
-
 
 class ItemListEditableMixin:
     def _get_widget(self):
         return ui.view.ViewWithCopyPaste(self.fields, self.factory_factory, interface=self.get_item_interface())
 
-    # sortable = False
-
-    # def __init__(self, unit, *args, editable=True, **kwargs):
-    #     super().__init__(unit, *args, **kwargs)
-
-    #     self.itemlist_actions.add_action(util.resource.Action('paste', self.action_paste_cb))
-    #     self.itemlist_actions.add_action(util.resource.Action('paste-before', self.action_paste_cb))
-    #     self.itemlist_actions.add_action(util.resource.Action('delete', self.action_copy_delete_cb))
-    #     self.itemlist_actions.add_action(util.resource.Action('cut', self.action_copy_delete_cb))
-    #     self.signal_handler_connect(self.view, 'notify::filtering', self.check_editable)
-
-    #     self.set_editable(editable)
-
-    # def shutdown(self):
-    #     self.view.item_view.rows.remove_controller(self.drop_target)
-    #     # Cleanup ????
-    #     del self.drop_target
-    #     super().shutdown()
-
     def get_item_interface(self):
         return super().get_item_interface(add_items=self.add_items, remove_items=self.remove_items)
-
-    # def get_editable(self):
-    #     return self._editable
-
-    # def set_editable(self, editable):
-    #     self._editable = editable
-    #     self.check_editable()
-
-    # def check_editable(self, *args):
-    #     editable = self._editable and not self.view.filtering
-    #     for name in ['paste', 'paste-before', 'delete', 'cut']:
-    #         self.itemlist_actions.lookup(name).set_enabled(editable)
-    #     self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
-
-    # def action_paste_cb(self, action, parameter):
-    #     util.misc.get_clipboard().read_value_async(util.item.ItemKeyTransfer, 0, None, self.action_paste_finish_cb, action.get_name().endswith('-before'))
-
-    # def action_paste_finish_cb(self, clipboard, result, before):
-    #     values = clipboard.read_value_finish(result).values
-    #     row = self.view.item_view.rows.get_focus_child()
-    #     if values is not None and row is not None:
-    #         pos = row.get_first_child().get_first_child().pos
-    #         if not before:
-    #             pos += 1
-    #         self.add_items(values, pos)
 
 
 class ItemListEditStackMixin(ItemListEditableMixin):
@@ -296,11 +245,12 @@ class ItemListEditStackMixin(ItemListEditableMixin):
             raise RuntimeError
         self.edit_stack_changed()
 
+    #  REMOVE ASYNC !!!!!!!!!!!!
     @ampd.task
     async def action_reset_cb(self, action, parameter):
         if not self.edit_stack or not self.edit_stack.deltas:
             return
-        if not await ui.dialog.AsyncMessageDialog(transient_for=self.widget.get_root(), message=_("Reset and lose all modifications?")).run():
+        if not await ui.dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Reset and lose all modifications?")).run():
             return
         self.edit_stack.undo()
         self.edit_stack.reset()

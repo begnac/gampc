@@ -39,7 +39,7 @@ def iterate_action_families(widget):
 
 class ShortcutsWindow(Gtk.ShortcutsWindow):
     def __init__(self, window):
-        super().__init__(modal=True)
+        super().__init__(modal=True, destroy_with_parent=True, transient_for=window)
 
         groups_app = {}
         groups_other = {}

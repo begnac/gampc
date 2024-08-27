@@ -63,7 +63,7 @@ class QueueItemFactory(ui.view.LabelItemFactory):
             util.misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
-class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, itemlist.ItemListEditableMixin, songlist.SongList):
+class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songlist.SongList):
     editable = True
     duplicate_test_columns = ['Title']
 
@@ -92,6 +92,9 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongListAddSpecialMixin, item
     def shutdown(self):
         Gtk.StyleContext.remove_provider_for_display(self.widget.get_display(), self.css_provider)
         super().shutdown()
+
+    def _get_widget(self):
+        return ui.view.ViewWithCopyPasteSongs(self.fields, self.factory_factory, interface=self.get_item_interface(), separator_file=self.unit.unit_database.SEPARATOR_FILE)
 
     @ampd.task
     async def client_connected_cb(self, client):

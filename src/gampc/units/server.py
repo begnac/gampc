@@ -18,20 +18,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GLib
 from gi.repository import GObject
-from gi.repository import Gtk
 
 import asyncio
 import ampd
 
 from .. import util
-from ..util.logger import logger
 
 
 class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
-    SEPARATOR_FILE = 'separator.mp3'
-
     server_label = GObject.Property(type=str, default='')
     server_profile = GObject.Property(type=str)
 
@@ -66,9 +61,6 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
         self.set_server_label()
 
         self.connect('notify::server-profile', self.notify_server_profile_cb)
-
-        self.separator_song = {name: '----------' for name in self.unit_songlist.fields.basic_names if name != 'Time'}
-        self.separator_song['file'] = self.SEPARATOR_FILE
 
     def shutdown(self):
         # if self.current_song_hooks:
@@ -116,22 +108,19 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
         await self.ampd.update()
 
     def client_connected_cb(self, client):
-        logger.info(_("Connected to {address} [protocol version {protocol}]").format(address=self.profile.name, protocol=self.ampd.get_protocol_version()))
+        util.logger.logger.info(_("Connected to {address} [protocol version {protocol}]").format(address=self.profile.name, protocol=self.ampd.get_protocol_version()))
         self.set_server_label()
-        self.idle_database()
 
     def client_disconnected_cb(self, client, reason, message):
-        self.separator_song.clear()
-        self.separator_song['file'] = self.SEPARATOR_FILE
         if reason == ampd.Client.DISCONNECT_RECONNECT:
             return
         elif reason == ampd.Client.DISCONNECT_PASSWORD:
-            logger.error(_("Invalid password"))
+            util.logger.logger.error(_("Invalid password"))
             return
         elif reason == ampd.Client.DISCONNECT_FAILED_CONNECT:
-            logger.error(_("Connection failed: {message}").format(message=message or _("reason unknown")))
+            util.logger.logger.error(_("Connection failed: {message}").format(message=message or _("reason unknown")))
         else:
-            logger.info(_("Disconnected"))
+            util.logger.logger.info(_("Disconnected"))
         if self.want_to_connect:
             self._reconnect()
         self.set_server_label()
@@ -141,27 +130,8 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
         await asyncio.sleep(1)
         await self.ampd_client.connect_to_server(self.profile.address)
 
-    @ampd.task
-    async def idle_database(self):
-        while True:
-            song = await self.ampd.find('file', self.SEPARATOR_FILE)
-            if song:
-                self.separator_song.update(song[0])
-            else:
-                GLib.idle_add(self.separator_missing)
-            await self.ampd.idle(ampd.DATABASE)
-            logger.info(_("Database changed"))
-
-    def separator_missing(self):
-        dialog = Gtk.MessageDialog(message_type=Gtk.MessageType.WARNING,
-                                   buttons=Gtk.ButtonsType.CLOSE,
-                                   text=_("Some features require a file named '{separator}' at the music root directory.  Such a file, consisting of a three second silence, is provided.").format(separator=self.SEPARATOR_FILE))
-        dialog.run()
-        dialog.destroy()
-        return GLib.SOURCE_REMOVE
-
     def server_error_cb(self, client, error):
-        logger.error(_("Server error: {error}").format(error=error))
+        util.logger.logger.error(_("Server error: {error}").format(error=error))
 
     def set_server_label(self, *args):
         if not self.want_to_connect:

@@ -81,10 +81,10 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
         else:
             self.set_edit_stack(None)
             self.view.set_editable(False)
-            self.set_values(sum(map(lambda node: list(node.edit_stack.items),
-                                    filter(lambda node: node.kind == NODE_PLAYLIST,
-                                           map(lambda pos: selection[pos].get_item(),
-                                               self.left_selection_pos))), []))
+            self.set_keys(sum(map(lambda node: list(node.edit_stack.items),
+                                  filter(lambda node: node.kind == NODE_PLAYLIST,
+                                         map(lambda pos: selection[pos].get_item(),
+                                             self.left_selection_pos))), []))
         self.edit_stack_changed()
 
     def left_view_activate_cb(self, view, position):
@@ -115,7 +115,7 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
         if not self.left_selected_item:
             return
         playlist_path = self.left_selected_item.joined_path
-        if not await dialog.AsyncMessageDialog(transient_for=self.widget.get_root(), message=_("Delete playlist {name}?").format(name=playlist_path)).run():
+        if not await dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Delete playlist {name}?").format(name=playlist_path)).run():
             return
         await self.ampd.rm(playlist_path.replace('/', PSEUDO_SEPARATOR))
 

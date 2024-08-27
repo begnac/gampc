@@ -35,7 +35,7 @@ class PlaylistCacheItem:
         self.last_modified = last_modified
 
 
-class ChoosePathDialog(ui.dialog.AsyncTextDialog):
+class ChoosePathDialog(ui.dialog.TextDialogAsync):
     def __init__(self, *args, paths, init=None, path_ok=False, **kwargs):
         super().__init__(*args, text=init, **kwargs)
         self.paths = list(paths)
@@ -196,7 +196,7 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
     async def save_playlist(self, playlist_path, filenames, win):
         playlist_name = playlist_path.replace('/', playlist.PSEUDO_SEPARATOR)
 
-        if playlist_name in self.playlists and not await ui.dialog.AsyncMessageDialog(transient_for=win, message=_("Replace existing playlist {name}?").format(name=playlist_path)).run():
+        if playlist_name in self.playlists and not await ui.dialog.MessageDialogAsync(transient_for=win, message=_("Replace existing playlist {name}?").format(name=playlist_path)).run():
             return False
 
         try:
@@ -238,7 +238,7 @@ class __unit__(songlist.UnitPanedSongListMixin, util.unit.Unit):
     async def action_playlist_add_saveas_cb(self, songlist_, action, parameter):
         filenames = list(songlist_.get_filenames(parameter.get_boolean()))
         if not filenames:
-            await ui.dialog.AsyncMessageDialog(message=_("Nothing to save!"), transient_for=songlist_.widget.get_root(), title="", cancel_button=False).run()
+            await ui.dialog.MessageDialogAsync(message=_("Nothing to save!"), transient_for=songlist_.widget.get_root(), title="", cancel_button=False).run()
             return
 
         saveas = '-saveas' in action.get_name()

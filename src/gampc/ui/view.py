@@ -24,12 +24,15 @@ from gi.repository import Gdk
 from gi.repository import Gtk
 
 import re
+import ampd
 
 from .. import util
 
-from . import listviewsearch
-from . import editable
+from . import contextmenu
 from . import dnd
+from . import editable
+from . import listviewsearch
+from . import dialog
 
 
 class ItemFactory(Gtk.SignalListItemFactory):
@@ -207,7 +210,7 @@ class ItemView(Gtk.ColumnView):
         columns.handler_unblock_by_func(self.columns_changed_cb)
 
 
-class View(Gtk.Box):
+class View(contextmenu.ContextMenuMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
     def __init__(self, fields, factory_factory, *, sortable, selection_model=Gtk.MultiSelection):
@@ -248,9 +251,6 @@ class View(Gtk.Box):
         self.view_search = listviewsearch.ListViewSearch(self.item_view.rows, lambda text, item: any(text.lower() in item.get_field(name).lower() for name in fields.fields))
 
         self.connect('notify::filtering', self.notify_filtering_cb)
-
-        # self.actions = Gio.SimplActionGroup()
-        # self.insert_action_group('view', self.actions)
 
     def cleanup(self):
         self.filter_item.disconnect_by_func(self.notify_filter_cb)
@@ -310,25 +310,25 @@ class ViewWithCopy(util.action.WidgetActionFamilyMixin, View):
         super().__init__(*args, **kwargs)
         self.interface = interface
 
-        self.copy_paste_family = util.action.ActionInfoFamily(self.generate_copy_paste_actions(), 'view', _("Cut and Paste"))
-        self.copy_paste_actions = self.copy_paste_family.insert_action_group(self)
-        self.add_controller(self.copy_paste_family.get_shortcut_controller())
-        # self.copy_paste_menu = util.action.Menu()
-        self.action_info_families.append(self.copy_paste_family)
+        self.editing_family = util.action.ActionInfoFamily(self.generate_editing_actions(), 'view-edit', _("Edit"))
+        self.editing_actions = self.editing_family.insert_action_group(self)
+        self.add_controller(self.editing_family.get_shortcut_controller())
+        self.action_info_families.append(self.editing_family)
+        self.context_menu.append_section(None, self.editing_family.get_menu())
 
         self.drag_source = dnd.ListDragSource(interface, actions=Gdk.DragAction.COPY)
         self.item_view.rows.add_controller(self.drag_source)
 
     def cleanup(self):
-        self.insert_action_group('view', None)
-        del self.copy_paste_family
-        del self.copy_paste_actions
+        self.insert_action_group('view-edit', None)
+        del self.editing_family
+        del self.editing_actions
         del self.interface
         self.item_view.rows.remove_controller(self.drag_source)
         del self.drag_source
         super().cleanup()
 
-    def generate_copy_paste_actions(self):
+    def generate_editing_actions(self):
         yield util.action.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
 
     def action_copy_cb(self, action, parameter):
@@ -364,13 +364,14 @@ class ViewWithCopyPaste(ViewWithCopy):
 
     def check_editable(self, *args):
         editable = self._editable and not self.filtering
-        for name in ['paste', 'delete', 'cut']:
-            self.copy_paste_actions.lookup(name).set_enabled(editable)
+        for name in self.editing_actions.list_actions():
+            if name != 'copy':
+                self.editing_actions.lookup_action(name).set_enabled(editable)
         self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
-    def generate_copy_paste_actions(self):
+    def generate_editing_actions(self):
         yield util.action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'])
-        yield from super().generate_copy_paste_actions()
+        yield from super().generate_editing_actions()
         paste_after = util.action.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True, parameter_format='b')
         yield paste_after
         yield paste_after.derive(_("Paste before"), ['<Control>b'], False)
@@ -397,3 +398,56 @@ class ViewWithCopyPaste(ViewWithCopy):
         values = clipboard.read_value_finish(result).values
         if values is not None:
             self.interface.add_items(values, pos)
+
+
+class ViewWithCopyPasteSongs(ViewWithCopyPaste):
+    def __init__(self, *args, separator_file, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.separator_file = separator_file
+
+    def generate_editing_actions(self):
+        yield from super().generate_editing_actions()
+        yield util.action.ActionInfo('add-separator', self.action_add_separator_cb, _("Add separator"))
+        yield util.action.ActionInfo('add-url', self.action_add_url_cb, _("Add URL or filename"))
+
+    # def generate_special_actions(self):
+    #     yield util.action.ActionInfo('delete-file', self.action_delete_file_cb, _("Move files to trash"), ['<Control>Delete'])
+
+    def action_add_separator_cb(self, action, parameter):
+        selection = self.get_selection()
+        if selection:
+            pos = selection[0]
+        else:
+            return
+        self.interface.add_items([self.separator_file], pos)
+
+    @ampd.task
+    async def action_add_url_cb(self, action, parameter):
+        selection = self.get_selection()
+        if selection:
+            pos = selection[0]
+        else:
+            return
+        dialog_ = dialog.TextDialogAsync(transient_for=self.get_root(), decorated=False, text='http://')
+        url = await dialog_.run()
+        if url:
+            self.interface.add_items([url], pos)
+
+
+    # def action_delete_file_cb(self, action, parameter):
+    #     store, paths = self.treeview.get_selection().get_selected_rows()
+    #     deleted = [self.store.get_record(self.store.get_iter(p)) for p in paths]
+    #     if deleted:
+    #         dialog = Gtk.Dialog(parent=self.get_window(), title=_("Move to trash"))
+    #         dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
+    #         dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
+    #         dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash bin?")] + [song.file for song in deleted])))
+    #         reply = dialog.run()
+    #         dialog.destroy()
+    #         if reply != Gtk.ResponseType.OK:
+    #             return
+    #         for song in deleted:
+    #             if song._gfile is not None:
+    #                 song._gfile.trash()
+    #                 song._status = self.RECORD_MODIFIED
+

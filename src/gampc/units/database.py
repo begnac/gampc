@@ -18,12 +18,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
+from gi.repository import Gtk
+
 from .. import util
+from .. import ui
 
 import ampd
 
 
 class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
+    SEPARATOR_FILE = 'separator.mp3'
+
     def __init__(self, *args):
         super().__init__(*args)
         self.require('songlist')
@@ -36,8 +42,15 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     @ampd.task
     async def client_connected_cb(self, client):
         while True:
+            if '_missing' in await self.cache.get_async(self.SEPARATOR_FILE):
+                await self.separator_missing()
             await self.ampd.idle(ampd.DATABASE)
             self.cache.clear()
+            util.logger.logger.info(_("Database changed"))
+
+    async def separator_missing(self):
+        await ui.dialog.MessageDialogAsync(cancel_button=False,
+                                           message=_("Some features require a file named '{separator}' at the music root directory.  Such a file, consisting of a three second silence, is provided.").format(separator=self.SEPARATOR_FILE)).run()
 
     async def cache_retrieve(self, key):
         try:
@@ -46,7 +59,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
             print(key, e)
             return {}
         if len(songs) == 0:
-            song = {'file': key}
+            song = {'file': key, '_missing': True}
         elif len(songs) == 1:
             song = songs[0]
             self.unit_songlist.fields.set_derived_fields(song)
