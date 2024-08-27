@@ -28,6 +28,11 @@ class __unit__(util.unit.Unit):
         super().__init__(*args)
 
         self.require('window')
+        self.require('persistent')
+        self.require('playback')
+        self.require('server')
+        self.require('profiles')
+        self.require('help')
 
         self.unit_window.action_info_families = []
         self.menubar = Gio.Menu()
@@ -37,27 +42,22 @@ class __unit__(util.unit.Unit):
         app_menu = Gio.Menu()
         app_label = _("_Application")
         self.menubar.append_submenu(app_label, app_menu)
-        self.load_unit_family('window', app_label, app, app_menu, True)
-        self.load_unit_family('persistent', app_label, app, app_menu, True)
+        self.load_family(self.unit_window.generate_actions(), app_label, app, app_menu, True)
+        self.load_family(self.unit_persistent.generate_actions(), app_label, app, app_menu, True)
         quit_action = util.action.ActionInfo('quit', self.quit_cb, _("Quit"), ['<Control>q'])
         self.load_family([quit_action], app_label, app, app_menu, True)
 
-        self.load_unit_family('playback', _("_Playback"), app, self.menubar)
+        self.load_family(self.unit_playback.generate_actions(), _("_Playback"), app, self.menubar)
 
         server_menu = Gio.Menu()
         server_label = _("_Server")
         self.menubar.append_submenu(server_label, server_menu)
-        unit_server = self.require('server')
-        self.load_family(unit_server.generate_database_actions(), server_label, app, server_menu, True)
+        self.load_family(self.unit_server.generate_database_actions(), server_label, app, server_menu, True)
         self.load_unit_simple('output', app, server_menu)
-        self.load_family(unit_server.generate_connection_actions(), server_label, app, server_menu, True)
-        unit_profiles = self.require('profiles')
-        server_menu.append_submenu(_("Profiles"), unit_profiles.menu)
+        self.load_family(self.unit_server.generate_connection_actions(), server_label, app, server_menu, True)
+        server_menu.append_submenu(_("Profiles"), self.unit_profiles.menu)
 
-        self.load_unit_family('help', _("_Help"), app, self.menubar)
-
-    def load_unit_family(self, unit_name, label, action_map, menu, section=False):
-        self.load_family(self.require(unit_name).generate_actions(), label, action_map, menu, section)
+        self.load_family(self.unit_help.generate_actions(), _("_Help"), app, self.menubar)
 
     def load_family(self, generator, label, action_map, menu, section=False):
         family = util.action.ActionInfoFamily('app', label, generator)
@@ -66,7 +66,7 @@ class __unit__(util.unit.Unit):
             menu.append_section(None, family.get_menu())
         else:
             menu.append_submenu(label, family.get_menu())
-        family.add_to_action_map(action_map)
+        family.add_to_action_map(action_map, protect=self.unit_persistent.protect)
 
     def load_unit_simple(self, unit_name, app, menu):
         unit = self.require(unit_name)

@@ -53,11 +53,13 @@ class ActionInfo:
         for arg in args:
             arg.add_action_info(self)
 
-    def get_action(self):
+    def get_action(self, protect=None):
         if self.data is not None:
             parameter_type = None if self.parameter_format is None else GLib.VariantType.new(self.parameter_format)
             action = Gio.SimpleAction(name=self.name, parameter_type=parameter_type, state=self.state)
             action.connect('activate', self.data)
+            if self.dangerous:
+                protect(action)
             return action
 
     def get_shortcut(self, prefix):
@@ -82,9 +84,12 @@ class ActionInfo:
 
 
 class PropertyActionInfo(ActionInfo):
-    def get_action(self):
+    def get_action(self, protect=None):
         if self.data is not None:
-            return Gio.PropertyAction(name=self.name, property_name=self.name, object=self.data)
+            action = Gio.PropertyAction(name=self.name, property_name=self.name, object=self.data)
+            if self.dangerous:
+                protect(action)
+            return action
 
 
 class ActionInfoFamily:
@@ -107,19 +112,19 @@ class ActionInfoFamily:
     def get_submenu(self):
         return Gio.MenuItem.new_submenu(self.label, self.get_menu)
 
-    def add_to_action_map(self, action_map):
+    def add_to_action_map(self, action_map, protect=None):
         for action_info in self.action_infos:
-            action = action_info.get_action()
+            action = action_info.get_action(protect)
             if action is not None:
                 action_map.add_action(action)
 
-    def get_action_group(self):
+    def get_action_group(self, protect=None):
         action_group = Gio.SimpleActionGroup()
-        self.add_to_action_map(action_group)
+        self.add_to_action_map(action_group, protect)
         return action_group
 
-    def insert_action_group(self, widget):
-        action_group = self.get_action_group()
+    def insert_action_group(self, widget, protect=None):
+        action_group = self.get_action_group(protect)
         widget.insert_action_group(self.prefix, action_group)
         return action_group
 

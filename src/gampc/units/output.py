@@ -25,13 +25,13 @@ from gi.repository import Gdk
 import ampd
 
 from .. import util
-from ..util import unit
-from ..util.misc import get_modifier_state
 
 
-class __unit__(unit.UnitServerMixin, unit.Unit):
+class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
+
+        self.require('persistent')
 
         self.outputs = []
 
@@ -53,7 +53,7 @@ class __unit__(unit.UnitServerMixin, unit.Unit):
                 outputs = await self.ampd.outputs()
                 family = util.action.ActionInfoFamily('app', None, self.generate_output_actions(outputs))
                 self.menu.append_section(None, family.get_menu())
-                family.add_to_action_map(self.actions)
+                family.add_to_action_map(self.actions, protect=self.unit_persistent.protect)
                 await self.ampd.idle(ampd.OUTPUT)
         except ampd.ConnectionError:
             self.clean_outputs()
