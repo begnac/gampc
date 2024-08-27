@@ -23,7 +23,7 @@ from gi.repository import GObject
 import asyncio
 import ampd
 
-from ..util import actions
+from ..util import action
 from ..util import unit
 from ..util.logger import logger
 
@@ -81,15 +81,15 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         super().shutdown()
 
     def generate_database_actions(self):
-        yield actions.ActionInfo('update', self.update_cb, _("Update database"))
+        yield action.ActionInfo('update', self.update_cb, _("Update database"))
 
     def generate_connection_actions(self):
-        yield actions.ActionInfo('connect', self.ampd_connect, _("Connect"), ['<Alt><Shift>c'])
-        yield actions.ActionInfo('disconnect', self.ampd_disconnect, _("Disconnect"), ['<Alt><Shift>d'])
-        yield actions.ActionInfo('connect-to-previous', self.ampd_connect_to_previous, _("Connect to previous"), ['<Control><Alt>p'])
-        yield actions.PropertyActionInfo('server-profile', self)
+        yield action.ActionInfo('connect', self.ampd_connect, _("Connect"), ['<Alt><Shift>c'])
+        yield action.ActionInfo('disconnect', self.ampd_disconnect, _("Disconnect"), ['<Alt><Shift>d'])
+        yield action.ActionInfo('connect-to-previous', self.ampd_connect_to_previous, _("Connect to previous"), ['<Control><Alt>p'])
+        yield action.PropertyActionInfo('server-profile', self)
         for name in ampd.OPTION_NAMES:
-            yield actions.PropertyActionInfo(name, self.ampd_server_properties, parameter_format='i')
+            yield action.PropertyActionInfo(name, self.ampd_server_properties, parameter_format='i')
 
     def ampd_connect(self, *args):
         self.want_to_connect = True

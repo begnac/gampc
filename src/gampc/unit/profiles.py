@@ -25,7 +25,7 @@ import zeroconf.asyncio
 import re
 import asyncio
 
-from ..util import actions
+from ..util import action
 from ..util import unit
 
 from ..ui import ssde
@@ -52,7 +52,7 @@ class Profile:
         return Profile(name, address)
 
     def get_action(self):
-        return actions.ActionInfo('server-profile', None, self.name, parameter_format='s', arg=repr(self))
+        return action.ActionInfo('server-profile', None, self.name, parameter_format='s', arg=repr(self))
 
     def __repr__(self):
         return f'{self.address}={self.name}'
@@ -98,7 +98,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         asyncio.get_event_loop().run_until_complete(self.zeroconf_profiles_cleanup())
 
     def generate_actions(self):
-        yield actions.ActionInfo('edit-user-profiles', self.edit_user_profiles_cb, _("Edit profiles"))
+        yield action.ActionInfo('edit-user-profiles', self.edit_user_profiles_cb, _("Edit profiles"))
 
     def zeroconf_profiles_setup(self):
         self.zc_profiles = {}
@@ -123,12 +123,12 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         if state_change in (zeroconf.ServiceStateChange.Added, zeroconf.ServiceStateChange.Updated) and short_name not in self.zc_profiles:
             info = await self.azc.async_get_service_info(service_type, name)
             self.zc_profiles[short_name] = Profile(short_name, f'{info.server[:-1]}:{info.port}').get_action()
-        family = actions.ActionInfoFamily(self.zc_profiles.values(), 'app')
+        family = action.ActionInfoFamily(self.zc_profiles.values(), 'app')
         self.zeroconf_menu.remove_all()
         self.zeroconf_menu.append_section(None, family.get_menu())
 
     def user_profiles_setup(self):
-        family = actions.ActionInfoFamily((Profile(**profile).get_action() for profile in self.config.profiles._get()), 'app')
+        family = action.ActionInfoFamily((Profile(**profile).get_action() for profile in self.config.profiles._get()), 'app')
         self.user_menu.remove_all()
         self.user_menu.append_section(None, family.get_menu())
 

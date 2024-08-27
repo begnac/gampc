@@ -23,7 +23,7 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import actions
+from ..util import action
 from ..util import item
 from ..util import misc
 
@@ -66,7 +66,7 @@ class QueueItemFactory(view.LabelItemFactory):
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
-class QueueView(view.ViewWithCopyPasteSongs):
+class QueueView(view.ViewWithCopyPasteSong):
     def __init__(self, *args, ampd, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
@@ -96,10 +96,10 @@ class QueueView(view.ViewWithCopyPasteSongs):
         self.css_provider.load_from_string(PLAYING_CSS)
 
     def generate_queue_actions(self):
-        yield actions.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
+        yield action.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
 
     def generate_priority_actions(self):
-        priority = actions.ActionInfo('priority', self.action_priority_cb, parameter_format='i')
+        priority = action.ActionInfo('priority', self.action_priority_cb, parameter_format='i')
         yield priority
         yield priority.derive(_("High"), arg=255)
         yield priority.derive(_("Normal"), arg=0)
@@ -131,8 +131,16 @@ class QueueView(view.ViewWithCopyPasteSongs):
 
         await self.ampd.prioid(priority, *(item_.Id for item_ in items))
 
+    @ampd.task
+    async def remove_items(self, items):
+        await self.ampd.command_list(self.ampd.deleteid(item.Id) for item in items)
 
-class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songlist.SongList):
+    @ampd.task
+    async def add_items(self, keys, position):
+        await self.ampd.command_list(self.ampd.add(key, position) for key in reversed(keys))
+
+
+class Queue(songlist.SongListTotalsMixin, songlist.SongList):
     editable = True
     duplicate_test_columns = ['Title']
 
@@ -152,13 +160,13 @@ class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songli
         self.cursor_by_profile = {}
         self.set_cursor = False
 
-    def _get_widget(self):
-        widget = QueueView(self.fields, self.factory_factory, interface=self.get_item_interface(), separator_file=self.unit.unit_database.SEPARATOR_FILE, ampd=self.ampd)
+    def widget_factory(self, *args, **kwargs):
+        widget = QueueView(*args, **kwargs, separator_file=self.unit.unit_database.SEPARATOR_FILE, ampd=self.ampd)
         widget.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit.unit_persistent.protect)
         return widget
 
     def generate_queue_actions(self):
-        yield actions.ActionInfo('shuffle', self.action_shuffle_cb, _("Shuffle"), dangerous=True)
+        yield action.ActionInfo('shuffle', self.action_shuffle_cb, _("Shuffle"), dangerous=True)
 
     @ampd.task
     async def action_shuffle_cb(self, action, parameter):
@@ -184,14 +192,6 @@ class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songli
 
     def notify_current_song_cb(self, server_properties, pspec):
         self.view.set_current_Id(server_properties.current_song.get('Id'))
-
-    @ampd.task
-    async def remove_items(self, items):
-        await self.ampd.command_list(self.ampd.deleteid(item.Id) for item in items)
-
-    @ampd.task
-    async def add_items(self, keys, position):
-        await self.ampd.command_list(self.ampd.add(key, position) for key in reversed(keys))
 
     @ampd.task
     async def view_activate_cb(self, view, position):

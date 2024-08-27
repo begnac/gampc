@@ -24,7 +24,7 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import actions
+from ..util import action
 from ..util import unit
 
 from . import mixins
@@ -57,8 +57,8 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         super().shutdown()
 
     def generate_actions(self):
-        yield actions.PropertyActionInfo('dark', self, _("Dark interface"), ['<Control><Alt>d'])
-        yield actions.PropertyActionInfo('protect-requested', self, _("Protected mode"), ['<Control><Alt>r'])
+        yield action.PropertyActionInfo('dark', self, _("Dark interface"), ['<Control><Alt>d'])
+        yield action.PropertyActionInfo('protect-requested', self, _("Protected mode"), ['<Control><Alt>r'])
 
     def protect(self, action):
         self.bind_property('protect-active', action, 'enabled', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)

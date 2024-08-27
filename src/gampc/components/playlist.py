@@ -21,6 +21,7 @@
 import ampd
 
 from ..ui import dialog
+from ..ui import view
 
 from . import itemlist
 from . import songlist
@@ -37,7 +38,7 @@ ICONS = {
 }
 
 
-class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, itemlist.ItemListEditStackMixin, songlist.SongListTotalsMixin, songlist.SongList):
+class Playlist(itemlist.ItemListTreeListMixin, songlist.SongListTotalsMixin, songlist.SongList):
     duplicate_test_columns = ['file']
 
     left_title = _("Playlists")
@@ -49,23 +50,17 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
         # self.actions.add_action(resource.Action('delete', self.action_playlist_delete_cb))
         # self.actions.add_action(resource.Action('update-from-queue', self.action_playlist_update_from_queue_cb))
 
-    def shutdown(self):
-        self.set_edit_stack(None)
-        super().shutdown()
+        self.view.connect('edit-stack-changed', self.edit_stack_changed_cb)
 
-    edit_stack_splicer = itemlist.ItemListDatabaseMixin.splice_keys
+    def widget_factory(self, *args, **kwargs):
+        return view.ViewWithCopyPasteEditStackSong(*args, **kwargs, separator_file=self.unit.unit_database.SEPARATOR_FILE, cache=self.unit.unit_database.cache)
 
-    @staticmethod
-    def edit_stack_getter(item):
-        return item.get_key()
-
-    def edit_stack_changed(self):
-        super().edit_stack_changed()
-        if not self.view.get_editable():
+    def edit_stack_changed_cb(self, view):
+        if not view.get_editable():
             return
-        if self.edit_stack.deltas and not self.left_selected_item.modified:
+        if view.edit_stack.deltas and not self.left_selected_item.modified:
             self.left_selected_item.modified = True
-        elif not self.edit_stack.deltas and self.left_selected_item.modified:
+        elif not view.edit_stack.deltas and self.left_selected_item.modified:
             self.left_selected_item.modified = False
         else:
             return
@@ -75,16 +70,16 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
         if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
-            self.set_edit_stack(self.left_selected_item.edit_stack)
+            self.view.set_edit_stack(self.left_selected_item.edit_stack)
             self.view.set_editable(True)
         else:
-            self.set_edit_stack(None)
+            self.view.set_edit_stack(None)
             self.view.set_editable(False)
-            self.set_keys(sum(map(lambda node: list(node.edit_stack.items),
-                                  filter(lambda node: node.kind == NODE_PLAYLIST,
-                                         map(lambda pos: selection[pos].get_item(),
-                                             self.left_selection_pos))), []))
-        self.edit_stack_changed()
+            self.view.set_keys(sum(map(lambda node: list(node.edit_stack.items),
+                                       filter(lambda node: node.kind == NODE_PLAYLIST,
+                                              map(lambda pos: selection[pos].get_item(),
+                                                  self.left_selection_pos))), []))
+        self.view.edit_stack_changed()
 
     def left_view_activate_cb(self, view, position):
         row = view.get_model()[position]

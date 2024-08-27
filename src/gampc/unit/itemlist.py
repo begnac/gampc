@@ -61,7 +61,6 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitCssMixin, unit.Unit):
         #     'app.menu',
         #     util.resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
         #     util.resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
-        #     util.resource.MenuAction('edit/global', 'itemlist.filter', _("Filter"), ['<Control><Shift>f']),
         #     *items,
         # )
 

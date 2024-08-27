@@ -22,7 +22,7 @@ from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gtk
 
-from ..util import actions
+from ..util import action
 from ..util import unit
 from ..util.logger import logger
 
@@ -34,7 +34,7 @@ from .. import __application__
 from . import mixins
 
 
-class Window(actions.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
+class Window(action.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
         super().__init__(show_menubar=True, **kwargs)
 
@@ -84,7 +84,7 @@ class Window(actions.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
         self.update_title()
         self.update_subtitle()
 
-        # family = actions.ActionInfoFamily('win', _("_Window"), self.generate_actions())
+        # family = action.ActionInfoFamily('win', _("_Window"), self.generate_actions())
         # self.action_info_families.append(family)
         # family.add_to_action_map(self)
         # self.add_controller(family.get_shortcut_controller())
@@ -172,10 +172,10 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
         self.config.message_timeout._get(default=5)
 
     def generate_actions(self):
-        yield actions.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])
-        yield actions.ActionInfo('close-window', self.close_window_cb, _("Close window"), ['<Control>w'])
-        yield actions.ActionInfo('toggle-fullscreen', self.action_toggle_fullscreen_cb, _("Fullscreen window"), ['<Alt>f'])
-        # yield actions.ActionInfo('notify', self.task_hold_app(self.action_notify_cb))
+        yield action.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])
+        yield action.ActionInfo('close-window', self.close_window_cb, _("Close window"), ['<Control>w'])
+        yield action.ActionInfo('toggle-fullscreen', self.action_toggle_fullscreen_cb, _("Fullscreen window"), ['<Alt>f'])
+        # yield action.ActionInfo('notify', self.task_hold_app(self.action_notify_cb))
 
     def new_window(self, name='current'):
         Window(self, application=self.app).activate_action('app.component-start', GLib.Variant('(sb)', (name, False)))

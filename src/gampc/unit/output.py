@@ -24,7 +24,7 @@ from gi.repository import Gdk
 
 import ampd
 
-from ..util import actions
+from ..util import action
 from ..util import misc
 from ..util import unit
 
@@ -55,7 +55,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
             while True:
                 self.clean_outputs()
                 outputs = await self.ampd.outputs()
-                family = actions.ActionInfoFamily(self.generate_output_actions(outputs), 'app')
+                family = action.ActionInfoFamily(self.generate_output_actions(outputs), 'app')
                 self.menu.append_section(None, family.get_menu())
                 family.add_to_action_map(self.actions, protect=self.unit_persistent.protect)
                 await self.ampd.idle(ampd.OUTPUT)
@@ -74,7 +74,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
                 continue
             self.outputs.append(output)
             output['action'] = 'output-' + output['outputid']
-            yield actions.ActionInfo(output['action'], self.action_output_activate_cb, output['outputname'], state=GLib.Variant.new_boolean(int(output['outputenabled'])), dangerous=True)
+            yield action.ActionInfo(output['action'], self.action_output_activate_cb, output['outputname'], state=GLib.Variant.new_boolean(int(output['outputenabled'])), dangerous=True)
 
     @ampd.task
     async def action_output_activate_cb(self, action, parameter):

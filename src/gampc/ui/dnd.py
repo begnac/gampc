@@ -32,14 +32,14 @@ columnview > listview:drop(active) > row.drop-row {
 
 
 class ListDragSource(Gtk.DragSource):
-    def __init__(self, interface, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, content_from_items, remove_items):
+        super().__init__(actions=Gdk.DragAction.COPY)
         icon = Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
         self.set_icon(icon, 5, 5)
-        self.connect('prepare', self.prepare_cb, interface.content_from_items)
+        self.connect('prepare', self.prepare_cb, content_from_items)
         # self.connect('drag-begin', self.drag_begin_cb)
         # self.connect('drag-cancel', self.drag_cancel_cb)
-        self.connect('drag-end', self.end_cb, interface.remove_items)
+        self.connect('drag-end', self.end_cb, remove_items)
 
     @staticmethod
     def prepare_cb(self, x, y, content_from_items):
@@ -71,13 +71,13 @@ class ListDragSource(Gtk.DragSource):
 
 
 class ListDropTarget(Gtk.DropTarget):
-    def __init__(self, interface):
-        super().__init__(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=interface.content_formats)
+    def __init__(self, content_formats, add_items):
+        super().__init__(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=content_formats)
         self.row = None
         self.connect('enter', self.action_cb)
         self.connect('motion', self.action_cb)
         # self.connect('leave', self.leave_cb)
-        self.connect('drop', self.drop_cb, interface.add_items)
+        self.connect('drop', self.drop_cb, add_items)
 
     def set_row(self, row=None):
         if row != self.row:

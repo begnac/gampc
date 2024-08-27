@@ -49,8 +49,6 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
     # DND_TARGET = 'GAMPC_STREAM'
 
     def __init__(self, unit):
-        self.fields = unit.fields
-
         super().__init__(unit)
         self.widget.item_view.add_css_class('stream')
 
@@ -73,7 +71,10 @@ class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
 
         self.load_streams()
 
-    edit_stack_splicer = itemlist.ItemList.splice_values
+    def get_fields(self):
+        return self.unit.fields
+
+    # edit_stack_splicer = itemlist.ItemList.splice_values
 
     # def splice_values(self, pos, remove, add):
     #     add = list(add)

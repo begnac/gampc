@@ -24,11 +24,14 @@ from gi.repository import Gdk
 from gi.repository import Gtk
 
 import re
+
 import ampd
 
-from ..util import actions
+from ..util import action
+from ..util import aioqueue
 from ..util import item
 from ..util import misc
+from ..util import editstack
 
 from . import contextmenu
 from . import dnd
@@ -217,8 +220,9 @@ class ItemView(Gtk.ColumnView):
 class View(Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, factory_factory, *, sortable, selection_model=Gtk.MultiSelection):
+    def __init__(self, fields, factory_factory, item_factory, *, sortable, selection_model=Gtk.MultiSelection):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        self.item_factory = item_factory
 
         self.filter_filter = Gtk.CustomFilter()
         self.filter_filter.set_filter_func(self.filter_func)
@@ -300,13 +304,50 @@ class View(Gtk.Box):
     #     else:
     #         return list(map(lambda item: item.file, self.item_store_selection))
 
+    def set_values(self, values):
+        self.splice_values(0, None, values)
 
-class ItemViewInterface:
-    def __init__(self, content_from_items, content_formats=None, add_items=None, remove_items=None):
-        self.content_from_items = content_from_items
-        self.content_formats = content_formats
-        self.add_items = add_items
-        self.remove_items = remove_items
+    def splice_values(self, pos, remove, values):
+        if remove is None:
+            remove = self.item_store.get_n_items()
+        values = list(values)
+        n = len(values)
+        new_items = [] if remove >= n else [self.item_factory() for _ in range(n - remove)]
+        items = self.item_store[pos:pos + remove] + new_items
+        for i in range(n):
+            items[i].load(values[i])
+        self.item_store[pos:pos + remove] = items[:n]
+
+
+class ViewKeyMixin:
+    content_formats = Gdk.ContentFormats.new_for_gtype(item.ItemKeyTransfer)
+
+    @staticmethod
+    def content_from_items(items):
+        return item.transfer_union(items, item.ItemKeyTransfer, item.ItemStringTransfer)
+
+
+class ViewCacheMixin(ViewKeyMixin):
+    def __init__(self, unit, *args, cache, **kwargs):
+        super().__init__(unit, *args, **kwargs)
+        self.aioqueue = aioqueue.AIOQueue()
+        self.cache = cache
+
+    def set_keys(self, keys):
+        self.splice_keys(0, None, keys)
+
+    def splice_keys(self, pos, remove, keys):
+        self.aioqueue.queue_task(self._splice_keys, pos, remove, list(keys))
+
+    async def _splice_keys(self, task, pos, remove, keys):
+        await self.cache.ensure_keys(keys)
+        if task is not None:
+            await task
+        self.splice_values(pos, remove, (self.cache[key] for key in keys))
+
+    # #  In case we inherit also from ItemListEditStackMixin.
+    # def refocus(self, *args):
+    #     self.aioqueue.queue_task(super().refocus, *args, sync=True)
 
 
 class ViewWithContextMenu(contextmenu.ContextMenuMixin, View):
@@ -315,35 +356,39 @@ class ViewWithContextMenu(contextmenu.ContextMenuMixin, View):
         self.add_to_context_menu(self.generate_view_actions(), 'view', _("View actions"))
 
     def generate_view_actions(self):
-        yield actions.PropertyActionInfo('filtering', self, _("Filter view"), ['<Control><Shift>f'])
+        yield action.PropertyActionInfo('filtering', self, _("Filter view"), ['<Control><Shift>f'])
         # util.resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
         # util.resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
 
 
 class ViewWithCopy(ViewWithContextMenu):
-    def __init__(self, *args, interface, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.interface = interface
+    remove_items = NotImplemented
+
+    def __init__(self, *args, sortable=True, **kwargs):
+        super().__init__(*args, **kwargs, sortable=sortable)
 
         self.add_to_context_menu(self.generate_editing_actions(), 'view-edit', _("Edit"))
 
-        self.drag_source = dnd.ListDragSource(interface, actions=Gdk.DragAction.COPY)
+        self.drag_source = dnd.ListDragSource(self.content_from_items, self.remove_items)
         self.item_view.rows.add_controller(self.drag_source)
 
     def cleanup(self):
-        del self.interface
         self.item_view.rows.remove_controller(self.drag_source)
         del self.drag_source
         super().cleanup()
 
     def generate_editing_actions(self):
-        yield actions.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
+        yield action.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
 
     def action_copy_cb(self, action, parameter):
         self.copy_items(self.get_selection_items())
 
     def copy_items(self, items):
-        self.get_clipboard().set_content(self.interface.content_from_items(items))
+        self.get_clipboard().set_content(self.content_from_items(items))
+
+
+class ViewCacheWithCopy(ViewCacheMixin, ViewWithCopy):
+    pass
 
 
 class ViewWithCopyPaste(ViewWithCopy):
@@ -352,7 +397,7 @@ class ViewWithCopyPaste(ViewWithCopy):
 
         self.connect('notify::filtering', self.check_editable)
 
-        self.drop_target = dnd.ListDropTarget(self.interface)
+        self.drop_target = dnd.ListDropTarget(self.content_formats, self.add_items)
         self.item_view.rows.add_controller(self.drop_target)
 
         self.set_editable(True)
@@ -379,20 +424,20 @@ class ViewWithCopyPaste(ViewWithCopy):
         self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
     def generate_editing_actions(self):
-        yield actions.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'])
+        yield action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'])
         yield from super().generate_editing_actions()
-        paste_after = actions.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True, parameter_format='b')
+        paste_after = action.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True, parameter_format='b')
         yield paste_after
         yield paste_after.derive(_("Paste before"), ['<Control>b'], False)
-        yield actions.ActionInfo('delete', self.action_cut_cb, _("Delete"), ['Delete'])
+        yield action.ActionInfo('delete', self.action_cut_cb, _("Delete"), ['Delete'])
 
     def action_cut_cb(self, action, parameter):
         items = self.get_selection_items()
         self.copy_items(items)
-        self.interface.remove_items(items)
+        self.remove_items(items)
 
     def action_delete_cb(self, action, parameter):
-        self.interface.remove_items(self.get_selection_items())
+        self.remove_items(self.get_selection_items())
 
     def action_paste_cb(self, action, parameter):
         row = self.item_view.rows.get_focus_child()
@@ -406,21 +451,114 @@ class ViewWithCopyPaste(ViewWithCopy):
     def action_paste_finish_cb(self, clipboard, result, pos):
         values = clipboard.read_value_finish(result).values
         if values is not None:
-            self.interface.add_items(values, pos)
+            self.add_items(values, pos)
 
 
-class ViewWithCopyPasteSongs(ViewWithCopyPaste):
+class ViewWithEditStack(ViewWithCopyPaste):
+    __gsignals__ = {
+        'edit-stack-changed': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.edit_stack = None
+        self.add_to_context_menu(self.generate_edit_stack_actions(), 'edit-stack', _("Edit stack"))
+        self.edit_stack_changed()
+
+    def cleanup(self):
+        self.set_edit_stack(None)
+        super().cleanup()
+
+    def generate_edit_stack_actions(self):
+        # yield action.ActionInfo('save', self.action_save_cb, _("Save"), ['<Control>s'])
+        # yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
+        yield action.ActionInfo('undo', self.action_do_cb, _("Undo"), ['<Control>z'], parameter_format='b', arg=False)
+        yield action.ActionInfo('redo', self.action_do_cb, _("Redo"), ['<Shift><Control>z'], parameter_format='b', arg=True)
+        # util.resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
+
+    def action_do_cb(self, action, parameter):
+        self.step_edit_stack(parameter.unpack())
+        self.edit_stack_changed()
+
+    # @ampd.task
+    # async def action_reset_cb(self, action, parameter):
+    #     if not self.edit_stack or not self.edit_stack.deltas:
+    #         return
+    #     if not await dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Reset and lose all modifications?")).run():
+    #         return
+    #     self.edit_stack.undo()
+    #     self.edit_stack.reset()
+    #     self.edit_stack_changed()
+
+    def set_edit_stack(self, edit_stack):
+        if self.edit_stack is not None:
+            self.edit_stack.set_splicer()
+        self.edit_stack = edit_stack
+        if edit_stack is not None:
+            self.edit_stack.set_splicer(self.edit_stack_splicer)
+        else:
+            self.item_store.remove_all()
+
+    def step_edit_stack(self, push):
+        focus, selection = self.edit_stack.step(push)
+        self.refocus(focus, selection)
+
+    def refocus(self, focus, selection):
+        if focus is not None:
+            self.item_view.scroll_to(focus, None, Gtk.ListScrollFlags.FOCUS, None)
+        if selection is not None:
+            self.item_store_selection.unselect_all()
+            for pos in selection:
+                self.item_store_selection.select_item(pos, False)
+        self.edit_stack_changed()
+
+    def remove_items(self, items):
+        if not items:
+            return
+        indices = []
+        for i, item_ in enumerate(self.item_store_selection):
+            if item_ in items:
+                indices.append(i)
+                items.remove(item_)
+        if items:
+            raise RuntimeError
+        deltas = []
+        i = j = indices[0]
+        for k in indices[1:] + [0]:
+            j += 1
+            if j != k:
+                values = [self.edit_stack_getter(item) for item in self.item_store_selection[i:j]]
+                deltas.append(editstack.SimpleDelta(values, i, True))
+                i = j = k
+        self.edit_stack.set_from_here([editstack.MetaDelta(deltas, False)])
+        self.step_edit_stack(True)
+
+    def add_items(self, values, position):
+        if not values:
+            return
+        self.edit_stack.set_from_here([editstack.SimpleDelta(values, position, True)])
+        self.step_edit_stack(True)
+
+    def edit_stack_changed(self):
+        self.emit('edit-stack-changed')
+        # self.actions['edit-stack'].lookup_action('save').set_enabled(True)
+        self.actions['edit-stack'].lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.pos > 0)
+        self.actions['edit-stack'].lookup_action('redo').set_enabled(self.edit_stack and self.edit_stack.pos < len(self.edit_stack.deltas))
+
+
+class ViewWithCopyPasteSong(ViewKeyMixin, ViewWithCopyPaste):
     def __init__(self, *args, separator_file, **kwargs):
         super().__init__(*args, **kwargs)
         self.separator_file = separator_file
 
     def generate_editing_actions(self):
         yield from super().generate_editing_actions()
-        yield actions.ActionInfo('add-separator', self.action_add_separator_cb, _("Add separator"))
-        yield actions.ActionInfo('add-url', self.action_add_url_cb, _("Add URL or filename"))
+        yield action.ActionInfo('add-separator', self.action_add_separator_cb, _("Add separator"))
+        yield action.ActionInfo('add-url', self.action_add_url_cb, _("Add URL or filename"))
 
     # def generate_special_actions(self):
-    #     yield actions.ActionInfo('delete-file', self.action_delete_file_cb, _("Move files to trash"), ['<Control>Delete'])
+    #     yield action.ActionInfo('delete-file', self.action_delete_file_cb, _("Move files to trash"), ['<Control>Delete'])
 
     def action_add_separator_cb(self, action, parameter):
         selection = self.get_selection()
@@ -428,7 +566,7 @@ class ViewWithCopyPasteSongs(ViewWithCopyPaste):
             pos = selection[0]
         else:
             return
-        self.interface.add_items([self.separator_file], pos)
+        self.add_items([self.separator_file], pos)
 
     @ampd.task
     async def action_add_url_cb(self, action, parameter):
@@ -440,7 +578,7 @@ class ViewWithCopyPasteSongs(ViewWithCopyPaste):
         dialog_ = dialog.TextDialogAsync(transient_for=self.get_root(), decorated=False, text='http://')
         url = await dialog_.run()
         if url:
-            self.interface.add_items([url], pos)
+            self.add_items([url], pos)
 
     # def action_delete_file_cb(self, action, parameter):
     #     store, paths = self.treeview.get_selection().get_selected_rows()
@@ -458,3 +596,11 @@ class ViewWithCopyPasteSongs(ViewWithCopyPaste):
     #             if song._gfile is not None:
     #                 song._gfile.trash()
     #                 song._status = self.RECORD_MODIFIED
+
+
+class ViewWithCopyPasteEditStackSong(ViewCacheMixin, ViewWithEditStack, ViewWithCopyPasteSong):
+    edit_stack_splicer = ViewCacheMixin.splice_keys
+
+    @staticmethod
+    def edit_stack_getter(item):
+        return item.get_key()

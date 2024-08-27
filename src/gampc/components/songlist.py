@@ -23,20 +23,14 @@ from . import itemlist
 
 
 class SongList(itemlist.ItemList):
-    # use_resources = ['itemlist', 'songlist']
-    DND_TARGET = 'GAMPC_SONG'
-
-    def __init__(self, unit, *args, **kwargs):
-        self.cache = unit.unit_database.cache
-        self.fields = unit.unit_songlist.fields
-        super().__init__(unit, *args, **kwargs)
-        # self.songlist_actions = self.add_actions_provider('songlist')
+    def get_fields(self):
+        return self.unit.unit_songlist.fields
 
     def set_songs(self, songs):
         for song in songs:
             self.unit.unit_songlist.fields.set_derived_fields(song)
-            self.cache[song['file']] = song
-        self.set_values(songs)
+            self.unit.unit_database.cache[song['file']] = song
+        self.view.set_values(songs)
 
     # def get_filenames(self, selection):
     #     return self.view.get_filenames(selection)

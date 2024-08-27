@@ -20,17 +20,18 @@
 
 import ampd
 
-from ..util import actions
+from ..util import action
 from ..util import unit
 
+from ..ui import view
+
 from ..components import component
-from ..components import itemlist
 from ..components import songlist
 
 from . import mixins
 
 
-class Search(component.ComponentEntryMixin, itemlist.ItemListDatabaseMixin, songlist.SongList):
+class Search(component.ComponentEntryMixin, songlist.SongList):
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
 
     sortable = True
@@ -43,13 +44,13 @@ class Search(component.ComponentEntryMixin, itemlist.ItemListDatabaseMixin, song
         # for name in self.fields.names:
         #     self.field_choice.append_text(name)
 
-    def _get_widget(self):
-        widget = super()._get_widget()
+    def widget_factory(self, *args, **kwargs):
+        widget = view.ViewCacheWithCopy(*args, **kwargs, cache=self.unit.unit_database.cache)
         widget.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
         return widget
 
     def generate_actions(self):
-        yield actions.ActionInfo('search', self.action_search_cb, _("Search"), ['<Control><Alt>f'])
+        yield action.ActionInfo('search', self.action_search_cb, _("Search"), ['<Control><Alt>f'])
 
     def action_search_cb(self, *args):
         self.entry.grab_focus()

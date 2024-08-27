@@ -22,7 +22,7 @@ from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import Gtk
 
-from ..util import actions
+from ..util import action
 from ..util import unit
 
 
@@ -41,8 +41,8 @@ class __unit__(unit.Unit):
         self._components = {}
 
         self.label = _("_Component")
-        self.start_family = actions.ActionInfoFamily(self.generate_start_actions(), 'app', self.label)
-        self.stop_family = actions.ActionInfoFamily(self.generate_stop_actions(), 'app', self.label)
+        self.start_family = action.ActionInfoFamily(self.generate_start_actions(), 'app', self.label)
+        self.stop_family = action.ActionInfoFamily(self.generate_stop_actions(), 'app', self.label)
 
         self.start_menu = Gio.Menu()
 
@@ -61,14 +61,14 @@ class __unit__(unit.Unit):
         super().shutdown()
 
     def generate_start_actions(self):
-        start = actions.ActionInfo('component-start', self.component_start_cb, parameter_format='(sb)')
+        start = action.ActionInfo('component-start', self.component_start_cb, parameter_format='(sb)')
         yield start
         for component in self._registered_components.values():
             yield start.derive(component.title, ['<Alt>' + component.key], arg=GLib.Variant('(sb)', (component.name, False)))
             yield start.derive(None, ['<Control><Alt>' + component.key], arg=GLib.Variant('(sb)', (component.name, True)))
 
     def generate_stop_actions(self):
-        yield actions.ActionInfo('component-stop', self.component_stop_cb, _("Stop component"), ['<Control><Shift>w'])
+        yield action.ActionInfo('component-stop', self.component_stop_cb, _("Stop component"), ['<Control><Shift>w'])
 
     def register_component(self, name, title, key, factory):
         if name in self._registered_components:

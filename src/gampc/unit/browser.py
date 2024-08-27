@@ -24,6 +24,7 @@ import ampd
 
 from ..util import unit
 
+from ..ui import view
 from ..ui import treelist
 
 from ..components import itemlist
@@ -35,18 +36,19 @@ from . import mixins
 DIRECTORY = 'directory'
 
 
-class Browser(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, songlist.SongList):
-    sortable = True
-
+class Browser(itemlist.ItemListTreeListMixin, songlist.SongList):
     def __init__(self, unit, **kwargs):
         super().__init__(unit, **kwargs)
         self.signal_handler_connect(self.unit.root.model, 'items-changed', self.root_items_changed_cb)
         if len(self.left_selection) > 0:
             self.left_selection[0].set_expanded(True)
 
+    def widget_factory(self, *args, **kwargs):
+        return view.ViewCacheWithCopy(*args, **kwargs, cache=self.unit.unit_database.cache)
+
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
-        self.set_keys(sum((selection[pos].get_item().songs for pos in self.left_selection_pos), []))
+        self.view.set_keys(sum((selection[pos].get_item().keys for pos in self.left_selection_pos), []))
 
     def root_items_changed_cb(self, model, p, r, a):
         if a:
@@ -63,6 +65,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
         super().__init__(*args, **kwargs)
         self.require('database')
         self.require('songlist')
+        self.require('persistent')
 
         self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)
 
@@ -85,7 +88,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
             contents = {DIRECTORY: [{DIRECTORY: _("Music")}]}
         for folder in sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, [])):
             node.append_sub_node(treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic'))
-        node.songs = [data['file'] for data in contents.get('file', [])]
+        node.keys = [data['file'] for data in contents.get('file', [])]
 
     async def fill_contents_cb(self, node):
         pass

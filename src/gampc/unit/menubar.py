@@ -20,7 +20,7 @@
 
 from gi.repository import Gio
 
-from ..util import actions
+from ..util import action
 from ..util import unit
 
 
@@ -47,7 +47,7 @@ class __unit__(unit.Unit):
         self.menubar.append_submenu(app_label, app_menu)
         self.load_family(self.unit_window.generate_actions(), app_label, app, app_menu, True)
         self.load_family(self.unit_persistent.generate_actions(), app_label, app, app_menu, True)
-        quit_action = actions.ActionInfo('quit', self.quit_cb, _("Quit"), ['<Control>q'])
+        quit_action = action.ActionInfo('quit', self.quit_cb, _("Quit"), ['<Control>q'])
         self.load_family([quit_action], app_label, app, app_menu, True)
 
         self.load_family(self.unit_playback.generate_actions(), _("_Playback"), app, self.menubar)
@@ -75,7 +75,7 @@ class __unit__(unit.Unit):
         super().shutdown()
 
     def load_family(self, generator, label, action_map, menu, section=False):
-        family = actions.ActionInfoFamily(generator, 'app', label)
+        family = action.ActionInfoFamily(generator, 'app', label)
         self.action_info_families.append(family)
         if section:
             menu.append_section(None, family.get_menu())

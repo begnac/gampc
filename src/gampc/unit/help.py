@@ -20,7 +20,7 @@
 
 from gi.repository import Gtk
 
-from ..util import actions
+from ..util import action
 from ..util import unit
 
 from .. import __program_name__, __version__, __program_description__, __copyright__, __license_type__, __website__
@@ -34,7 +34,7 @@ def iterate_children(widget):
 
 def iterate_action_families(widget):
     for child in iterate_children(widget):
-        if isinstance(child, actions.ActionInfoFamiliesMixin):
+        if isinstance(child, action.ActionInfoFamiliesMixin):
             for family in child.action_info_families:
                 yield family
 
@@ -72,9 +72,9 @@ class __unit__(unit.Unit):
         super().__init__(*args)
 
     def generate_actions(self):
-        # yield actions.ActionInfo('app', 'BAD', self.BAD_cb, _("BAD"), ['<Control><Shift>b'])
-        yield actions.ActionInfo('help', self.help_cb, _("Help"), ['<Control>h', 'F1'])
-        yield actions.ActionInfo('about', self.about_cb, _("About"), ['<Control><Shift>h'])
+        # yield action.ActionInfo('app', 'BAD', self.BAD_cb, _("BAD"), ['<Control><Shift>b'])
+        yield action.ActionInfo('help', self.help_cb, _("Help"), ['<Control>h', 'F1'])
+        yield action.ActionInfo('about', self.about_cb, _("About"), ['<Control><Shift>h'])
 
     def BAD_cb(self, *args):
         print(Gtk.Application.get_default().get_active_window().get_focus())
