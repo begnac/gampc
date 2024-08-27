@@ -24,26 +24,23 @@ import ampd
 
 from ..util import unit
 
+from ..ui import compound
+
 from ..components import component
 
 from . import mixins
 
 
-class _Command(component.Component):
+class Command(component.Component):
     def __init__(self, unit):
         super().__init__(unit)
         self.label = Gtk.Label(max_width_chars=50, wrap=True, selectable=True)
-        self.widget = scrolled = Gtk.ScrolledWindow(vexpand=True)
-        scrolled.set_child(self.label)
+        self.widget = compound.WidgetWithEntry(Gtk.ScrolledWindow(vexpand=True, child=self.label), self.entry_activate_cb)
 
     @ampd.task
     async def entry_activate_cb(self, entry):
         reply = await self.ampd._raw(entry.get_text())
         self.label.set_label('\n'.join(str(x) for x in reply) if reply else _("Empty reply"))
-
-
-class Command(component.ComponentEntryMixin, _Command):
-    pass
 
 
 class __unit__(mixins.UnitComponentMixin, unit.Unit):

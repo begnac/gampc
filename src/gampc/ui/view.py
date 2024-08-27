@@ -221,7 +221,7 @@ class View(Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
     def __init__(self, fields, factory_factory, item_factory, *, sortable, selection_model=Gtk.MultiSelection):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, focusable=True)
         self.item_factory = item_factory
 
         self.filter_filter = Gtk.CustomFilter()
@@ -232,7 +232,7 @@ class View(Gtk.Box):
         self.filter_store_selection = Gtk.NoSelection(model=self.filter_store)
         self.filter_view = ItemView(fields, self.filter_factory_factory, sortable=False, model=self.filter_store_selection)
         self.filter_view.add_css_class('filter')
-        self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, focusable=False, vscrollbar_policy=Gtk.PolicyType.NEVER)
+        self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, vscrollbar_policy=Gtk.PolicyType.NEVER)
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
         self.append(self.scrolled_filter_view)
         self.filter_item.connect('notify::value', self.notify_filter_cb)
@@ -240,7 +240,7 @@ class View(Gtk.Box):
         self.item_store_selection = selection_model()
         self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_store_selection, vexpand=True, enable_rubberband=False)
         self.item_view.add_css_class('items')
-        self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view, focusable=False)
+        self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view)
         self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_item_view)
 
@@ -268,6 +268,9 @@ class View(Gtk.Box):
         self.item_view.cleanup()
         self.view_search.cleanup()
 
+    def grab_focus(self):
+        self.item_view.grab_focus()
+
     def filter_factory_factory(self, name):
         return EditableItemFactory(name, always_editable=True)
 
@@ -279,9 +282,11 @@ class View(Gtk.Box):
         if self.filtering:
             self.filter_store.append(self.filter_item)
             self.item_store_filter.set_filter(self.filter_filter)
+            self.filter_view.grab_focus()
         else:
             self.filter_store.remove(0)
             self.item_store_filter.set_filter(None)
+            self.item_view.grab_focus()
 
     def filter_func(self, item):
         for name, value in self.filter_item.value.items():

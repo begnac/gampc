@@ -149,7 +149,7 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongList):
 
     def __init__(self, unit):
         super().__init__(unit)
-        self.widget.item_view.add_css_class('queue')
+        self.view.item_view.add_css_class('queue')
 
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.signal_handler_connect(self.view.item_store_selection, 'selection-changed', self.selection_changed_cb)
@@ -160,7 +160,7 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongList):
         self.cursor_by_profile = {}
         self.set_cursor = False
 
-    def widget_factory(self, *args, **kwargs):
+    def create_view(self, *args, **kwargs):
         widget = QueueView(*args, **kwargs, separator_file=self.unit.unit_database.SEPARATOR_FILE, ampd=self.ampd)
         widget.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit.unit_persistent.protect)
         return widget

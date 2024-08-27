@@ -24,27 +24,27 @@ from ..util import action
 from ..util import unit
 
 from ..ui import view
+from ..ui import compound
 
-from ..components import component
 from ..components import songlist
 
 from . import mixins
 
 
-class Search(component.ComponentEntryMixin, songlist.SongList):
+class Search(songlist.SongList):
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
-
-    sortable = True
 
     def __init__(self, unit):
         super().__init__(unit)
+
+        self.widget = compound.WidgetWithEntry(self.view, self.entry_activate_cb)
 
         # self.field_choice = Gtk.ComboBoxText()
         # self.field_choice.append_text(_("any field"))
         # for name in self.fields.names:
         #     self.field_choice.append_text(name)
 
-    def widget_factory(self, *args, **kwargs):
+    def create_view(self, *args, **kwargs):
         widget = view.ViewCacheWithCopy(*args, **kwargs, cache=self.unit.unit_database.cache)
         widget.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
         return widget
@@ -53,12 +53,12 @@ class Search(component.ComponentEntryMixin, songlist.SongList):
         yield action.ActionInfo('search', self.action_search_cb, _("Search"), ['<Control><Alt>f'])
 
     def action_search_cb(self, *args):
-        self.entry.grab_focus()
+        self.widget.entry.grab_focus()
 
     @ampd.task
     async def client_connected_cb(self, client):
         while True:
-            self.entry.activate()
+            self.widget.entry.activate()
             await self.ampd.idle(ampd.DATABASE)
 
     # def action_reset_cb(self, action, parameter):

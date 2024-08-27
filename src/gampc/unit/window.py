@@ -110,7 +110,6 @@ class Window(action.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
     def change_component(self, component):
         if self.component is not None:
             self.component.disconnect_by_func(self.update_subtitle)
-            self.component.disconnect_by_func(self.update_title)
             self.main.remove(self.component.widget)
             for cb in self.component.window_signals.values():
                 self.disconnect_by_func(cb)
@@ -119,11 +118,7 @@ class Window(action.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
             for name, cb in self.component.window_signals.items():
                 self.connect(name, cb)
             self.main.prepend(self.component.widget)
-            if self.component.focus_widget is not None:
-                self.component.focus_widget.grab_focus()
-            else:
-                self.component.widget.grab_focus()
-            self.component.connect('notify::title-extra', self.update_title)
+            self.component.widget.grab_focus()
             self.component.connect('notify::full-title', self.update_subtitle)
         self.update_subtitle()
 

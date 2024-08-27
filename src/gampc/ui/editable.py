@@ -22,6 +22,8 @@ from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
 
+from ..util import misc
+
 
 class EditableLabel(Gtk.EditableLabel):
     label = GObject.Property(type=str, default='')

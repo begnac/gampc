@@ -20,10 +20,10 @@
 
 import ampd
 
+from ..ui import compound
 from ..ui import dialog
 from ..ui import view
 
-from . import itemlist
 from . import songlist
 
 
@@ -38,13 +38,37 @@ ICONS = {
 }
 
 
-class Playlist(itemlist.ItemListTreeListMixin, songlist.SongListTotalsMixin, songlist.SongList):
+class PlaylistWidget(compound.WidgetWithPanedTreeList):
+    def left_selection_changed_cb(self, selection, position, n_items):
+        super().left_selection_changed_cb(selection, position, n_items)
+        if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
+            self.main.set_edit_stack(self.left_selected_item.edit_stack)
+            self.main.set_editable(True)
+        else:
+            self.main.set_edit_stack(None)
+            self.main.set_editable(False)
+            self.main.set_keys(sum(map(lambda node: list(node.edit_stack.items),
+                                       filter(lambda node: node.kind == NODE_PLAYLIST,
+                                              map(lambda pos: selection[pos].get_item(),
+                                                  self.left_selection_pos))), []))
+        self.main.edit_stack_changed()
+
+    @staticmethod
+    def left_view_activate_cb(view, position):
+        row = view.get_model()[position]
+        node = row.get_item()
+        if node.kind is NODE_FOLDER:
+            compound.WidgetWithPanedTreeList.left_view_activate_cb(view, position)
+        else:  # XXXXXXXXXXXXXX
+            self.action_playlist_rename_cb(None, None)
+
+
+class Playlist(songlist.SongListTotalsMixin, songlist.SongList):
     duplicate_test_columns = ['file']
 
-    left_title = _("Playlists")
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, unit):
+        super().__init__(unit)
+        self.widget = PlaylistWidget(self.view, self.config.pane_separator, unit.root.model)
 
         # self.actions.add_action(resource.Action('rename', self.action_playlist_rename_cb))
         # self.actions.add_action(resource.Action('delete', self.action_playlist_delete_cb))
@@ -52,42 +76,22 @@ class Playlist(itemlist.ItemListTreeListMixin, songlist.SongListTotalsMixin, son
 
         self.view.connect('edit-stack-changed', self.edit_stack_changed_cb)
 
-    def widget_factory(self, *args, **kwargs):
+    def create_view(self, *args, **kwargs):
         return view.ViewWithCopyPasteEditStackSong(*args, **kwargs, separator_file=self.unit.unit_database.SEPARATOR_FILE, cache=self.unit.unit_database.cache)
 
-    def edit_stack_changed_cb(self, view):
+    @staticmethod
+    def edit_stack_changed_cb(view):
         if not view.get_editable():
             return
-        if view.edit_stack.deltas and not self.left_selected_item.modified:
-            self.left_selected_item.modified = True
-        elif not view.edit_stack.deltas and self.left_selected_item.modified:
-            self.left_selected_item.modified = False
+        widget = view.get_parent()
+        if view.edit_stack.deltas and not widget.left_selected_item.modified:
+            widget.left_selected_item.modified = True
+        elif not view.edit_stack.deltas and widget.left_selected_item.modified:
+            widget.left_selected_item.modified = False
         else:
             return
-        pos = self.left_selected_item.parent_model.find(self.left_selected_item).position
-        self.left_selected_item.parent_model.items_changed(pos, 1, 1)
-
-    def left_selection_changed_cb(self, selection, position, n_items):
-        super().left_selection_changed_cb(selection, position, n_items)
-        if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
-            self.view.set_edit_stack(self.left_selected_item.edit_stack)
-            self.view.set_editable(True)
-        else:
-            self.view.set_edit_stack(None)
-            self.view.set_editable(False)
-            self.view.set_keys(sum(map(lambda node: list(node.edit_stack.items),
-                                       filter(lambda node: node.kind == NODE_PLAYLIST,
-                                              map(lambda pos: selection[pos].get_item(),
-                                                  self.left_selection_pos))), []))
-        self.view.edit_stack_changed()
-
-    def left_view_activate_cb(self, view, position):
-        row = view.get_model()[position]
-        node = row.get_item()
-        if node.kind is NODE_FOLDER:
-            super().left_view_activate_cb(view, position)
-        else:
-            self.action_playlist_rename_cb(None, None)
+        pos = widget.left_selected_item.parent_model.find(widget.left_selected_item).position
+        widget.left_selected_item.parent_model.items_changed(pos, 1, 1)
 
     @ampd.task
     async def action_save_cb(self, action, parameter):

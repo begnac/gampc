@@ -18,8 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gtk
-
 import ampd
 
 from ..util import item
@@ -35,12 +33,13 @@ class ItemList(component.Component):
 
     factory_factory = view.LabelItemFactory
     item_factory = item.Item
-    widget_factory = view.ViewWithCopy
+
+    create_view = view.ViewWithCopy
 
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.widget = self.view = self.widget_factory(self.get_fields(), self.factory_factory, self.item_factory)
+        self.widget = self.view = self.create_view(self.get_fields(), self.factory_factory, self.item_factory)
         self.view.item_view.add_css_class('itemlist')
         self.focus_widget = self.view.item_view
 
@@ -53,14 +52,9 @@ class ItemList(component.Component):
         # self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
 
     def shutdown(self):
-        self.view.cleanup()
+        self.widget.cleanup()
         super().shutdown()
         del self.view
-        del self.widget
-
-    # def bind_cb(self, factory, listitem):
-    #     listitem.row = listitem.get_child().get_parent().get_parent()
-    #     listitem.row.pos = listitem.get_position()
 
     @ampd.task
     async def view_activate_cb(self, view, position):
@@ -101,33 +95,3 @@ class ItemList(component.Component):
     #     self.view.filtering = False
     #     if self.sortable:
     #         self.view.item_view.sort_by_column(None, Gtk.SortType.ASCENDING)
-
-
-class ItemListEditStackMixin:
-    pass
-    # @ampd.task
-    # async def action_reset_cb(self, action, parameter):
-    #     if not self.edit_stack or not self.edit_stack.deltas:
-    #         return
-    #     if not await dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Reset and lose all modifications?")).run():
-    #         return
-    #     self.edit_stack.undo()
-    #     self.edit_stack.reset()
-    #     self.edit_stack_changed()
-
-
-class ItemListTreeListMixin(component.ComponentPaneTreeMixin):
-    def __init__(self, unit, **kwargs):
-        self.left_store = Gtk.TreeListModel.new(unit.root.model, False, False, lambda node: node.expose())
-        self.left_selection = Gtk.MultiSelection(model=self.left_store)
-
-        super().__init__(unit, **kwargs)
-
-        self.signal_handler_connect(self.left_view, 'activate', self.left_view_activate_cb)
-        self.left_selection.select_item(0, True)
-
-    @staticmethod
-    def left_view_activate_cb(view, position):
-        row = view.get_model()[position]
-        if row.is_expandable():
-            row.set_expanded(not row.get_expanded())

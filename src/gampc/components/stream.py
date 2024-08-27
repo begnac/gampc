@@ -44,7 +44,7 @@ class StreamItemFactory(view.EditableItemFactory):
         view.EditableItemFactory.value_binder(widget, item, name)
 
 
-class Stream(itemlist.ItemListEditStackMixin, itemlist.ItemList):
+class Stream(itemlist.ItemList):
     use_resources = ['itemlist']
     # DND_TARGET = 'GAMPC_STREAM'
 
