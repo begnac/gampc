@@ -49,38 +49,30 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.UnitCssMixin, util.unit.Unit
         super().__init__(*args)
 
         items = [
-            util.resource.MenuPath('edit/songlist'),
-            util.resource.MenuPath('edit/songlist/base'),
-            # util.resource.MenuAction('edit/songlist/base', 'mod.selectall', _("Select all"), ['<Control>a'], accels_fragile=True),
-            # util.resource.MenuAction('edit/songlist/base', 'itemlist.cut', _("Cut"), ['<Control>x'], accels_fragile=True),
-            # util.resource.MenuAction('edit/songlist/base', 'itemlist.copy', _("Copy"), ['<Control>c'], accels_fragile=True),
-            # util.resource.MenuAction('edit/songlist/base', 'itemlist.paste', _("Paste"), ['<Control>v'], accels_fragile=True),
-            # util.resource.MenuAction('edit/songlist/base', 'itemlist.paste-before', _("Paste before"), ['<Control>b']),
-            # util.resource.MenuAction('edit/songlist/base', 'itemlist.delete', _("Delete"), ['Delete'], accels_fragile=True),
             # util.resource.MenuAction('edit/songlist/base', 'itemlist.undo', _("Undo"), ['<Control>z'], accels_fragile=True),
             # util.resource.MenuAction('edit/songlist/base', 'itemlist.redo', _("Redo"), ['<Shift><Control>z'], accels_fragile=True),
             # util.resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
         ]
 
-        self.add_resources(
-            'app.menu',
-            util.resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
-            util.resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
-            util.resource.MenuAction('edit/global', 'itemlist.filter', _("Filter"), ['<Control><Shift>f']),
-            *items,
-        )
+        # self.add_resources(
+        #     'app.menu',
+        #     util.resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
+        #     util.resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
+        #     util.resource.MenuAction('edit/global', 'itemlist.filter', _("Filter"), ['<Control><Shift>f']),
+        #     *items,
+        # )
 
-        self.add_resources(
-            'itemlist.context.menu',
-            util.resource.MenuPath('action'),
-            util.resource.MenuPath('edit'),
-            util.resource.MenuPath('other'),
-            *items,
-        )
+        # self.add_resources(
+        #     'itemlist.context.menu',
+        #     util.resource.MenuPath('action'),
+        #     util.resource.MenuPath('edit'),
+        #     util.resource.MenuPath('other'),
+        #     *items,
+        # )
 
-        self.add_resources(
-            'itemlist.left-context.menu',
-            util.resource.MenuPath('action'),
-            util.resource.MenuPath('edit'),
-            util.resource.MenuPath('other'),
-        )
+        # self.add_resources(
+        #     'itemlist.left-context.menu',
+        #     util.resource.MenuPath('action'),
+        #     util.resource.MenuPath('edit'),
+        #     util.resource.MenuPath('other'),
+        # )

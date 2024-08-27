@@ -18,17 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from ..util import db
-from ..util import resource
-from ..util import unit
-from ..util import field
-from ..util.logger import logger
+from .. import util
 
 from ..components import itemlist
 from ..components import stream
 
 
-class StreamDatabase(db.Database):
+class StreamDatabase(util.db.Database):
     def __init__(self, name, fields):
         self.fields = fields
         super().__init__(name)
@@ -48,7 +44,7 @@ class StreamDatabase(db.Database):
                                                                                                        ':' + ',:'.join(self.fields.basic_names)), stream_)
 
 
-class __unit__(itemlist.UnitItemListMixin, unit.UnitCssMixin, unit.Unit):
+class __unit__(itemlist.UnitItemListMixin, util.unit.UnitCssMixin, util.unit.Unit):
     title = _("Internet Streams")
     key = '4'
 
@@ -72,6 +68,19 @@ class __unit__(itemlist.UnitItemListMixin, unit.UnitCssMixin, unit.Unit):
 
         self.require('database')
 
+        self.fields = util.field.FieldFamily(self.config.fields)
+        self.fields.register_field(util.field.Field('Name', _("Name")))
+        self.fields.register_field(util.field.Field('file', _("URL"), editable=True))
+        self.fields.register_field(util.field.Field('Comment', _("Comment")))
+
+        self.db = StreamDatabase(self.name, self.fields)
+        for song in self.db.get_streams():
+            song['Title'] = song['Name']
+            self.unit_database.cache[song['file']] = song
+
+        self.config.edit_dialog_size._get(default=[500, 500])
+
+        return
         self.add_resources(
             'app.menu',
             resource.MenuPath('edit/component/stream'),
@@ -86,18 +95,6 @@ class __unit__(itemlist.UnitItemListMixin, unit.UnitCssMixin, unit.Unit):
             resource.MenuAction('edit/component/stream', 'stream.add', _("Add stream"), ),
             resource.MenuAction('edit/component/stream', 'stream.modify', _("Modify stream"), ['F2']),
         )
-
-        self.fields = field.FieldFamily(self.config.fields)
-        self.fields.register_field(field.Field('Name', _("Name")))
-        self.fields.register_field(field.Field('file', _("URL"), editable=True))
-        self.fields.register_field(field.Field('Comment', _("Comment")))
-
-        self.db = StreamDatabase(self.name, self.fields)
-        for song in self.db.get_streams():
-            song['Title'] = song['Name']
-            self.unit_database.cache[song['file']] = song
-
-        self.config.edit_dialog_size._get(default=[500, 500])
 
         # self.unit_server.add_current_song_hook(self.current_song_hook)
 

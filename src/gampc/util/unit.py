@@ -25,7 +25,6 @@ from gi.repository import Gtk
 import importlib
 import collections
 
-from . import resource
 from .logger import logger
 
 
@@ -33,7 +32,7 @@ class UnitLoadError(Exception):
     pass
 
 
-class Unit(resource.ResourceProvider):
+class Unit(GObject.Object):
     def __init__(self, manager):
         super().__init__()
         self.manager = manager
@@ -43,7 +42,6 @@ class Unit(resource.ResourceProvider):
 
     def shutdown(self):
         logger.debug(f"Shutting down unit {self}")
-        self.remove_all_resources()
         while self.loaded_required:
             self.manager._free_unit(self.loaded_required.pop())
         del self.manager

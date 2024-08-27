@@ -105,7 +105,7 @@ class __unit__(songlist.UnitSongListMixin, util.unit.Unit):
 
     COMPONENT_CLASS = Search
 
-    def __init__(self, *args):
+    def xxxx__init__(self, *args):
         super().__init__(*args)
         self.add_resources(
             'app.menu',

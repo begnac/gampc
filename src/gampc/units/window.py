@@ -106,14 +106,12 @@ class Window(util.action.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
             self.component.disconnect_by_func(self.update_subtitle)
             self.component.disconnect_by_func(self.update_title)
             self.main.remove(self.component.widget)
-            self.component.remove_action_groups(self)
             for cb in self.component.window_signals.values():
                 self.disconnect_by_func(cb)
         self.component = component
         if self.component is not None:
             for name, cb in self.component.window_signals.items():
                 self.connect(name, cb)
-            self.component.insert_action_groups(self)
             self.main.prepend(self.component.widget)
             if self.component.focus_widget is not None:
                 self.component.focus_widget.grab_focus()

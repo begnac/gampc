@@ -143,9 +143,9 @@ class Queue(songlist.SongListTotalsMixin, itemlist.ItemListEditableMixin, songli
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.signal_handler_connect(self.view.item_store_selection, 'selection-changed', self.selection_changed_cb)
 
-        for name in self.itemlist_actions.list_actions():
-            if name.startswith('queue-ext-'):
-                self.itemlist_actions.remove(name)
+        # for name in self.itemlist_actions.list_actions():
+        #     if name.startswith('queue-ext-'):
+        #         self.itemlist_actions.remove(name)
         self.cursor_by_profile = {}
         self.set_cursor = False
 

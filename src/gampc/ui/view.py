@@ -305,7 +305,18 @@ class ItemViewInterface:
         self.remove_items = remove_items
 
 
-class ViewWithCopy(contextmenu.ContextMenuMixin, View):
+class ViewWithContextMenu(contextmenu.ContextMenuMixin, View):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_to_context_menu(self.generate_editing_actions(), 'view', _("View actions"))
+
+    def generate_view_actions(self):
+        yield util.action.PropertyActionInfo('filtering', self, _("Filter view"), ['<Control><Shift>f'])
+        # util.resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
+        # util.resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
+
+
+class ViewWithCopy(ViewWithContextMenu):
     def __init__(self, *args, interface, **kwargs):
         super().__init__(*args, **kwargs)
         self.interface = interface

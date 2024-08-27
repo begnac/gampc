@@ -29,8 +29,6 @@ from .. import ui
 
 
 class Component(GObject.Object):
-    use_resources = []
-
     status = GObject.Property()
     full_title = GObject.Property(type=str)
 
@@ -43,11 +41,7 @@ class Component(GObject.Object):
         self.config = self.unit.config
         self.ampd = self.unit.ampd.sub_executor()
         self.signal_handlers = []
-        self.actions_dict = {}
-        self.action_aggregator_dict = {}
         self.window_signals = {}
-
-        self.actions = self.add_actions_provider(self.name)
 
         self.status_binding = self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(unit.title, self.status) if self.status else unit.title)
 
@@ -64,23 +58,18 @@ class Component(GObject.Object):
         self.signal_handlers_disconnect()
         # self.widget.destroy()
         self.status_binding.unbind()
-        for action_aggregator in self.action_aggregator_dict.values():
-            self.manager.remove_aggregator(action_aggregator)
         self.ampd.close()
         del self.window_signals
-        del self.actions
-        del self.actions_dict
-        del self.action_aggregator_dict
 
     def get_window(self):
         root = self.widget.get_root()
         return root if isinstance(root, Gtk.Window) else None
 
-    def add_actions_provider(self, name):
-        actions = self.actions_dict[name] = Gio.SimpleActionGroup()
-        action_aggregator = self.action_aggregator_dict[name] = util.resource.ActionAggregator([name + '.action'], actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
-        self.unit.manager.add_aggregator(action_aggregator)
-        return actions
+    # def add_actions_provider(self, name):
+    #     actions = self.actions_dict[name] = Gio.SimpleActionGroup()
+    #     action_aggregator = self.action_aggregator_dict[name] = util.resource.ActionAggregator([name + '.action'], actions, lambda f: types.MethodType(f, self), self.unit.unit_persistent)
+    #     self.unit.manager.add_aggregator(action_aggregator)
+    #     return actions
 
     def signal_handler_connect(self, target, *args):
         handler = target.connect(*args)
@@ -91,28 +80,13 @@ class Component(GObject.Object):
             target.disconnect(handler)
         self.signal_handlers = []
 
-    def insert_action_groups(self, widget):
-        for prefix, actions in self.actions_dict.items():
-            widget.insert_action_group(prefix, actions)
+    # def insert_action_groups(self, widget):
+    #     for prefix, actions in self.actions_dict.items():
+    #         widget.insert_action_group(prefix, actions)
 
-    def remove_action_groups(self, widget):
-        for prefix in self.actions_dict:
-            widget.insert_action_group(prefix, None)
-
-    def setup_context_menu(self, name, widget):
-        controller = Gtk.GestureClick(button=3)
-        self.signal_handler_connect(controller, 'pressed', self.context_menu_pressed_cb, name)
-        widget.add_controller(controller)
-
-    def context_menu_pressed_cb(self, controller, n_press, x, y, name):
-        if name not in self.unit.menu_aggregators:
-            return
-        menu_model = self.unit.menu_aggregators[name].menu
-        if menu_model.get_n_items() == 0:
-            return
-        menu = Gtk.PopoverMenu(menu_model=menu_model, has_arrow=False, pointing_to=util.misc.Rectangle(x, y), halign=Gtk.Align.START)
-        menu.set_parent(controller.get_widget())
-        menu.popup()
+    # def remove_action_groups(self, widget):
+    #     for prefix in self.actions_dict:
+    #         widget.insert_action_group(prefix, None)
 
     @staticmethod
     def client_connected_cb(client):
@@ -179,7 +153,7 @@ class ComponentPaneMixin:
         self.paned.set_end_child(self.widget)
         self.widget = self.paned
 
-        self.setup_context_menu(f'{self.name}.left-context', self.left_view)
+        # self.setup_context_menu(f'{self.name}.left-context', self.left_view)
 
     def shutdown(self):
         super().shutdown()
@@ -229,27 +203,25 @@ class UnitComponentMixin(util.unit.UnitConfigMixin, util.unit.UnitServerMixin):
         self.require('component')
         self.require('persistent')
 
-        self.menu_aggregators = {}
-
         self.unit_component.register_component(self)
 
-        for menu in menus:
-            self.setup_menu(self.name, menu, self.COMPONENT_CLASS.use_resources)
+        # for menu in menus:
+        #     self.setup_menu(self.name, menu, self.COMPONENT_CLASS.use_resources)
 
     def shutdown(self):
-        for aggregator in self.menu_aggregators.values():
-            self.manager.remove_aggregator(aggregator)
-        del self.menu_aggregators
+        # for aggregator in self.menu_aggregators.values():
+        #     self.manager.remove_aggregator(aggregator)
+        # del self.menu_aggregators
         self.unit_component.unregister_component(self.name)
         super().shutdown()
 
     def new_component(self):
         return self.COMPONENT_CLASS(self)
 
-    def setup_menu(self, name, kind, providers=[]):
-        aggregator = util.resource.MenuAggregator([f'{provider}.{kind}.menu' for provider in [name] + providers])
-        self.manager.add_aggregator(aggregator)
-        self.menu_aggregators[f'{name}.{kind}'] = aggregator
+    # def setup_menu(self, name, kind, providers=[]):
+    #     aggregator = util.resource.MenuAggregator([f'{provider}.{kind}.menu' for provider in [name] + providers])
+    #     self.manager.add_aggregator(aggregator)
+    #     self.menu_aggregators[f'{name}.{kind}'] = aggregator
 
 
 class UnitPanedComponentMixin(UnitComponentMixin, util.unit.UnitConfigMixin):

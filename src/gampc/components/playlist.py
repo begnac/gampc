@@ -20,8 +20,7 @@
 
 import ampd
 
-from ..util import resource
-from ..ui import dialog
+from .. import ui
 
 from . import itemlist
 from . import songlist
@@ -46,9 +45,9 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.actions.add_action(resource.Action('rename', self.action_playlist_rename_cb))
-        self.actions.add_action(resource.Action('delete', self.action_playlist_delete_cb))
-        self.actions.add_action(resource.Action('update-from-queue', self.action_playlist_update_from_queue_cb))
+        # self.actions.add_action(resource.Action('rename', self.action_playlist_rename_cb))
+        # self.actions.add_action(resource.Action('delete', self.action_playlist_delete_cb))
+        # self.actions.add_action(resource.Action('update-from-queue', self.action_playlist_update_from_queue_cb))
 
     def shutdown(self):
         self.set_edit_stack(None)
@@ -115,7 +114,7 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
         if not self.left_selected_item:
             return
         playlist_path = self.left_selected_item.joined_path
-        if not await dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Delete playlist {name}?").format(name=playlist_path)).run():
+        if not await ui.dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Delete playlist {name}?").format(name=playlist_path)).run():
             return
         await self.ampd.rm(playlist_path.replace('/', PSEUDO_SEPARATOR))
 

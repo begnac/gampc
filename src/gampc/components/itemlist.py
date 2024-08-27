@@ -50,21 +50,15 @@ class ItemList(component.Component):
         self.view.item_view.add_css_class('itemlist')
         self.focus_widget = self.view.item_view
 
-        self.itemlist_actions = self.add_actions_provider('itemlist')
-        self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
-        # self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
-
-        self.itemlist_actions.add_action(Gio.PropertyAction(name='filter', object=self.view, property_name='filtering'))
-
-        # self.setup_context_menu(f'{self.name}.context', self.view)
         self.signal_handler_connect(self.view.item_view, 'activate', self.view_activate_cb)
         if self.duplicate_test_columns:
             self.signal_handler_connect(self.view.item_store, 'items-changed', self.mark_duplicates)
 
-        # self.view.item_view.columns['file'].get_factory().connect('bind', self.bind_cb)
+        # self.itemlist_actions = self.add_actions_provider('itemlist')
+        # self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
+        # self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
 
     def shutdown(self):
-        del self.itemlist_actions
         self.view.cleanup()
         super().shutdown()
 
@@ -156,10 +150,10 @@ class ItemListEditableMixin:
 class ItemListEditStackMixin(ItemListEditableMixin):
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
-        self.itemlist_actions.add_action(util.resource.Action('save', self.action_save_cb))
+        # self.itemlist_actions.add_action(util.resource.Action('save', self.action_save_cb))
         # self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
-        self.itemlist_actions.add_action(util.resource.Action('undo', self.action_do_cb))
-        self.itemlist_actions.add_action(util.resource.Action('redo', self.action_do_cb))
+        # self.itemlist_actions.add_action(util.resource.Action('undo', self.action_do_cb))
+        # self.itemlist_actions.add_action(util.resource.Action('redo', self.action_do_cb))
 
         self.edit_stack = None
 
@@ -232,9 +226,10 @@ class ItemListEditStackMixin(ItemListEditableMixin):
         self.step_edit_stack(True)
 
     def edit_stack_changed(self):
-        self.itemlist_actions.lookup_action('save').set_enabled(True)
-        self.itemlist_actions.lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.pos > 0)
-        self.itemlist_actions.lookup_action('redo').set_enabled(self.edit_stack and self.edit_stack.pos < len(self.edit_stack.deltas))
+        return
+        # self.itemlist_actions.lookup_action('save').set_enabled(True)
+        # self.itemlist_actions.lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.pos > 0)
+        # self.itemlist_actions.lookup_action('redo').set_enabled(self.edit_stack and self.edit_stack.pos < len(self.edit_stack.deltas))
 
     def action_do_cb(self, action, parameter):
         if action.get_name() == 'redo':

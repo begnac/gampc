@@ -18,30 +18,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gtk
-
-import asyncio
-
 from .. import util
-from .. import ui
 
 from . import itemlist
 from . import component
 
 
 class SongList(itemlist.ItemList):
-    use_resources = ['itemlist', 'songlist']
+    # use_resources = ['itemlist', 'songlist']
     DND_TARGET = 'GAMPC_SONG'
 
     def __init__(self, unit, *args, **kwargs):
         self.cache = unit.unit_database.cache
         self.fields = unit.unit_songlist.fields
         super().__init__(unit, *args, **kwargs)
-        self.songlist_actions = self.add_actions_provider('songlist')
-
-    def shutdown(self):
-        del self.songlist_actions
-        super().shutdown()
+        # self.songlist_actions = self.add_actions_provider('songlist')
 
     def set_songs(self, songs):
         for song in songs:
