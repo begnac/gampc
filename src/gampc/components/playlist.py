@@ -44,7 +44,7 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
     left_title = _("Playlists")
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, editable=False, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.actions.add_action(resource.Action('rename', self.action_playlist_rename_cb))
         self.actions.add_action(resource.Action('delete', self.action_playlist_delete_cb))
@@ -62,7 +62,7 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
 
     def edit_stack_changed(self):
         super().edit_stack_changed()
-        if not self.get_editable():
+        if not self.view.get_editable():
             return
         if self.edit_stack.deltas and not self.left_selected_item.modified:
             self.left_selected_item.modified = True
@@ -77,10 +77,10 @@ class Playlist(itemlist.ItemListTreeListMixin, itemlist.ItemListDatabaseMixin, i
         super().left_selection_changed_cb(selection, position, n_items)
         if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
             self.set_edit_stack(self.left_selected_item.edit_stack)
-            self.set_editable(True)
+            self.view.set_editable(True)
         else:
             self.set_edit_stack(None)
-            self.set_editable(False)
+            self.view.set_editable(False)
             self.set_values(sum(map(lambda node: list(node.edit_stack.items),
                                     filter(lambda node: node.kind == NODE_PLAYLIST,
                                            map(lambda pos: selection[pos].get_item(),

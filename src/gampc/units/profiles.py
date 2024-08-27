@@ -58,17 +58,17 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
     LOCAL_HOST_NAME = _("Local host")
     LOCAL_HOST_ADDRESS = 'localhost:6600'
 
-    user_profiles_struct = ssde.List(
-        label=_("Profiles"),
-        substruct=ssde.Dict(
-            label=_("Profile"),
-            substructs=[
-                ssde.Text(name='name', label=_("Name"), default=_("<Name>")),
-                ssde.Text(name='address', label=_("[password@]host:port"), default=_("<Host>") + ':6600'),
-            ]))
-
     def __init__(self, *args):
         super().__init__(*args)
+
+        user_profiles_struct = ssde.List(
+            label=_("Profiles"),
+            substruct=ssde.Dict(
+                label=_("Profile"),
+                substructs=[
+                    ssde.Text(name='name', label=_("Name"), default=_("<Name>")),
+                    ssde.Text(name='address', label=_("[password@]host:port"), default=_("<Host>") + ':6600'),
+                ]))
 
         default_profiles = [
             {
@@ -119,12 +119,12 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.Unit):
         if state_change in (zeroconf.ServiceStateChange.Added, zeroconf.ServiceStateChange.Updated) and short_name not in self.zc_profiles:
             info = await self.azc.async_get_service_info(service_type, name)
             self.zc_profiles[short_name] = Profile(short_name, f'{info.server[:-1]}:{info.port}').get_action()
-        family = util.action.ActionInfoFamily('app', None, self.zc_profiles.values())
+        family = util.action.ActionInfoFamily(self.zc_profiles.values(), 'app')
         self.zeroconf_menu.remove_all()
         self.zeroconf_menu.append_section(None, family.get_menu())
 
     def user_profiles_setup(self):
-        family = util.action.ActionInfoFamily('app', None, (Profile(**profile).get_action() for profile in self.config.profiles._get()))
+        family = util.action.ActionInfoFamily((Profile(**profile).get_action() for profile in self.config.profiles._get()), 'app')
         self.user_menu.remove_all()
         self.user_menu.append_section(None, family.get_menu())
 

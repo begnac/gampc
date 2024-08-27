@@ -51,7 +51,7 @@ class __unit__(util.unit.UnitServerMixin, util.unit.Unit):
             while True:
                 self.clean_outputs()
                 outputs = await self.ampd.outputs()
-                family = util.action.ActionInfoFamily('app', None, self.generate_output_actions(outputs))
+                family = util.action.ActionInfoFamily(self.generate_output_actions(outputs), 'app')
                 self.menu.append_section(None, family.get_menu())
                 family.add_to_action_map(self.actions, protect=self.unit_persistent.protect)
                 await self.ampd.idle(ampd.OUTPUT)

@@ -231,11 +231,7 @@ class UnitComponentMixin(util.unit.UnitConfigMixin, util.unit.UnitServerMixin):
 
         self.menu_aggregators = {}
 
-        self.unit_component.register_component_factory(self.name, self.new_component)
-        self.add_resource('app.menu', util.resource.MenuAction('components/components',
-                                                               f'app.component-start("{self.name}")',
-                                                               self.title,
-                                                               ['<Alt>' + self.key, '<Control><Alt>' + self.key]))
+        self.unit_component.register_component(self)
 
         for menu in menus:
             self.setup_menu(self.name, menu, self.COMPONENT_CLASS.use_resources)
@@ -244,7 +240,7 @@ class UnitComponentMixin(util.unit.UnitConfigMixin, util.unit.UnitServerMixin):
         for aggregator in self.menu_aggregators.values():
             self.manager.remove_aggregator(aggregator)
         del self.menu_aggregators
-        self.unit_component.unregister_component_factory(self.name)
+        self.unit_component.unregister_component(self.name)
         super().shutdown()
 
     def new_component(self):

@@ -82,6 +82,9 @@ class ActionInfo:
     def derive(self, label, accels=None, arg=None):
         return ActionInfo(self.name, None, label, accels, arg, parameter_format=self.parameter_format, dangerous=self.dangerous)
 
+    def __str__(self):
+        return f"Action \"{self.name}\""
+
 
 class PropertyActionInfo(ActionInfo):
     def get_action(self, protect=None):
@@ -93,10 +96,10 @@ class PropertyActionInfo(ActionInfo):
 
 
 class ActionInfoFamily:
-    def __init__(self, prefix, label, action_infos):
+    def __init__(self, action_infos, prefix=None, label=None):
+        self.action_infos = list(action_infos)
         self.prefix = prefix
         self.label = label
-        self.action_infos = list(action_infos)
 
     def get_menu(self):
         menu = Gio.Menu()
@@ -147,3 +150,7 @@ class WidgetActionFamilyMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.action_info_families = []
+
+    def cleanup(self):
+        del self.action_info_families
+        super().cleanup()

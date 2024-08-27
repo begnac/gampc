@@ -31,10 +31,12 @@ class __unit__(util.unit.Unit):
         self.require('persistent')
         self.require('playback')
         self.require('server')
+        self.require('output')
         self.require('profiles')
+        self.require('component')
         self.require('help')
 
-        self.unit_window.action_info_families = []
+        self.action_info_families = self.unit_window.action_info_families = []
         self.menubar = Gio.Menu()
         app = Gio.Application.get_default()
         app.set_menubar(self.menubar)
@@ -53,25 +55,32 @@ class __unit__(util.unit.Unit):
         server_label = _("_Server")
         self.menubar.append_submenu(server_label, server_menu)
         self.load_family(self.unit_server.generate_database_actions(), server_label, app, server_menu, True)
-        self.load_unit_simple('output', app, server_menu)
+        app.follow_action_group(self.unit_output.actions)
+        server_menu.append_section(None, self.unit_output.menu)
         self.load_family(self.unit_server.generate_connection_actions(), server_label, app, server_menu, True)
         server_menu.append_submenu(_("Profiles"), self.unit_profiles.menu)
 
+        component_label = _("_Component")
+        self.menubar.append_submenu(component_label, self.unit_component.menu)
+        self.action_info_families.append(self.unit_component.start_family)
+        self.action_info_families.append(self.unit_component.stop_family)
+        self.unit_component.start_family.add_to_action_map(app)
+        self.unit_component.stop_family.add_to_action_map(app)
+
         self.load_family(self.unit_help.generate_actions(), _("_Help"), app, self.menubar)
 
+    def shutdown(self):
+        self.action_info_families.clear()
+        super().shutdown()
+
     def load_family(self, generator, label, action_map, menu, section=False):
-        family = util.action.ActionInfoFamily('app', label, generator)
-        self.unit_window.action_info_families.append(family)
+        family = util.action.ActionInfoFamily(generator, 'app', label)
+        self.action_info_families.append(family)
         if section:
             menu.append_section(None, family.get_menu())
         else:
             menu.append_submenu(label, family.get_menu())
         family.add_to_action_map(action_map, protect=self.unit_persistent.protect)
-
-    def load_unit_simple(self, unit_name, app, menu):
-        unit = self.require(unit_name)
-        app.follow_action_group(unit.actions)
-        menu.append_section(None, unit.menu)
 
     @staticmethod
     def quit_cb(action, parameter):

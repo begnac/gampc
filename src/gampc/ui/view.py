@@ -310,7 +310,7 @@ class ViewWithCopy(util.action.WidgetActionFamilyMixin, View):
         super().__init__(*args, **kwargs)
         self.interface = interface
 
-        self.copy_paste_family = util.action.ActionInfoFamily('view', _("Cut and Paste"), self.generate_copy_paste_actions())
+        self.copy_paste_family = util.action.ActionInfoFamily(self.generate_copy_paste_actions(), 'view', _("Cut and Paste"))
         self.copy_paste_actions = self.copy_paste_family.insert_action_group(self)
         self.add_controller(self.copy_paste_family.get_shortcut_controller())
         # self.copy_paste_menu = util.action.Menu()
@@ -319,19 +319,23 @@ class ViewWithCopy(util.action.WidgetActionFamilyMixin, View):
         self.drag_source = dnd.ListDragSource(interface, actions=Gdk.DragAction.COPY)
         self.item_view.rows.add_controller(self.drag_source)
 
+    def cleanup(self):
+        self.insert_action_group('view', None)
+        del self.copy_paste_family
+        del self.copy_paste_actions
+        del self.interface
+        self.item_view.rows.remove_controller(self.drag_source)
+        del self.drag_source
+        super().cleanup()
+
     def generate_copy_paste_actions(self):
         yield util.action.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
 
     def action_copy_cb(self, action, parameter):
-        print(777)
         self.copy_items(self.get_selection_items())
 
     def copy_items(self, items):
         self.get_clipboard().set_content(self.interface.content_from_items(items))
-
-    # def cleanup(self):
-    #     del self.interface
-    #     super().cleanup()
 
 
 class ViewWithCopyPaste(ViewWithCopy):
@@ -345,11 +349,11 @@ class ViewWithCopyPaste(ViewWithCopy):
 
         self.set_editable(True)
 
-    # def shutdown(self):
-    #     self.view.item_view.rows.remove_controller(self.drop_target)
-    #     # Cleanup ????
-    #     del self.drop_target
-    #     super().shutdown()
+    def cleanup(self):
+        self.disconnect_by_func(self.check_editable)
+        self.item_view.rows.remove_controller(self.drop_target)
+        del self.drop_target
+        super().cleanup()
 
     def get_editable(self):
         return self._editable

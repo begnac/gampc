@@ -108,10 +108,9 @@ class App(Gtk.Application):
         del self.unit_manager
 
         del self.unit_window.app
-        # del self.unit_window
-        # del self.unit_component
-        # del self.unit_persistent
-        # del self.unit_server
+
+        # for name in self.list_actions():
+        #     self.remove_action(name)
 
         for name in self.list_actions():
             self.remove_action(name)
@@ -148,7 +147,7 @@ class App(Gtk.Application):
     def do_command_line(self, command_line):
         options = command_line.get_options_dict().end().unpack()
         if 'component' in options:
-            self.unit_window.component_start(options['component'])
+            self.unit_window.new_window(options['component'])
         elif GLib.OPTION_REMAINING in options:
             for option in options[GLib.OPTION_REMAINING]:
                 try:

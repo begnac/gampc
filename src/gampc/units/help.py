@@ -55,7 +55,7 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
             else:
                 groups, section = groups_other, section_other
             for action_info in family.action_infos:
-                if action_info.accels is not None:
+                if action_info.accels is not None and action_info.label is not None:
                     section = section
                     name = family.label.replace('_', '')
                     group = groups.get(name)

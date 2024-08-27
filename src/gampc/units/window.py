@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gtk
 
@@ -92,8 +93,8 @@ class Window(util.action.WidgetActionFamilyMixin, Gtk.ApplicationWindow):
         self.change_component(None)
         util.logger.logger.removeHandler(self.logging_handler)
         self.logging_handler.shutdown()
-        self.remove_action('toggle-fullscreen')
-        self.remove_action('volume-popup')
+        # self.remove_action('toggle-fullscreen')
+        # self.remove_action('volume-popup')
         self.unit.unit_server.disconnect_by_func(self.update_subtitle)
         self.unit.unit_server.ampd_server_properties.disconnect_by_func(self.set_time_scale_sensitive)
         self.unit.unit_server.ampd_server_properties.disconnect_by_func(self.update_title)
@@ -166,22 +167,17 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.UnitServerMixin, util.unit.U
         self.require('component')
         self.config.message_timeout._get(default=5)
 
-    def new_window(self):
-        return Window(self, application=self.app)
-
     def generate_actions(self):
         yield util.action.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])
         yield util.action.ActionInfo('close-window', self.close_window_cb, _("Close window"), ['<Control>w'])
         yield util.action.ActionInfo('toggle-fullscreen', self.action_toggle_fullscreen_cb, _("Fullscreen window"), ['<Alt>f'])
         # yield util.action.ActionInfo('notify', self.task_hold_app(self.action_notify_cb))
-        yield util.action.ActionInfo('component-start', self.component_start_cb, parameter_format='(sb)')
-        yield util.action.ActionInfo('component-stop', self.component_stop_cb)
+
+    def new_window(self, name='current'):
+        Window(self, application=self.app).activate_action('app.component-start', GLib.Variant('(sb)', (name, False)))
 
     def new_window_cb(self, action, parameter):
-        component = self.unit_component.get_component('current', False)
-        window = self.new_window()
-        window.change_component(component)
-        window.present()
+        self.new_window()
 
     def close_window_cb(self, action, parameter):
         self.app.get_active_window().destroy()
@@ -192,21 +188,3 @@ class __unit__(util.unit.UnitConfigMixin, util.unit.UnitServerMixin, util.unit.U
             window.unfullscreen()
         else:
             window.fullscreen()
-
-    def component_start_cb(self, action, parameter):
-        self.component_start(parameter.unpack())
-
-    def component_start(self, name, new_instance=True):
-        component = self.unit_component.get_component(name, new_instance)
-        window = component.get_window()
-        if window is None:
-            window = self.app.get_active_window() or self.new_window()
-            window.change_component(component)
-        window.present()
-
-    def component_stop_cb(self, action, parameter):
-        window = self.app.get_active_window()
-        component = window.component
-        if component is not None:
-            window.change_component(window.unit.unit_component.get_free_component())
-            self.unit_component.remove_component(component)
