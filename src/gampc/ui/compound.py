@@ -57,28 +57,27 @@ class TreeItemFactory(Gtk.SignalListItemFactory):
 
     @staticmethod
     def setup_cb(self, listitem):
-        listitem.icon = Gtk.Image()
-        listitem.label = Gtk.Label()
         box = Gtk.Box(spacing=4)
-        box.append(listitem.icon)
-        box.append(listitem.label)
-        listitem.expander = Gtk.TreeExpander(child=box)
-        listitem.expander.set_focusable(False)
-        listitem.set_child(listitem.expander)
+        child = Gtk.TreeExpander(child=box, focusable=False)
+        child.icon = Gtk.Image()
+        child.label = Gtk.Label()
+        box.append(child.icon)
+        box.append(child.label)
+        listitem.set_child(child)
 
     @staticmethod
     def bind_cb(self, listitem):
+        child = listitem.get_child()
         row = listitem.get_item()
         node = row.get_item()
-        listitem.icon.set_from_icon_name(node.icon)
+        child.icon.set_from_icon_name(node.icon)
         if node.modified:
-            listitem.label.set_label('* ' + node.name)
-            listitem.label.set_css_classes(['modified'])
+            child.label.set_label('* ' + node.name)
+            child.label.set_css_classes(['modified'])
         else:
-            listitem.label.set_label(node.name)
-            listitem.label.set_css_classes([])
-        listitem.expander.set_list_row(row)
-        # row.name = node.name
+            child.label.set_label(node.name)
+            child.label.set_css_classes([])
+        child.set_list_row(row)
 
     # @staticmethod
     # def unbind_cb(self, listitem):
@@ -110,8 +109,6 @@ class WidgetWithPaned(Gtk.Paned):
         self.left_selected_item = None
         self.left_selection.connect('selection-changed', self.left_selection_changed_cb)
         self.connect('notify::position', self.paned_notify_position_cb, config)
-
-        # self.setup_context_menu(f'{self.name}.left-context', self.left_view)
 
     def cleanup(self):
         self.main.cleanup()
