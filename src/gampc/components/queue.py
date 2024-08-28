@@ -108,7 +108,7 @@ class QueueView(view.ViewWithCopyPasteSong):
     def action_go_to_current_cb(self, action, parameter):
         if self.current_Id is None:
             return
-        for position, item_ in enumerate(self.item_store_selection):
+        for position, item_ in enumerate(self.item_selection_model):
             if item_.Id == self.current_Id:
                 self.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
                 view_height = self.item_view.rows.get_allocation().height
@@ -132,8 +132,8 @@ class QueueView(view.ViewWithCopyPasteSong):
         await self.ampd.prioid(priority, *(item_.Id for item_ in items))
 
     @ampd.task
-    async def remove_items(self, items):
-        await self.ampd.command_list(self.ampd.deleteid(item.Id) for item in items)
+    async def remove_positions(self, positions):
+        await self.ampd.command_list(self.ampd.deleteid(self.item_selection_model[pos].Id) for pos in positions)
 
     @ampd.task
     async def add_items(self, keys, position):
@@ -152,7 +152,7 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongList):
         self.view.item_view.add_css_class('queue')
 
         self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
-        self.signal_handler_connect(self.view.item_store_selection, 'selection-changed', self.selection_changed_cb)
+        self.signal_handler_connect(self.view.item_selection_model, 'selection-changed', self.selection_changed_cb)
 
         # for name in self.itemlist_actions.list_actions():
         #     if name.startswith('queue-ext-'):
@@ -196,4 +196,4 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongList):
     @ampd.task
     async def view_activate_cb(self, view, position):
         if not self.unit.unit_persistent.protect_active:
-            await self.ampd.playid(self.view.item_store_selection[position].Id)
+            await self.ampd.playid(self.view.item_selection_model[position].Id)

@@ -237,19 +237,19 @@ class View(Gtk.Box):
         self.append(self.scrolled_filter_view)
         self.filter_item.connect('notify::value', self.notify_filter_cb)
 
-        self.item_store_selection = selection_model()
-        self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_store_selection, vexpand=True, enable_rubberband=False)
+        self.item_selection_model = selection_model()
+        self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_selection_model, vexpand=True, enable_rubberband=False)
         self.item_view.add_css_class('items')
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view)
         self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_item_view)
 
         self.item_store = Gio.ListStore(item_type=item.Item)
-        self.item_store_filter = Gtk.FilterListModel(model=self.item_store)
+        self.item_filter_model = Gtk.FilterListModel(model=self.item_store)
         if sortable:
-            self.item_store_selection.set_model(Gtk.SortListModel(model=self.item_store_filter, sorter=self.item_view.get_sorter()))
+            self.item_selection_model.set_model(Gtk.SortListModel(model=self.item_filter_model, sorter=self.item_view.get_sorter()))
         else:
-            self.item_store_selection.set_model(self.item_store_filter)
+            self.item_selection_model.set_model(self.item_filter_model)
 
         clean_shortcuts_below(self)
 
@@ -281,11 +281,11 @@ class View(Gtk.Box):
     def notify_filtering_cb(self, param):
         if self.filtering:
             self.filter_store.append(self.filter_item)
-            self.item_store_filter.set_filter(self.filter_filter)
+            self.item_filter_model.set_filter(self.filter_filter)
             self.filter_view.grab_focus()
         else:
             self.filter_store.remove(0)
-            self.item_store_filter.set_filter(None)
+            self.item_filter_model.set_filter(None)
             self.item_view.grab_focus()
 
     def filter_func(self, item):
@@ -295,19 +295,19 @@ class View(Gtk.Box):
         return True
 
     def _get_selection(self):
-        return misc.get_selection(self.item_store_selection)
+        return misc.get_selection(self.item_selection_model)
 
     def get_selection(self):
         return list(self._get_selection())
 
-    def get_selection_items(self):
-        return list(map(lambda i: self.item_store_selection[i], self._get_selection()))
+    def get_items(self, positions):
+        return list(map(lambda i: self.item_selection_model[i], positions))
 
     # def get_filenames(self, selection):
     #     if selection:
-    #         return list(map(lambda i: self.item_store_selection[i].file, self._get_selection()))
+    #         return list(map(lambda i: self.item_selection_model[i].file, self._get_selection()))
     #     else:
-    #         return list(map(lambda item: item.file, self.item_store_selection))
+    #         return list(map(lambda item: item.file, self.item_selection_model))
 
     def set_values(self, values):
         self.splice_values(0, None, values)
@@ -350,10 +350,6 @@ class ViewCacheMixin(ViewKeyMixin):
             await task
         self.splice_values(pos, remove, (self.cache[key] for key in keys))
 
-    # #  In case we inherit also from ItemListEditStackMixin.
-    # def refocus(self, *args):
-    #     self.aioqueue.queue_task(super().refocus, *args, sync=True)
-
 
 class ViewWithContextMenu(contextmenu.ContextMenuMixin, View):
     def __init__(self, *args, **kwargs):
@@ -367,14 +363,14 @@ class ViewWithContextMenu(contextmenu.ContextMenuMixin, View):
 
 
 class ViewWithCopy(ViewWithContextMenu):
-    remove_items = NotImplemented
+    remove_positions = NotImplemented
 
     def __init__(self, *args, sortable=True, **kwargs):
         super().__init__(*args, **kwargs, sortable=sortable)
 
         self.add_to_context_menu(self.generate_editing_actions(), 'view-edit', _("Edit"))
 
-        self.drag_source = dnd.ListDragSource(self.content_from_items, self.remove_items)
+        self.drag_source = dnd.ListDragSource(self.content_from_items, self.remove_positions)
         self.item_view.rows.add_controller(self.drag_source)
 
     def cleanup(self):
@@ -386,7 +382,7 @@ class ViewWithCopy(ViewWithContextMenu):
         yield action.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
 
     def action_copy_cb(self, action, parameter):
-        self.copy_items(self.get_selection_items())
+        self.copy_items(self.get_items(self.get_selection()))
 
     def copy_items(self, items):
         self.get_clipboard().set_content(self.content_from_items(items))
@@ -429,20 +425,25 @@ class ViewWithCopyPaste(ViewWithCopy):
         self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
     def generate_editing_actions(self):
-        yield action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'])
+        cut = action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'], True)
+        yield cut
         yield from super().generate_editing_actions()
-        paste_after = action.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True, parameter_format='b')
+        paste_after = action.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True)
         yield paste_after
         yield paste_after.derive(_("Paste before"), ['<Control>b'], False)
-        yield action.ActionInfo('delete', self.action_cut_cb, _("Delete"), ['Delete'])
+        yield cut.derive(_("Delete"), ['Delete'], False)
 
     def action_cut_cb(self, action, parameter):
-        items = self.get_selection_items()
-        self.copy_items(items)
-        self.remove_items(items)
-
-    def action_delete_cb(self, action, parameter):
-        self.remove_items(self.get_selection_items())
+        selection = self.get_selection()
+        if not selection:
+            return
+        if parameter.unpack():
+            self.copy_items(self.get_items(selection))
+        pos = selection[0]
+        if pos > 0 and pos + len(selection) >= self.item_selection_model.get_n_items():
+            pos -= 1
+        self.remove_positions(selection)
+        self.item_selection_model.select_item(pos, True)
 
     def action_paste_cb(self, action, parameter):
         row = self.item_view.rows.get_focus_child()
@@ -513,27 +514,27 @@ class ViewWithEditStack(ViewWithCopyPaste):
         if focus is not None:
             self.item_view.scroll_to(focus, None, Gtk.ListScrollFlags.FOCUS, None)
         if selection is not None:
-            self.item_store_selection.unselect_all()
+            self.item_selection_model.unselect_all()
             for pos in selection:
-                self.item_store_selection.select_item(pos, False)
+                self.item_selection_model.select_item(pos, False)
         self.edit_stack_changed()
 
-    def remove_items(self, items):
-        if not items:
+    def remove_positions(self, positions):
+        if not positions:
             return
-        indices = []
-        for i, item_ in enumerate(self.item_store_selection):
-            if item_ in items:
-                indices.append(i)
-                items.remove(item_)
-        if items:
-            raise RuntimeError
+        # indices = []
+        # for i, item_ in enumerate(self.item_selection_model):
+        #     if item_ in items:
+        #         indices.append(i)
+        #         items.remove(item_)
+        # if items:
+        #     raise RuntimeError
         deltas = []
-        i = j = indices[0]
-        for k in indices[1:] + [0]:
+        i = j = positions[0]
+        for k in positions[1:] + [0]:
             j += 1
             if j != k:
-                values = [self.edit_stack_getter(item) for item in self.item_store_selection[i:j]]
+                values = [self.edit_stack_getter(item) for item in self.item_selection_model[i:j]]
                 deltas.append(editstack.SimpleDelta(values, i, True))
                 i = j = k
         self.edit_stack.set_from_here([editstack.MetaDelta(deltas, False)])
@@ -609,3 +610,6 @@ class ViewWithCopyPasteEditStackSong(ViewCacheMixin, ViewWithEditStack, ViewWith
     @staticmethod
     def edit_stack_getter(item):
         return item.get_key()
+
+    def refocus(self, *args):
+        self.aioqueue.queue_task(super().refocus, *args, sync=True)

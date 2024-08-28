@@ -32,14 +32,14 @@ columnview > listview:drop(active) > row.drop-row {
 
 
 class ListDragSource(Gtk.DragSource):
-    def __init__(self, content_from_items, remove_items):
+    def __init__(self, content_from_items, remove_positions):
         super().__init__(actions=Gdk.DragAction.COPY)
         icon = Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
         self.set_icon(icon, 5, 5)
         self.connect('prepare', self.prepare_cb, content_from_items)
         # self.connect('drag-begin', self.drag_begin_cb)
         # self.connect('drag-cancel', self.drag_cancel_cb)
-        self.connect('drag-end', self.end_cb, remove_items)
+        self.connect('drag-end', self.end_cb, remove_positions)
 
     @staticmethod
     def prepare_cb(self, x, y, content_from_items):
@@ -63,10 +63,9 @@ class ListDragSource(Gtk.DragSource):
     #     return False
 
     @staticmethod
-    def end_cb(self, drag, delete, remove_items):
-        model = self.get_widget().get_model()
+    def end_cb(self, drag, delete, remove_positions):
         if delete:
-            remove_items([model[pos] for pos in self.selection])
+            remove_positions(self.selection)
         del self.selection
 
 

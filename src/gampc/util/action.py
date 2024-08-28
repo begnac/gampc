@@ -43,9 +43,17 @@ class ActionInfo:
         self.data = data
         self.label = label
         self.accels = accels
-        self.arg = None if arg is None else GLib.Variant(parameter_format, arg)
 
-        self.parameter_format = parameter_format
+        if isinstance(arg, bool):
+            self.parameter_format = 'b'
+        elif isinstance(arg, int):
+            self.parameter_format = 'i'
+        elif isinstance(arg, str):
+            self.parameter_format = 's'
+        else:
+            self.parameter_format = parameter_format
+        self.arg = None if arg is None else GLib.Variant(self.parameter_format, arg)
+
         self.state = state
         self.dangerous = dangerous
 

@@ -60,7 +60,7 @@ class ItemList(component.Component):
     async def view_activate_cb(self, view, position):
         if self.unit.unit_persistent.protect_active:
             return
-        filename = self.view.item_store_selection[position].get_key()
+        filename = self.view.item_selection_model[position].get_key()
         items = await self.ampd.playlistfind('file', filename)
         if items:
             item_id = sorted(items, key=lambda item: item['Pos'])[0]['Id']
