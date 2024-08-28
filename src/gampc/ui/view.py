@@ -477,7 +477,7 @@ class ViewWithEditStack(ViewWithCopyPaste):
 
     def generate_edit_stack_actions(self):
         # yield action.ActionInfo('save', self.action_save_cb, _("Save"), ['<Control>s'])
-        # yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
+        yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
         yield action.ActionInfo('undo', self.action_do_cb, _("Undo"), ['<Control>z'], parameter_format='b', arg=False)
         yield action.ActionInfo('redo', self.action_do_cb, _("Redo"), ['<Shift><Control>z'], parameter_format='b', arg=True)
         # util.resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
@@ -486,15 +486,15 @@ class ViewWithEditStack(ViewWithCopyPaste):
         self.step_edit_stack(parameter.unpack())
         self.edit_stack_changed()
 
-    # @ampd.task
-    # async def action_reset_cb(self, action, parameter):
-    #     if not self.edit_stack or not self.edit_stack.deltas:
-    #         return
-    #     if not await dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Reset and lose all modifications?")).run():
-    #         return
-    #     self.edit_stack.undo()
-    #     self.edit_stack.reset()
-    #     self.edit_stack_changed()
+    @ampd.task
+    async def action_reset_cb(self, action, parameter):
+        if not self.edit_stack or not self.edit_stack.deltas:
+            return
+        if not await dialog.MessageDialogAsync(transient_for=self.get_root(), message=_("Reset and lose all modifications?")).run():
+            return
+        self.edit_stack.undo()
+        self.edit_stack.reset()
+        self.edit_stack_changed()
 
     def set_edit_stack(self, edit_stack):
         if self.edit_stack is not None:

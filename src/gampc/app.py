@@ -30,6 +30,7 @@ import asyncio
 import gasyncio
 import ampd
 
+from .util import misc
 from .util import unit
 from .util.logger import logger
 
@@ -102,7 +103,7 @@ class App(Gtk.Application):
         for win in self.get_windows():
             win.destroy()
 
-        # misc.get_clipboard().set_content(None)
+        misc.get_clipboard().set_content(None)
 
         self.unit_server.ampd_server_properties.disconnect_by_func(self.set_inhibit)
         self.unit_manager.set_target()
