@@ -35,12 +35,10 @@ class ItemList(component.Component):
     factory_factory = LabelItemFactory
     item_factory = item.Item
 
-    create_view = ViewWithCopy
-
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.widget = self.view = self.create_view(self.get_fields(), self.factory_factory, self.item_factory)
+        self.widget = self.view = self.create_view()
         self.view.item_view.add_css_class('itemlist')
         self.focus_widget = self.view.item_view
 
@@ -56,6 +54,9 @@ class ItemList(component.Component):
         self.widget.cleanup()
         super().shutdown()
         del self.view
+
+    def create_view(self, view_class=ViewWithCopy, /, **kwargs):
+        return view_class(self.get_fields(), self.factory_factory, self.item_factory, **kwargs)
 
     @ampd.task
     async def view_activate_cb(self, view, position):

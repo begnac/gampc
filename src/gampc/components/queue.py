@@ -161,8 +161,8 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongList):
         self.cursor_by_profile = {}
         self.set_cursor = False
 
-    def create_view(self, *args, **kwargs):
-        widget = QueueView(*args, **kwargs, separator_file=self.unit.unit_database.SEPARATOR_FILE, ampd=self.ampd)
+    def create_view(self):
+        widget = super().create_view(QueueView, separator_file=self.unit.unit_database.SEPARATOR_FILE, ampd=self.ampd)
         widget.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit.unit_persistent.protect)
         return widget
 

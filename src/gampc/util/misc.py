@@ -21,6 +21,9 @@
 from gi.repository import Gdk
 from gi.repository import Gtk
 
+import asyncio
+import decorator
+
 
 class Rectangle(Gdk.Rectangle):
     def __init__(self, x, y, width=0, height=0):
@@ -86,3 +89,8 @@ def generator_set_attribute(name, value):
                 yield obj
         return generator
     return decorator
+
+
+@decorator.decorator
+def create_task(coro, *args, **kwargs):
+    return asyncio.create_task(coro(*args, **kwargs), name=coro.__name__)

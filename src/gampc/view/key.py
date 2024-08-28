@@ -20,11 +20,10 @@
 
 from gi.repository import Gdk
 
-import asyncio
-
 from ..util import action
 from ..util import aioqueue
 from ..util import item
+from ..util import misc
 
 from ..ui import dialog
 
@@ -85,10 +84,8 @@ class ViewWithCopyPasteSong(ViewKeyMixin, ViewWithCopyPaste):
             return
         self.add_items([self.separator_file], pos)
 
-    def action_add_url_cb(self, action, parameter):
-        asyncio.create_task(self.add_url())
-
-    async def add_url(self):
+    @misc.create_task
+    async def action_add_url_cb(self, action, parameter):
         selection = self.get_selection()
         if selection:
             pos = selection[0]

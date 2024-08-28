@@ -51,8 +51,8 @@ class Browser(songlist.SongList):
         if len(self.widget.left_selection) > 0:
             self.widget.left_selection[0].set_expanded(True)
 
-    def create_view(self, *args, **kwargs):
-        return ViewCacheWithCopy(*args, **kwargs, cache=self.unit.unit_database.cache)
+    def create_view(self):
+        return super().create_view(ViewCacheWithCopy, cache=self.unit.unit_database.cache)
 
     def root_items_changed_cb(self, model, p, r, a):
         if a:

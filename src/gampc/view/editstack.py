@@ -21,10 +21,9 @@
 from gi.repository import GObject
 from gi.repository import Gtk
 
-import asyncio
-
 from ..util import action
 from ..util import editstack
+from ..util import misc
 
 from ..ui import dialog
 
@@ -48,7 +47,6 @@ class ViewWithEditStack(ViewWithCopyPaste):
         super().cleanup()
 
     def generate_edit_stack_actions(self):
-        # yield action.ActionInfo('save', self.action_save_cb, _("Save"), ['<Control>s'])
         yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
         yield action.ActionInfo('undo', self.action_do_cb, _("Undo"), ['<Control>z'], arg=False, arg_format='b')
         yield action.ActionInfo('redo', self.action_do_cb, _("Redo"), ['<Shift><Control>z'], arg=True, arg_format='b')
@@ -58,10 +56,8 @@ class ViewWithEditStack(ViewWithCopyPaste):
         self.step_edit_stack(parameter.unpack())
         self.edit_stack_changed()
 
-    def action_reset_cb(self, action, parameter):
-        asyncio.create_task(self.reset())
-
-    async def reset(self):
+    @misc.create_task
+    async def action_reset_cb(self, action, parameter):
         if not self.edit_stack or not self.edit_stack.deltas:
             return
         if not await dialog.MessageDialogAsync(transient_for=self.get_root(), message=_("Reset and lose all modifications?")).run():

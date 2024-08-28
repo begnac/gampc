@@ -45,8 +45,8 @@ class Search(songlist.SongList):
         # for name in self.fields.names:
         #     self.field_choice.append_text(name)
 
-    def create_view(self, *args, **kwargs):
-        widget = ViewCacheWithCopy(*args, **kwargs, cache=self.unit.unit_database.cache)
+    def create_view(self):
+        widget = super().create_view(ViewCacheWithCopy, cache=self.unit.unit_database.cache)
         widget.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
         return widget
 

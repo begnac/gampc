@@ -88,14 +88,14 @@ class TreeItemFactory(Gtk.SignalListItemFactory):
     #     self.labels.remove(listitem.label)
 
 
-class ScrolledListView(contextmenu.ContextMenuMixin, Gtk.ScrolledWindow):
+class ScrolledListView(Gtk.ScrolledWindow):
     def __init__(self, **kwargs):
         self.view = Gtk.ListView(**kwargs)
         self.view_search = listviewsearch.ListViewSearch(self.view, lambda text, row: text.lower() in row.get_item().name.lower())
         super().__init__(child=self.view)
 
 
-class WidgetWithPaned(Gtk.Paned):
+class WidgetWithPaned(contextmenu.ContextMenuMixin, Gtk.Paned):
     def __init__(self, main, config, model, factory, **kwargs):
         self.main = main
         self.config = config

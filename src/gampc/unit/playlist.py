@@ -89,6 +89,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
 
     COMPONENT_CLASS = playlist.Playlist
 
+    PSEUDO_SEPARATOR = ' % '
     TEMPNAME = '$$TEMP$$'
 
     CSS = """
@@ -102,6 +103,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
         super().__init__(*args)
         self.require('database')
         self.require('songlist')
+        self.require('persistent')
 
         self.playlist_cache = cache.AsyncCache(self.playlist_retrieve)
         self.playlists = {}
@@ -132,8 +134,6 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
 
         self.add_resources(
             self.name + '.left-context.menu',
-            util.resource.MenuAction('action', 'playlist.rename', _("Rename")),
-            util.resource.MenuAction('action', 'playlist.delete', _("Delete")),
             util.resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
         )
 
@@ -171,11 +171,11 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
 
     async def fill_contents_cb(self, node):
         if node.kind == playlist.NODE_PLAYLIST:
-            item = await self.playlist_cache.get_async(playlist.PSEUDO_SEPARATOR.join(node.path))
+            item = await self.playlist_cache.get_async(self.PSEUDO_SEPARATOR.join(node.path))
             node.edit_stack = editstack.EditStack(item.files)
 
     def get_pseudo_folder_contents(self, path):
-        prefix = ''.join(folder + playlist.PSEUDO_SEPARATOR for folder in path)
+        prefix = ''.join(folder + self.PSEUDO_SEPARATOR for folder in path)
         folders = []
         names = []
 
@@ -185,8 +185,8 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
             if not name.startswith(prefix):
                 continue
             name = name[len(prefix):]
-            if playlist.PSEUDO_SEPARATOR in name:
-                folder_name = name.split(playlist.PSEUDO_SEPARATOR, 1)[0]
+            if self.PSEUDO_SEPARATOR in name:
+                folder_name = name.split(self.PSEUDO_SEPARATOR, 1)[0]
                 if folder_name != last_folder:
                     last_folder = folder_name
                     folders.append(folder_name)
@@ -198,7 +198,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
     def playlist_paths(self):
         last_path = []
         for playlist_name in sorted(self.playlists):
-            playlist_path = playlist_name.split(playlist.PSEUDO_SEPARATOR)
+            playlist_path = playlist_name.split(self.PSEUDO_SEPARATOR)
             common = min(len(last_path), len(playlist_path) - 1)
             for i in range(common):
                 if last_path[i] != playlist_path[i]:
@@ -210,10 +210,10 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
                 yield '/'.join(last_path) + '/'
             yield '/'.join(playlist_path)
 
-    async def save_playlist(self, playlist_path, filenames, win):
-        playlist_name = playlist_path.replace('/', playlist.PSEUDO_SEPARATOR)
+    async def save_playlist(self, window, playlist_path, filenames):
+        playlist_name = playlist_path.replace('/', self.PSEUDO_SEPARATOR)
 
-        if playlist_name in self.playlists and not await dialog.MessageDialogAsync(transient_for=win, message=_("Replace existing playlist {name}?").format(name=playlist_path)).run():
+        if playlist_name in self.playlists and not await dialog.MessageDialogAsync(transient_for=window, message=_("Replace existing playlist {name}?").format(name=playlist_path)).run():
             return False
 
         try:
@@ -233,15 +233,15 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
             raise
         return True
 
-    async def rename_playlist(self, old_path, win, folder):
+    async def rename_playlist(self, window, old_path, folder):
         title = _("Rename playlist folder") if folder else _("Rename playlist")
-        dialog_ = ChoosePathDialog(transient_for=win, title=title, paths=self.playlist_paths(), init=old_path)
+        dialog_ = ChoosePathDialog(transient_for=window, title=title, paths=self.playlist_paths(), init=old_path)
         new_path = await dialog_.run()
         if new_path is None or old_path == new_path:
             return
 
-        old_real = old_path.replace('/', playlist.PSEUDO_SEPARATOR)
-        new_real = new_path.replace('/', playlist.PSEUDO_SEPARATOR)
+        old_real = old_path.replace('/', self.PSEUDO_SEPARATOR)
+        new_real = new_path.replace('/', self.PSEUDO_SEPARATOR)
 
         if folder:
             for name in self.playlists:
@@ -250,6 +250,11 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
                     await self.ampd.rename(name, new_real + suffix)
         else:
             await self.ampd.rename(old_real, new_real)
+
+    async def delete_playlist(self, window, path):
+        if not await dialog.MessageDialogAsync(transient_for=window, message=_("Delete playlist {name}?").format(name=path)).run():
+            return
+        await self.ampd.rm(path.replace('/', self.PSEUDO_SEPARATOR))
 
     @ampd.task
     async def action_playlist_add_saveas_cb(self, songlist_, action, parameter):
@@ -263,7 +268,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
         playlist_path = await ChoosePathDialog(transient_for=songlist_.widget.get_root(), title=title, paths=self.playlist_paths()).run()
         if playlist_path is None:
             return
-        playlist_name = playlist_path.replace('/', playlist.PSEUDO_SEPARATOR)
+        playlist_name = playlist_path.replace('/', self.PSEUDO_SEPARATOR)
         if not saveas and playlist_name in self.playlists:
             filenames = await self.ampd.listplaylist(playlist_name) + filenames
         await self.save_playlist(playlist_path, filenames, songlist_.widget.get_root())

@@ -18,10 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import ampd
+from ..util import action
+from ..util import misc
 
 from ..ui import compound
-from ..ui import dialog
 
 from ..view.key import ViewWithCopyPasteEditStackSong
 
@@ -30,8 +30,6 @@ from . import songlist
 
 NODE_FOLDER = 0
 NODE_PLAYLIST = 1
-
-PSEUDO_SEPARATOR = ' % '
 
 ICONS = {
     NODE_FOLDER: 'folder-symbolic',
@@ -55,13 +53,13 @@ class PlaylistWidget(compound.WidgetWithPanedTreeList):
         self.main.edit_stack_changed()
 
     @staticmethod
-    def left_view_activate_cb(view, position):
-        row = view.get_model()[position]
+    def left_view_activate_cb(left_view, position):
+        row = left_view.get_model()[position]
         node = row.get_item()
         if node.kind is NODE_FOLDER:
-            compound.WidgetWithPanedTreeList.left_view_activate_cb(view, position)
-        else:  # XXXXXXXXXXXXXX
-            self.action_playlist_rename_cb(None, None)
+            compound.WidgetWithPanedTreeList.left_view_activate_cb(left_view, position)
+        else:
+            left_view.activate_action('playlist-global.rename')
 
 
 class Playlist(songlist.SongListTotalsMixin, songlist.SongList):
@@ -71,14 +69,43 @@ class Playlist(songlist.SongListTotalsMixin, songlist.SongList):
         super().__init__(unit)
         self.widget = PlaylistWidget(self.view, self.config.pane_separator, unit.root.model)
 
-        # self.actions.add_action(resource.Action('rename', self.action_playlist_rename_cb))
-        # self.actions.add_action(resource.Action('delete', self.action_playlist_delete_cb))
-        # self.actions.add_action(resource.Action('update-from-queue', self.action_playlist_update_from_queue_cb))
-
         self.view.connect('edit-stack-changed', self.edit_stack_changed_cb)
 
-    def create_view(self, *args, **kwargs):
-        return ViewWithCopyPasteEditStackSong(*args, **kwargs, separator_file=self.unit.unit_database.SEPARATOR_FILE, cache=self.unit.unit_database.cache)
+        self.view.add_to_context_menu(self.generate_actions(), 'playlist-local', _("Playlist"))
+        self.widget.add_to_context_menu(self.generate_left_actions(), 'playlist-global', _("Playlist global"))
+
+    def create_view(self):
+        return super().create_view(ViewWithCopyPasteEditStackSong, separator_file=self.unit.unit_database.SEPARATOR_FILE, cache=self.unit.unit_database.cache)
+
+    def generate_actions(self):
+        yield action.ActionInfo('save', self.global_action_cb, _("Save"), ['<Control>s'])
+
+    def generate_left_actions(self):
+        yield from self.generate_actions()
+        yield action.ActionInfo('rename', self.global_action_cb, _("Rename"))
+        yield action.ActionInfo('delete', self.global_action_cb, _("Delete"))
+        yield action.ActionInfo('update-from-queue', self.global_action_cb, _("Update from play queue"))
+
+    @misc.create_task
+    async def global_action_cb(self, action, parameter):
+        if not self.widget.left_selected_item:
+            return
+        path = self.widget.left_selected_item.joined_path
+        window = self.widget.get_root()
+        if action.get_name() == 'save':
+            if not self.view.edit_stack.deltas:
+                return
+            if await self.unit.save_playlist(window, path, [item.get_key() for item in self.view.item_store]):
+                self.view.edit_stack.reset()
+                self.view.edit_stack_changed()
+        elif action.get_name() == 'rename':
+            await self.unit.rename_playlist(window, path, self.widget.left_selected_item.kind == NODE_FOLDER)
+        elif action.get_name() == 'delete':
+            await self.unit.delete_playlist(window, path)
+        elif action.get_name() == 'update-from-queue':
+            await self.unit.save_playlist(window, path, await self.ampd.playlist())
+        else:
+            raise RuntimeError
 
     @staticmethod
     def edit_stack_changed_cb(view):
@@ -93,34 +120,3 @@ class Playlist(songlist.SongListTotalsMixin, songlist.SongList):
             return
         pos = widget.left_selected_item.parent_model.find(widget.left_selected_item).position
         widget.left_selected_item.parent_model.items_changed(pos, 1, 1)
-
-    @ampd.task
-    async def action_save_cb(self, action, parameter):
-        if not self.edit_stack.deltas:
-            return
-        if await self.unit.save_playlist(self.left_selected_item.joined_path, [item.get_key() for item in self.view.item_store], self.widget.get_root()):
-            self.edit_stack.reset()
-            self.edit_stack_changed()
-
-    @ampd.task
-    async def action_playlist_rename_cb(self, action, parameter):
-        if not self.left_selected_item:
-            return
-        playlist_path = self.left_selected_item.joined_path
-        await self.unit.rename_playlist(playlist_path, self.widget.get_root(), self.left_selected_item.kind == NODE_FOLDER)
-
-    @ampd.task
-    async def action_playlist_delete_cb(self, action, parameter):
-        if not self.left_selected_item:
-            return
-        playlist_path = self.left_selected_item.joined_path
-        if not await dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Delete playlist {name}?").format(name=playlist_path)).run():
-            return
-        await self.ampd.rm(playlist_path.replace('/', PSEUDO_SEPARATOR))
-
-    @ampd.task
-    async def action_playlist_update_from_queue_cb(self, action, parameter):
-        if not self.selected_node:
-            return
-        playlist_path = self.selected_node.joined_path
-        await self.unit.save_playlist(playlist_path, await self.ampd.playlist(), self.widget.get_root())
