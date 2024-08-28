@@ -25,8 +25,9 @@ import ampd
 from ..util import unit
 
 from ..ui import compound
-from ..ui import view
 from ..ui import treelist
+
+from ..view.key import ViewCacheWithCopy
 
 from ..components import songlist
 
@@ -51,7 +52,7 @@ class Browser(songlist.SongList):
             self.widget.left_selection[0].set_expanded(True)
 
     def create_view(self, *args, **kwargs):
-        return view.ViewCacheWithCopy(*args, **kwargs, cache=self.unit.unit_database.cache)
+        return ViewCacheWithCopy(*args, **kwargs, cache=self.unit.unit_database.cache)
 
     def root_items_changed_cb(self, model, p, r, a):
         if a:

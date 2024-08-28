@@ -22,7 +22,8 @@ import ampd
 
 from ..util import item
 
-from ..ui import view
+from ..view.base import LabelItemFactory
+from ..view.actions import ViewWithCopy
 
 from . import component
 
@@ -31,10 +32,10 @@ class ItemList(component.Component):
     duplicate_test_columns = []
     duplicate_extra_items = None
 
-    factory_factory = view.LabelItemFactory
+    factory_factory = LabelItemFactory
     item_factory = item.Item
 
-    create_view = view.ViewWithCopy
+    create_view = ViewWithCopy
 
     def __init__(self, unit, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)

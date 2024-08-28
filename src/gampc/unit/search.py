@@ -23,8 +23,9 @@ import ampd
 from ..util import action
 from ..util import unit
 
-from ..ui import view
 from ..ui import compound
+
+from ..view.key import ViewCacheWithCopy
 
 from ..components import songlist
 
@@ -45,7 +46,7 @@ class Search(songlist.SongList):
         #     self.field_choice.append_text(name)
 
     def create_view(self, *args, **kwargs):
-        widget = view.ViewCacheWithCopy(*args, **kwargs, cache=self.unit.unit_database.cache)
+        widget = ViewCacheWithCopy(*args, **kwargs, cache=self.unit.unit_database.cache)
         widget.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
         return widget
 

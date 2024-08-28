@@ -28,9 +28,10 @@ from ..util import item
 from ..util import misc
 
 from ..ui import ssde
-from ..ui import view
 
-from . import itemlist
+from ..view.base import LabelItemFactory
+from ..view.key import ViewWithCopyPasteSong
+
 from . import songlist
 
 
@@ -49,7 +50,7 @@ class QueueItem(item.Item):
         super().load(value)
 
 
-class QueueItemFactory(view.LabelItemFactory):
+class QueueItemFactory(LabelItemFactory):
     def __init__(self, name):
         super().__init__(name)
 
@@ -66,7 +67,7 @@ class QueueItemFactory(view.LabelItemFactory):
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
-class QueueView(view.ViewWithCopyPasteSong):
+class QueueView(ViewWithCopyPasteSong):
     def __init__(self, *args, ampd, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))

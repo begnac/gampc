@@ -22,7 +22,8 @@ import ampd
 
 from ..ui import compound
 from ..ui import dialog
-from ..ui import view
+
+from ..view.key import ViewWithCopyPasteEditStackSong
 
 from . import songlist
 
@@ -77,7 +78,7 @@ class Playlist(songlist.SongListTotalsMixin, songlist.SongList):
         self.view.connect('edit-stack-changed', self.edit_stack_changed_cb)
 
     def create_view(self, *args, **kwargs):
-        return view.ViewWithCopyPasteEditStackSong(*args, **kwargs, separator_file=self.unit.unit_database.SEPARATOR_FILE, cache=self.unit.unit_database.cache)
+        return ViewWithCopyPasteEditStackSong(*args, **kwargs, separator_file=self.unit.unit_database.SEPARATOR_FILE, cache=self.unit.unit_database.cache)
 
     @staticmethod
     def edit_stack_changed_cb(view):

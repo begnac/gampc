@@ -25,7 +25,7 @@ from gi.repository import Gtk
 from ..util import editstack
 from ..util import misc
 
-from ..ui import view
+from ..view.base import EditableItemFactory
 
 from . import itemlist
 
@@ -37,11 +37,11 @@ def encode_url(url):
     return url.encode().hex()
 
 
-class StreamItemFactory(view.EditableItemFactory):
+class StreamItemFactory(EditableItemFactory):
     @staticmethod
     def value_binder(widget, item, name):
         misc.add_unique_css_class(widget.get_parent(), STREAM_URL_CSS_PREFIX, encode_url(item.get_key()))
-        view.EditableItemFactory.value_binder(widget, item, name)
+        EditableItemFactory.value_binder(widget, item, name)
 
 
 class Stream(itemlist.ItemList):
