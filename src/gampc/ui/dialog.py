@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import Gdk
 from gi.repository import Gtk
 
 import asyncio
@@ -25,17 +26,18 @@ import asyncio
 
 class DialogAsync(Gtk.Window):
     def __init__(self, **kwargs):
-        super().__init__(modal=True, destroy_with_parent=True, **kwargs)
-        self.future = asyncio.Future()
-
         self.button_box = Gtk.Box(halign=Gtk.Align.CENTER)
-
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.main_box.append(self.button_box)
+        self.future = asyncio.Future()
 
-        self.set_child(self.main_box)
+        super().__init__(modal=True, destroy_with_parent=True, child=self.main_box, **kwargs)
 
         self.connect('close-request', self.button_clicked_cb, self.future, Gtk.ResponseType.CANCEL)
+
+        controller = Gtk.EventControllerKey()
+        controller.connect('key-pressed', self.key_pressed_cb, self.future)
+        self.add_controller(controller)
 
     def add_button(self, label, response):
         button = Gtk.Button.new_with_mnemonic(label)
@@ -46,6 +48,14 @@ class DialogAsync(Gtk.Window):
     @staticmethod
     def button_clicked_cb(button, future, response):
         future.set_result(response)
+
+    @staticmethod
+    def key_pressed_cb(controller, keyval, keycode, state, future):
+        if keyval == Gdk.KEY_Escape:
+            future.set_result(Gtk.ResponseType.CANCEL)
+            return True
+        else:
+            return False
 
     async def run(self):
         if self.future.done():
