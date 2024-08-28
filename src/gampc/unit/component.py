@@ -61,7 +61,7 @@ class __unit__(unit.Unit):
         super().shutdown()
 
     def generate_start_actions(self):
-        start = action.ActionInfo('component-start', self.component_start_cb, parameter_format='(sb)')
+        start = action.ActionInfo('component-start', self.component_start_cb, arg_format='(sb)')
         yield start
         for component in self._registered_components.values():
             yield start.derive(component.title, ['<Alt>' + component.key], arg=GLib.Variant('(sb)', (component.name, False)))

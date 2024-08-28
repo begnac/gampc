@@ -38,21 +38,14 @@ def get_accels_trigger(accels):
 
 
 class ActionInfo:
-    def __init__(self, name, data, label=None, accels=None, arg=None, *, parameter_format=None, state=None, dangerous=False):
+    def __init__(self, name, data, label=None, accels=None, arg=None, *, arg_format=None, state=None, dangerous=False):
         self.name = name
         self.data = data
         self.label = label
         self.accels = accels
 
-        if isinstance(arg, bool):
-            self.parameter_format = 'b'
-        elif isinstance(arg, int):
-            self.parameter_format = 'i'
-        elif isinstance(arg, str):
-            self.parameter_format = 's'
-        else:
-            self.parameter_format = parameter_format
-        self.arg = None if arg is None else GLib.Variant(self.parameter_format, arg)
+        self.arg = None if arg is None else GLib.Variant(arg_format, arg)
+        self.arg_format = arg_format
 
         self.state = state
         self.dangerous = dangerous
@@ -63,7 +56,7 @@ class ActionInfo:
 
     def get_action(self, protect=None):
         if self.data is not None:
-            parameter_type = None if self.parameter_format is None else GLib.VariantType.new(self.parameter_format)
+            parameter_type = None if self.arg_format is None else GLib.VariantType.new(self.arg_format)
             action = Gio.SimpleAction(name=self.name, parameter_type=parameter_type, state=self.state)
             action.connect('activate', self.data)
             if self.dangerous:
@@ -88,7 +81,7 @@ class ActionInfo:
         return item
 
     def derive(self, label, accels=None, arg=None):
-        return ActionInfo(self.name, None, label, accels, arg, parameter_format=self.parameter_format, dangerous=self.dangerous)
+        return ActionInfo(self.name, None, label, accels, arg, arg_format=self.arg_format, dangerous=self.dangerous)
 
     def __str__(self):
         return f"Action \"{self.name}\""

@@ -51,17 +51,17 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         yield action.ActionInfo('stop', self.mpd_command_cb, _("_Stop"), ['<Control>Down', 'AudioStop'], dangerous=True)
         yield action.ActionInfo('next', self.mpd_command_cb, _("_Next"), ['<Control>Right', 'AudioNext'], dangerous=True)
         yield action.ActionInfo('previous', self.mpd_command_cb, _("_Previous"), ['<Control>Left', 'AudioPrev'], dangerous=True)
-        fadeout = action.ActionInfo('fadeout-then', self.fadeout_then_cb, parameter_format='b')
+        fadeout = action.ActionInfo('fadeout-then', self.fadeout_then_cb, arg_format='b')
         yield fadeout
         yield fadeout.derive(_("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], True)
         yield fadeout.derive(_("Next [fadeout]"), ['<Control><Shift>Right'], False)
         yield action.ActionInfo('volume-popup', self.volume_popup_cb, _("Adjust volume"), ['<Alt>v'])
-        volume = action.ActionInfo('volume', self.volume_cb, parameter_format='(ib)')
+        volume = action.ActionInfo('volume', self.volume_cb, arg_format='(ib)')
         yield volume
         yield volume.derive(_("Volume up"), ['<Control>plus', '<Control>KP_Add'], (5, True))
         yield volume.derive(_("Volume down"), ['<Control>minus', '<Control>KP_Subtract'], (-5, True))
         yield volume.derive(_("Mute"), ['<Control>AudioMute'], (0, False))
-        jump = action.ActionInfo('jump', self.jump_cb, parameter_format='(ib)')
+        jump = action.ActionInfo('jump', self.jump_cb, arg_format='(ib)')
         yield jump
         yield jump.derive(_("Restart playback"), ['<Alt>Up'], (0, False))
         yield jump.derive(_("End of song (-{} seconds)").format(15), ['<Alt>Down'], (-15, False))

@@ -89,7 +89,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         yield action.ActionInfo('connect-to-previous', self.ampd_connect_to_previous, _("Connect to previous"), ['<Control><Alt>p'])
         yield action.PropertyActionInfo('server-profile', self)
         for name in ampd.OPTION_NAMES:
-            yield action.PropertyActionInfo(name, self.ampd_server_properties, parameter_format='i')
+            yield action.PropertyActionInfo(name, self.ampd_server_properties, arg_format='i')
 
     def ampd_connect(self, *args):
         self.want_to_connect = True

@@ -100,7 +100,7 @@ class QueueView(ViewWithCopyPasteSong):
         yield action.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
 
     def generate_priority_actions(self):
-        priority = action.ActionInfo('priority', self.action_priority_cb, parameter_format='i')
+        priority = action.ActionInfo('priority', self.action_priority_cb, arg_format='i')
         yield priority
         yield priority.derive(_("High"), arg=255)
         yield priority.derive(_("Normal"), arg=0)

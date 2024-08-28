@@ -52,7 +52,7 @@ class Profile:
         return Profile(name, address)
 
     def get_action(self):
-        return action.ActionInfo('server-profile', None, self.name, parameter_format='s', arg=repr(self))
+        return action.ActionInfo('server-profile', None, self.name, arg=repr(self), arg_format='s')
 
     def __repr__(self):
         return f'{self.address}={self.name}'

@@ -99,10 +99,10 @@ class ViewWithCopyPaste(ViewWithCopy):
         self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
 
     def generate_editing_actions(self):
-        cut = action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'], True)
+        cut = action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'], True, arg_format='b')
         yield cut
         yield from super().generate_editing_actions()
-        paste_after = action.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True)
+        paste_after = action.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True, arg_format='b')
         yield paste_after
         yield paste_after.derive(_("Paste before"), ['<Control>b'], False)
         yield cut.derive(_("Delete"), ['Delete'], False)

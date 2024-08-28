@@ -50,8 +50,8 @@ class ViewWithEditStack(ViewWithCopyPaste):
     def generate_edit_stack_actions(self):
         # yield action.ActionInfo('save', self.action_save_cb, _("Save"), ['<Control>s'])
         yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
-        yield action.ActionInfo('undo', self.action_do_cb, _("Undo"), ['<Control>z'], parameter_format='b', arg=False)
-        yield action.ActionInfo('redo', self.action_do_cb, _("Redo"), ['<Shift><Control>z'], parameter_format='b', arg=True)
+        yield action.ActionInfo('undo', self.action_do_cb, _("Undo"), ['<Control>z'], arg=False, arg_format='b')
+        yield action.ActionInfo('redo', self.action_do_cb, _("Redo"), ['<Shift><Control>z'], arg=True, arg_format='b')
         # util.resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
 
     def action_do_cb(self, action, parameter):
