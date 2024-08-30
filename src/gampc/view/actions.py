@@ -22,8 +22,10 @@ from gi.repository import Gdk
 
 from ..util import action
 from ..util import item
+from ..util import misc
 
 from ..ui import contextmenu
+from ..ui import dialog
 from ..ui import dnd
 
 from .base import ViewBase
@@ -73,6 +75,13 @@ class ViewWithCopy(ViewWithContextMenu):
     def unlock(self):
         pass
 
+    transfer_type = NotImplemented
+    extra_transfer_types = NotImplemented
+
+    @classmethod
+    def content_from_items(cls, items):
+        return item.transfer_union(items, cls.transfer_type, *cls.extra_transfer_types)
+
 
 class ViewWithCopyPaste(ViewWithCopy):
     def __init__(self, *args, **kwargs):
@@ -80,7 +89,7 @@ class ViewWithCopyPaste(ViewWithCopy):
 
         self.connect('notify::filtering', self.check_editable)
 
-        self.drop_target = dnd.ListDropTarget(self.content_formats, self.add_items)
+        self.drop_target = dnd.ListDropTarget(Gdk.ContentFormats.new_for_gtype(self.transfer_type), self.add_items)
         self.item_view.rows.add_controller(self.drop_target)
 
         self.set_editable(True)
@@ -134,9 +143,26 @@ class ViewWithCopyPaste(ViewWithCopy):
         pos = row.get_first_child().get_first_child().pos
         if parameter.unpack():
             pos += 1
-        self.get_clipboard().read_value_async(item.ItemKeyTransfer, 0, None, self.action_paste_finish_cb, pos)
+        self.get_clipboard().read_value_async(self.transfer_type, 0, None, self.action_paste_finish_cb, pos)
 
     def action_paste_finish_cb(self, clipboard, result, pos):
         values = clipboard.read_value_finish(result).values
         if values is not None:
             self.add_items(values, pos)
+
+    def generate_url_actions(self):
+        yield action.ActionInfo('add-url', self.action_add_url_cb, _("Add URL or filename"))
+
+    @misc.create_task
+    async def action_add_url_cb(self, action, parameter):
+        selection = self.get_selection()
+        if selection:
+            pos = selection[0]
+        else:
+            return
+        dialog_ = dialog.TextDialogAsync(transient_for=self.get_root(), decorated=False, text='http://')
+        url = await dialog_.run()
+        if url:
+            item_ = item.Item(value=dict(file=url))
+            transfer = self.transfer_type([item_])
+            self.add_items(transfer.values, pos)

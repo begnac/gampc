@@ -65,28 +65,28 @@ class ItemFactory(Gtk.SignalListItemFactory):
     # def teardown_cb(self, listitem):
     #     pass
 
-    def bind(self, widget, item):
+    def bind(self, widget, item_):
         for binder, *args in self.binders.values():
-            binder(widget, item, *args)
-        item.connect('notify', self.notify_item_cb, widget)
+            binder(widget, item_, *args)
+        item_.connect('notify', self.notify_item_cb, widget)
 
-    def unbind(self, widget, item):
-        item.disconnect_by_func(self.notify_item_cb)
+    def unbind(self, widget, item_):
+        item_.disconnect_by_func(self.notify_item_cb)
 
-    def notify_item_cb(self, item, param, widget):
+    def notify_item_cb(self, item_, param, widget):
         binder, *args = self.binders[param.name]
-        binder(widget, item, *args)
+        binder(widget, item_, *args)
 
     @staticmethod
-    def value_binder(widget, item, name):
-        widget.set_label(item.get_field(name))
+    def value_binder(widget, item_, name):
+        widget.set_label(item_.get_field(name))
 
     @staticmethod
-    def duplicate_binder(widget, item):
-        if item.duplicate is None:
+    def duplicate_binder(widget, item_):
+        if item_.duplicate is None:
             suffix = None
         else:
-            suffix = str(item.duplicate % 64)
+            suffix = str(item_.duplicate % 64)
         misc.add_unique_css_class(widget.get_parent(), 'duplicate', suffix)
 
 
@@ -97,6 +97,10 @@ class LabelItemFactory(ItemFactory):
 
 
 class EditableItemFactory(ItemFactory):
+    __gsignals__ = {
+        'item-edited': (GObject.SIGNAL_RUN_FIRST, None, (int, str, str)),
+    }
+
     def __init__(self, name, always_editable=False):
         super().__init__(name)
         self.always_editable = always_editable
@@ -104,18 +108,16 @@ class EditableItemFactory(ItemFactory):
     def make_widget(self):
         return editable.EditableLabel(always_editable=self.always_editable)
 
-    def bind(self, widget, item):
-        super().bind(widget, item)
-        widget.connect('edited', self.label_edited_cb, item, self.name)
+    def bind(self, widget, item_):
+        super().bind(widget, item_)
+        widget.connect('edited', self.label_edited_cb, self.name)
 
-    def unbind(self, widget, item):
-        super().unbind(widget, item)
+    def unbind(self, widget, item_):
+        super().unbind(widget, item_)
         widget.disconnect_by_func(self.label_edited_cb)
 
-    @staticmethod
-    def label_edited_cb(widget, item, name):
-        item.value[name] = widget.get_text()
-        item.value = item.value
+    def label_edited_cb(self, widget, name):
+        self.emit('item-edited', widget.pos, name, widget.get_text())
 
 
 class FieldItemColumn(Gtk.ColumnViewColumn):

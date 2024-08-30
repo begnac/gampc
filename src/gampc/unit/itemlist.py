@@ -47,34 +47,3 @@ for d in range(N ** 3):
 
 class __unit__(mixins.UnitConfigMixin, mixins.UnitCssMixin, unit.Unit):
     CSS = CSS
-
-    def xxxx__init__(self, *args):
-        super().__init__(*args)
-
-        items = [
-            # util.resource.MenuAction('edit/songlist/base', 'itemlist.undo', _("Undo"), ['<Control>z'], accels_fragile=True),
-            # util.resource.MenuAction('edit/songlist/base', 'itemlist.redo', _("Redo"), ['<Shift><Control>z'], accels_fragile=True),
-            # util.resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
-        ]
-
-        # self.add_resources(
-        #     'app.menu',
-        #     util.resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
-        #     util.resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
-        #     *items,
-        # )
-
-        # self.add_resources(
-        #     'itemlist.context.menu',
-        #     util.resource.MenuPath('action'),
-        #     util.resource.MenuPath('edit'),
-        #     util.resource.MenuPath('other'),
-        #     *items,
-        # )
-
-        # self.add_resources(
-        #     'itemlist.left-context.menu',
-        #     util.resource.MenuPath('action'),
-        #     util.resource.MenuPath('edit'),
-        #     util.resource.MenuPath('other'),
-        # )

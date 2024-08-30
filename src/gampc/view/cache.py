@@ -18,29 +18,25 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gdk
-
 from ..util import action
 from ..util import aioqueue
 from ..util import item
-from ..util import misc
-
-from ..ui import dialog
 
 from .actions import ViewWithCopy
 from .actions import ViewWithCopyPaste
 from .editstack import ViewWithEditStack
 
 
-class ViewKeyMixin:
-    content_formats = Gdk.ContentFormats.new_for_gtype(item.ItemKeyTransfer)
-
-    @staticmethod
-    def content_from_items(items):
-        return item.transfer_union(items, item.ItemKeyTransfer, item.ItemStringTransfer)
+class ItemFilenameTransfer(item.ItemKeyTransfer):
+    pass
 
 
-class ViewCacheMixin(ViewKeyMixin):
+class ViewFilenameMixin:
+    transfer_type = ItemFilenameTransfer
+    extra_transfer_types = (item.ItemStringTransfer,)
+
+
+class ViewCacheMixin(ViewFilenameMixin):
     def __init__(self, unit, *args, cache, **kwargs):
         super().__init__(unit, *args, **kwargs)
         self.aioqueue = aioqueue.AIOQueue()
@@ -63,7 +59,7 @@ class ViewCacheWithCopy(ViewCacheMixin, ViewWithCopy):
     pass
 
 
-class ViewWithCopyPasteSong(ViewKeyMixin, ViewWithCopyPaste):
+class ViewWithCopyPasteSong(ViewFilenameMixin, ViewWithCopyPaste):
     def __init__(self, *args, separator_file, **kwargs):
         super().__init__(*args, **kwargs)
         self.separator_file = separator_file
@@ -71,7 +67,7 @@ class ViewWithCopyPasteSong(ViewKeyMixin, ViewWithCopyPaste):
     def generate_editing_actions(self):
         yield from super().generate_editing_actions()
         yield action.ActionInfo('add-separator', self.action_add_separator_cb, _("Add separator"))
-        yield action.ActionInfo('add-url', self.action_add_url_cb, _("Add URL or filename"))
+        yield from self.generate_url_actions()
 
     # def generate_special_actions(self):
     #     yield action.ActionInfo('delete-file', self.action_delete_file_cb, _("Move files to trash"), ['<Control>Delete'])
@@ -83,18 +79,6 @@ class ViewWithCopyPasteSong(ViewKeyMixin, ViewWithCopyPaste):
         else:
             return
         self.add_items([self.separator_file], pos)
-
-    @misc.create_task
-    async def action_add_url_cb(self, action, parameter):
-        selection = self.get_selection()
-        if selection:
-            pos = selection[0]
-        else:
-            return
-        dialog_ = dialog.TextDialogAsync(transient_for=self.get_root(), decorated=False, text='http://')
-        url = await dialog_.run()
-        if url:
-            self.add_items([url], pos)
 
     # def action_delete_file_cb(self, action, parameter):
     #     store, paths = self.treeview.get_selection().get_selected_rows()

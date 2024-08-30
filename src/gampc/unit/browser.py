@@ -27,7 +27,7 @@ from ..util import unit
 from ..ui import compound
 from ..ui import treelist
 
-from ..view.key import ViewCacheWithCopy
+from ..view.cache import ViewCacheWithCopy
 
 from ..components import songlist
 

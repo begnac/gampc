@@ -23,7 +23,7 @@ from ..util import misc
 
 from ..ui import compound
 
-from ..view.key import ViewWithCopyPasteEditStackSong
+from ..view.cache import ViewWithCopyPasteEditStackSong
 
 from . import songlist
 

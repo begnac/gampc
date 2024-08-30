@@ -30,7 +30,7 @@ from ..util import misc
 from ..ui import ssde
 
 from ..view.base import LabelItemFactory
-from ..view.key import ViewWithCopyPasteSong
+from ..view.cache import ViewWithCopyPasteSong
 
 from . import songlist
 

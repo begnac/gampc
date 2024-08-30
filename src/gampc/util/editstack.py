@@ -32,11 +32,8 @@ class Delta:
             add_cb(self.position, self.items)
             return self.position, list(range(self.position, self.position + len(self.items)))
         else:
-            # remove_cb(self.position, len(self.items))
-            remove_cb(self.position, self.items)
+            remove_cb(self.position, len(self.items))
             pos = self.position
-            # if pos == len(model):
-            #     pos -= 1
             if pos >= 0:
                 return pos, [pos]
             else:
@@ -154,16 +151,7 @@ class EditStack:
         if self.splicer:
             self.splicer(pos, 0, items)
 
-    # def _remove_cb(self, pos, n):
-    #     self.items[pos:pos + n] = []
-    #     if self.splicer:
-    #         self.splicer(pos, n, [])
-
-    def _remove_cb(self, pos, items):
-        n = len(items)
-        for i in range(n):
-            if items[i] != self.items[pos + i]:
-                raise RuntimeError
+    def _remove_cb(self, pos, n):
         self.items[pos:pos + n] = []
         if self.splicer:
             self.splicer(pos, n, [])
