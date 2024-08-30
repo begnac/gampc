@@ -48,12 +48,17 @@ class App(Gtk.Application):
         self.add_main_option('debug', ord('d'), GLib.OptionFlags.NONE, GLib.OptionArg.NONE, _("Debug messages"), None)
         self.add_main_option(GLib.OPTION_REMAINING, 0, GLib.OptionFlags.NONE, GLib.OptionArg.STRING_ARRAY, '', _("[ACTION...]"))
 
+        self.connect('startup', self.startup_cb)
+        self.connect('shutdown', self.shutdown_cb)
+        self.connect('handle-local-options', self.handle_local_options_cb)
+        self.connect('command-line', self.command_line_cb)
+        self.connect('activate', self.activate_cb)
+
     def __del__(self):
         logger.debug(f'Deleting {self}')
 
-    def do_startup(self):
-        Gtk.Application.do_startup(self)
-
+    @staticmethod
+    def startup_cb(self):
         logger.debug("Starting")
 
         gasyncio.start_slave_loop()
@@ -97,7 +102,8 @@ class App(Gtk.Application):
 
         self.connect('window-removed', lambda self, window: window.shutdown())
 
-    def do_shutdown(self):
+    @staticmethod
+    def shutdown_cb(self):
         logger.debug("Shutting down")
 
         for win in self.get_windows():
@@ -123,9 +129,8 @@ class App(Gtk.Application):
 
         GLib.source_remove(self.sigint_source)
 
-        Gtk.Application.do_shutdown(self)
-
-    def do_handle_local_options(self, options):
+    @staticmethod
+    def handle_local_options_cb(self, options):
         if options.contains('version'):
             print(_("{program} version {version}").format(program=__program_name__, version=__version__))
             print(__copyright__)
@@ -144,9 +149,10 @@ class App(Gtk.Application):
         if options.contains('debug'):
             logging.getLogger().setLevel(logging.DEBUG)
 
-        return Gtk.Application.do_handle_local_options(self, options)
+        return -1
 
-    def do_command_line(self, command_line):
+    @staticmethod
+    def command_line_cb(self, command_line):
         options = command_line.get_options_dict().end().unpack()
         if 'component' in options:
             self.unit_window.new_window(options['component'])
@@ -165,8 +171,8 @@ class App(Gtk.Application):
             self.activate()
         return 0
 
-    def do_activate(self):
-        Gtk.Application.do_activate(self)
+    @staticmethod
+    def activate_cb(self):
         win = self.get_active_window()
         if win:
             win.present()
