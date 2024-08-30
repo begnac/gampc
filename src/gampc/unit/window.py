@@ -34,15 +34,13 @@ from .. import __application__
 from . import mixins
 
 
-class Window(action.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
+class Window(Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
         super().__init__(show_menubar=True, **kwargs)
 
-        controller = Gtk.ShortcutController()
-        self.add_controller(controller)
         self.action_info_families = list(unit.action_info_families)
         for family in self.action_info_families:
-            family.add_to_shortcut_controller(controller)
+            self.add_controller(family.get_shortcut_controller())
 
         self.unit = unit
         self.component = None
@@ -83,13 +81,6 @@ class Window(action.ActionInfoFamiliesMixin, Gtk.ApplicationWindow):
 
         self.update_title()
         self.update_subtitle()
-
-        # family = action.ActionInfoFamily('win', _("_Window"), self.generate_actions())
-        # self.action_info_families.append(family)
-        # family.add_to_action_map(self)
-        # self.add_controller(family.get_shortcut_controller())
-        # self.copy_paste_menu = actions.Menu()
-        # self.action_info_families.append(self.copy_paste_family)
 
     def __del__(self):
         logger.debug("Deleting {}".format(self))

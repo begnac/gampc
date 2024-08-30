@@ -25,7 +25,7 @@ from ..util import action
 from ..util import misc
 
 
-class ContextMenuMixin(action.ActionInfoFamiliesMixin):
+class ContextMenuMixin:
     def __init__(self, *args, **kwargs):
         self.context_menu = Gio.Menu()
         self.actions = {}
@@ -48,7 +48,6 @@ class ContextMenuMixin(action.ActionInfoFamiliesMixin):
         family = action.ActionInfoFamily(generator, prefix, label)
         self.actions[prefix] = family.insert_action_group(self, protect=protect)
         self.add_controller(family.get_shortcut_controller())
-        self.action_info_families.append(family)
         if submenu:
             self.context_menu.append_submenu(label, family.get_menu())
         else:

@@ -19,6 +19,7 @@
 
 
 from gi.repository import GLib
+from gi.repository import GObject
 from gi.repository import Gio
 from gi.repository import Gtk
 
@@ -35,6 +36,16 @@ def get_accels_trigger(accels):
     for accel in accels[1:]:
         trigger = Gtk.AlternativeTrigger(first=trigger, second=get_accel_trigger(accel))
     return trigger
+
+
+class ShortcutWithHelp(Gtk.Shortcut):
+    label = GObject.Property()
+    accels = GObject.Property()
+
+
+class ShortcutControllerWithHelp(Gtk.ShortcutController):
+    prefix = GObject.Property()
+    label = GObject.Property()
 
 
 class ActionInfo:
@@ -66,11 +77,13 @@ class ActionInfo:
     def get_shortcut(self, prefix):
         if self.accels is None:
             return None, None
-        main = Gtk.Shortcut(trigger=get_accel_trigger(self.accels[0]), action=Gtk.NamedAction.new(f'{prefix}.{self.name}'), arguments=self.arg)
-        if len(self.accels) > 1:
-            secondary = Gtk.Shortcut(trigger=get_accels_trigger(self.accels[1:]), action=Gtk.NamedAction.new(f'{prefix}.{self.name}'), arguments=self.arg)
+        secondary = None
+        if self.label is None:
+            main = Gtk.Shortcut(trigger=get_accels_trigger(self.accels), action=Gtk.NamedAction.new(f'{prefix}.{self.name}'), arguments=self.arg)
         else:
-            secondary = None
+            main = ShortcutWithHelp(trigger=get_accel_trigger(self.accels[0]), action=Gtk.NamedAction.new(f'{prefix}.{self.name}'), arguments=self.arg, label=self.label.replace('_', ''), accels=self.accels)
+            if len(self.accels) > 1:
+                secondary = Gtk.Shortcut(trigger=get_accels_trigger(self.accels[1:]), action=Gtk.NamedAction.new(f'{prefix}.{self.name}'), arguments=self.arg)
         return main, secondary
 
     def get_menu_item(self, prefix):
@@ -127,7 +140,8 @@ class ActionInfoFamily:
         widget.insert_action_group(self.prefix, action_group)
         return action_group
 
-    def add_to_shortcut_controller(self, controller):
+    def get_shortcut_controller(self):
+        controller = ShortcutControllerWithHelp(prefix=self.prefix, label=self.label.replace('_', ''))
         for action_info in self.action_infos:
             shortcut, secondary_shortcut = action_info.get_shortcut(self.prefix)
             if shortcut is not None:
@@ -135,18 +149,4 @@ class ActionInfoFamily:
                 if secondary_shortcut is not None:
                     controller.add_shortcut(secondary_shortcut)
                 controller.add_shortcut(shortcut)
-
-    def get_shortcut_controller(self):
-        controller = Gtk.ShortcutController()
-        self.add_to_shortcut_controller(controller)
         return controller
-
-
-class ActionInfoFamiliesMixin:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.action_info_families = []
-
-    def cleanup(self):
-        del self.action_info_families
-        super().cleanup()

@@ -32,11 +32,11 @@ def iterate_children(widget):
         yield from iterate_children(child)
 
 
-def iterate_action_families(widget):
+def iterate_help_controllers(widget):
     for child in iterate_children(widget):
-        if isinstance(child, action.ActionInfoFamiliesMixin):
-            for family in child.action_info_families:
-                yield family
+        for controller in child.observe_controllers():
+            if isinstance(controller, action.ShortcutControllerWithHelp):
+                yield controller
 
 
 class ShortcutsWindow(Gtk.ShortcutsWindow):
@@ -51,20 +51,20 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
         self.add_section(section_app)
         self.add_section(section_other)
 
-        for family in iterate_action_families(window):
-            if family.prefix == 'app':
+        for controller in iterate_help_controllers(window):
+            if controller.prefix == 'app':
                 groups, section = groups_app, section_app
             else:
                 groups, section = groups_other, section_other
-            for action_info in family.action_infos:
-                if action_info.accels is not None and action_info.label is not None:
+            for shortcut in controller:
+                if isinstance(shortcut, action.ShortcutWithHelp) and shortcut.accels is not None and shortcut.label is not None:
                     section = section
-                    name = family.label.replace('_', '')
+                    name = controller.label
                     group = groups.get(name)
                     if group is None:
                         groups[name] = group = Gtk.ShortcutsGroup(title=name)
                         section.add_group(group)
-                    group.add_shortcut(Gtk.ShortcutsShortcut(title=action_info.label.replace('_', ''), accelerator=' '.join(action_info.accels)))
+                    group.add_shortcut(Gtk.ShortcutsShortcut(title=shortcut.label, accelerator=' '.join(shortcut.accels)))
 
 
 class __unit__(unit.Unit):
