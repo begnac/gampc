@@ -36,7 +36,6 @@ class Component(GObject.Object):
         self.config = self.unit.config
         self.ampd = self.unit.ampd.sub_executor()
         self.signal_handlers = []
-        self.window_signals = {}
 
         self.status_binding = self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(unit.title, self.status) if self.status else unit.title)
 
@@ -47,13 +46,12 @@ class Component(GObject.Object):
     def __del__(self):
         logger.debug('Deleting {}'.format(self))
 
-    def shutdown(self):
+    def cleanup(self):
         if self.get_window() is not None:
             raise RuntimeError
         self.signal_handlers_disconnect()
         self.status_binding.unbind()
         self.ampd.close()
-        del self.window_signals
         del self.widget
 
     def get_window(self):

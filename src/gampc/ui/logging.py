@@ -62,5 +62,5 @@ class Handler(logging.Handler):
         self.box.append(message)
         self.messages.append(message)
 
-    def shutdown(self):
+    def cleanup(self):
         self.cull_messages()

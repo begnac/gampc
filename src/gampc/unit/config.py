@@ -117,8 +117,8 @@ class __unit__(unit.Unit):
         super().__init__(*args)
         self.config_trees = {}
 
-    def shutdown(self):
-        super().shutdown()
+    def cleanup(self):
+        super().cleanup()
         for config_tree in self.config_trees.values():
             config_tree._save()
 

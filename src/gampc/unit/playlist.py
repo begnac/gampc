@@ -137,8 +137,8 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
             util.resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
         )
 
-    def shutdown(self):
-        super().shutdown()
+    def cleanup(self):
+        super().cleanup()
         del self.root
         del self.playlist_cache
 

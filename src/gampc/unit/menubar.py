@@ -70,9 +70,9 @@ class __unit__(unit.Unit):
 
         self.load_family(self.unit_help.generate_actions(), _("_Help"), app, self.menubar)
 
-    def shutdown(self):
+    def cleanup(self):
         self.action_info_families.clear()
-        super().shutdown()
+        super().cleanup()
 
     def load_family(self, generator, label, action_map, menu, section=False):
         family = action.ActionInfoFamily(generator, 'app', label)

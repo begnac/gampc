@@ -38,7 +38,7 @@ class Unit(GObject.Object):
 
         self.loaded_required = []
 
-    def shutdown(self):
+    def cleanup(self):
         logger.debug(f"Shutting down unit {self}")
         while self.loaded_required:
             self.manager._free_unit(self.loaded_required.pop())
@@ -98,7 +98,7 @@ class UnitManager(GObject.Object):
             for aggregator in reversed(self._aggregators):
                 aggregator.unlink(unit)
             del self._units[name]
-            unit.shutdown()
+            unit.cleanup()
 
     def add_aggregator(self, aggregator):
         for unit in self._units.values():

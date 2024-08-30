@@ -137,11 +137,11 @@ class Tanda(component.ComponentPaneMixin, component.Component):
 
         self.read_db()
 
-    def shutdown(self):
+    def cleanup(self):
         self.change_subcomponent_actions(False)
-        self.edit.shutdown()
-        self.view.shutdown()
-        super().shutdown()
+        self.edit.cleanup()
+        self.view.cleanup()
+        super().cleanup()
 
     @staticmethod
     def get_left_factory():
@@ -333,9 +333,9 @@ class TandaEdit(TandaSubComponent, itemlist.ItemListEditStackMixin, songlist.Son
 
         self.widget = self.box
 
-    def shutdown(self):
+    def cleanup(self):
         self.tanda_view.cleanup()
-        super().shutdown()
+        super().cleanup()
 
     @ampd.task
     async def client_connected_cb(self, client):
@@ -899,6 +899,6 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.UnitCssMixin, unit.Unit):
         self.setup_menu('tanda-edit', 'left-context', ['itemlist', 'songlist'])
         self.setup_menu('tanda-view', 'context', ['itemlist', 'songlist'])
 
-    def shutdown(self):
+    def cleanup(self):
         del self.db
-        super().shutdown()
+        super().cleanup()

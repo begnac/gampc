@@ -78,6 +78,6 @@ class __unit__(mixins.UnitComponentMixin, unit.Unit):
         self.handler.setFormatter(logging.Formatter(fmt='%(asctime)s %(levelname)s: %(name)s: %(message)s (%(pathname)s %(lineno)d)'))
         logging.getLogger().addHandler(self.handler)
 
-    def shutdown(self):
+    def cleanup(self):
         logging.getLogger().removeHandler(self.handler)
-        super().shutdown()
+        super().cleanup()

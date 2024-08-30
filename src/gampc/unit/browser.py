@@ -73,9 +73,9 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
 
         self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)
 
-    def shutdown(self):
+    def cleanup(self):
         del self.root
-        super().shutdown()
+        super().cleanup()
 
     @ampd.task
     async def client_connected_cb(self, client):

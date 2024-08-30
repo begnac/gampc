@@ -85,11 +85,11 @@ class Window(Gtk.ApplicationWindow):
     def __del__(self):
         logger.debug("Deleting {}".format(self))
 
-    def shutdown(self):
+    def cleanup(self):
         logger.debug("Destroying window: {}".format(self))
         self.change_component(None)
         logger.removeHandler(self.logging_handler)
-        self.logging_handler.shutdown()
+        self.logging_handler.cleanup()
         # self.remove_action('toggle-fullscreen')
         # self.remove_action('volume-popup')
         self.unit.unit_server.disconnect_by_func(self.update_subtitle)
@@ -102,12 +102,8 @@ class Window(Gtk.ApplicationWindow):
         if self.component is not None:
             self.component.disconnect_by_func(self.update_subtitle)
             self.main.remove(self.component.widget)
-            for cb in self.component.window_signals.values():
-                self.disconnect_by_func(cb)
         self.component = component
         if self.component is not None:
-            for name, cb in self.component.window_signals.items():
-                self.connect(name, cb)
             self.main.prepend(self.component.widget)
             self.component.widget.grab_focus()
             self.component.connect('notify::full-title', self.update_subtitle)

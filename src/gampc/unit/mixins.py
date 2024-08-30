@@ -29,9 +29,9 @@ class UnitCssMixin:
         self.css_provider.load_from_data(self.CSS, -1)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-    def shutdown(self):
+    def cleanup(self):
         Gtk.StyleContext.remove_provider_for_display(Gdk.Display.get_default(), self.css_provider)
-        super().shutdown()
+        super().cleanup()
 
 
 class UnitConfigMixin:
@@ -51,10 +51,10 @@ class UnitServerMixin:
         if self.ampd.get_is_connected():
             self.client_connected_cb(self.unit_server.ampd_client)
 
-    def shutdown(self):
+    def cleanup(self):
         self.unit_server.ampd_client.disconnect_by_func(self.client_connected_cb)
         self.ampd.close()
-        super().shutdown()
+        super().cleanup()
 
     @staticmethod
     def client_connected_cb(client):
@@ -69,12 +69,12 @@ class UnitComponentMixin(UnitConfigMixin, UnitServerMixin):
         # for menu in menus:
         #     self.setup_menu(self.name, menu, self.COMPONENT_CLASS.use_resources)
 
-    def shutdown(self):
+    def cleanup(self):
         # for aggregator in self.menu_aggregators.values():
         #     self.manager.remove_aggregator(aggregator)
         # del self.menu_aggregators
         self.unit_component.unregister_component(self.name)
-        super().shutdown()
+        super().cleanup()
 
     def new_component(self):
         return self.COMPONENT_CLASS(self)

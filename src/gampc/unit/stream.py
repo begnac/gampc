@@ -174,7 +174,7 @@ class __unit__(mixins.UnitComponentMixin, unit.Unit):
         Gtk.StyleContext.add_provider_for_display(misc.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.unit_server.connect('notify::current-song', self.notify_current_song_cb, self.css_provider)
 
-    # shutdown remove css_provider
+    # cleanup remove css_provider
 
     @staticmethod
     def notify_current_song_cb(server_properties, pspec, css_provider):

@@ -49,12 +49,12 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         for option in ampd.OPTION_NAMES:
             self.unit_server.ampd_server_properties.connect('notify::' + option, self.notify_option_cb)
 
-    def shutdown(self):
+    def cleanup(self):
         self.disconnect_by_func(self.notify_sticker_cb)
         self.disconnect_by_func(self.notify_dark_cb)
         self.disconnect_by_func(self.notify_protect_requested_cb)
         self.unit_server.ampd_server_properties.disconnect_by_func(self.notify_protect_requested_cb)
-        super().shutdown()
+        super().cleanup()
 
     def generate_actions(self):
         yield action.PropertyActionInfo('dark', self, _("Dark interface"), ['<Control><Alt>d'])

@@ -50,9 +50,9 @@ class ItemList(component.Component):
         # self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
         # self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
 
-    def shutdown(self):
+    def cleanup(self):
         self.widget.cleanup()
-        super().shutdown()
+        super().cleanup()
         del self.view
 
     def create_view(self, view_class=ViewWithCopy, /, **kwargs):

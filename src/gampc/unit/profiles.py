@@ -93,8 +93,8 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.menu.append_section(None, self.zeroconf_menu)
         self.menu.append_section(None, self.user_menu)
 
-    def shutdown(self):
-        super().shutdown()
+    def cleanup(self):
+        super().cleanup()
         asyncio.get_event_loop().run_until_complete(self.zeroconf_profiles_cleanup())
 
     def generate_actions(self):

@@ -66,7 +66,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
 
         self.connect('notify::server-profile', self.notify_server_profile_cb)
 
-    def shutdown(self):
+    def cleanup(self):
         # if self.current_song_hooks:
         #     raise RuntimeError
         self.want_to_connect = False
@@ -78,7 +78,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.ampd_server_properties.disconnect_by_func(self.server_error_cb)
         del self.ampd_client
         del self.ampd_server_properties
-        super().shutdown()
+        super().cleanup()
 
     def generate_database_actions(self):
         yield action.ActionInfo('update', self.update_cb, _("Update database"))

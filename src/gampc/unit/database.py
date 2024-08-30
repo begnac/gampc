@@ -36,8 +36,8 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         self.require('songlist')
         self.cache = cache.AsyncCache(self.cache_retrieve)
 
-    def shutdown(self):
-        super().shutdown()
+    def cleanup(self):
+        super().cleanup()
         del self.cache
 
     @ampd.task

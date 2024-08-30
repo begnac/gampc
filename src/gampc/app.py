@@ -100,7 +100,7 @@ class App(Gtk.Application):
 
         self.unit_server.ampd_connect()
 
-        self.connect('window-removed', lambda self, window: window.shutdown())
+        self.connect('window-removed', lambda self, window: window.cleanup())
 
     @staticmethod
     def shutdown_cb(self):

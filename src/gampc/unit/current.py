@@ -210,12 +210,12 @@ class Current(component.Component):
         self.widget.get_style_context().add_provider(self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.bind_property('size', welcome, 'size')
 
-    def shutdown(self):
+    def cleanup(self):
         # if self.fading:
         #     self.fading.cancel()
         #     self.fading = None
         self.layout.disconnect_by_func(self.notify_size_cb)
-        super().shutdown()
+        super().cleanup()
 
     def notify_current_song_cb(self, server, param):
         self.info.artist.set_name(server.current_song.get('Artist', ''))

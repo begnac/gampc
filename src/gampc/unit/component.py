@@ -51,14 +51,14 @@ class __unit__(unit.Unit):
         self.menu.append_section(None, self.stop_family.get_menu())
         self.regenerate_start()
 
-    def shutdown(self):
+    def cleanup(self):
         del self.start_family
         del self.stop_family
         for components in self._components.values():
             for component in components:
-                component.shutdown()
+                component.cleanup()
         del self._components
-        super().shutdown()
+        super().cleanup()
 
     def generate_start_actions(self):
         start = action.ActionInfo('component-start', self.component_start_cb, arg_format='(sb)')
@@ -100,7 +100,7 @@ class __unit__(unit.Unit):
                     return component
 
     def remove_component(self, component):
-        component.shutdown()
+        component.cleanup()
         for name in self._components:
             if component in self._components[name]:
                 self._components[name].remove(component)
