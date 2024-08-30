@@ -41,14 +41,12 @@ class ViewWithContextMenu(contextmenu.ContextMenuMixin, ViewBase):
 
 
 class ViewWithCopy(ViewWithContextMenu):
-    remove_positions = NotImplemented
-
     def __init__(self, *args, sortable=True, **kwargs):
         super().__init__(*args, **kwargs, sortable=sortable)
 
         self.add_to_context_menu(self.generate_editing_actions(), 'view-edit', _("Edit"))
 
-        self.drag_source = dnd.ListDragSource(self.content_from_items, self.remove_positions)
+        self.drag_source = dnd.ListDragSource(self.content_from_items, self.remove_positions, self.lock, self.unlock)
         self.item_view.rows.add_controller(self.drag_source)
 
     def cleanup(self):
@@ -64,6 +62,16 @@ class ViewWithCopy(ViewWithContextMenu):
 
     def copy_items(self, items):
         self.get_clipboard().set_content(self.content_from_items(items))
+
+    remove_positions = NotImplemented
+
+    @staticmethod
+    def lock(self):
+        pass
+
+    @staticmethod
+    def unlock(self):
+        pass
 
 
 class ViewWithCopyPaste(ViewWithCopy):

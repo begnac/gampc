@@ -93,7 +93,7 @@ class Playlist(songlist.SongListTotalsMixin, songlist.SongList):
         path = self.widget.left_selected_item.joined_path
         window = self.widget.get_root()
         if action.get_name() == 'save':
-            if not self.view.edit_stack.deltas:
+            if not self.view.edit_stack.transactions:
                 return
             if await self.unit.save_playlist(window, path, [item.get_key() for item in self.view.item_store]):
                 self.view.edit_stack.reset()
@@ -112,9 +112,9 @@ class Playlist(songlist.SongListTotalsMixin, songlist.SongList):
         if not view.get_editable():
             return
         widget = view.get_parent()
-        if view.edit_stack.deltas and not widget.left_selected_item.modified:
+        if view.edit_stack.index and not widget.left_selected_item.modified:
             widget.left_selected_item.modified = True
-        elif not view.edit_stack.deltas and widget.left_selected_item.modified:
+        elif not view.edit_stack.index and widget.left_selected_item.modified:
             widget.left_selected_item.modified = False
         else:
             return

@@ -53,12 +53,11 @@ class ViewWithEditStack(ViewWithCopyPaste):
         # util.resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
 
     def action_do_cb(self, action, parameter):
-        self.step_edit_stack(parameter.unpack())
-        self.edit_stack_changed()
+        self.edit_stack.step(parameter.unpack())
 
     @misc.create_task
     async def action_reset_cb(self, action, parameter):
-        if not self.edit_stack or not self.edit_stack.deltas:
+        if not self.edit_stack or not self.edit_stack.transactions:
             return
         if not await dialog.MessageDialogAsync(transient_for=self.get_root(), message=_("Reset and lose all modifications?")).run():
             return
@@ -71,13 +70,17 @@ class ViewWithEditStack(ViewWithCopyPaste):
             self.edit_stack.set_splicer()
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.edit_stack.set_splicer(self.edit_stack_splicer)
+            self.edit_stack.set_splicer(self.edit_stack_splicer, self.step_cb)
         else:
             self.item_store.remove_all()
 
-    def step_edit_stack(self, push):
-        focus, selection = self.edit_stack.step(push)
+    # def step_edit_stack(self, push):
+    #     focus, selection = self.edit_stack.step(push)
+    #     self.refocus(focus, selection)
+
+    def step_cb(self, focus, selection):
         self.refocus(focus, selection)
+        self.edit_stack_changed()
 
     def refocus(self, focus, selection):
         if focus is not None:
@@ -91,32 +94,31 @@ class ViewWithEditStack(ViewWithCopyPaste):
     def remove_positions(self, positions):
         if not positions:
             return
-        # indices = []
-        # for i, item_ in enumerate(self.item_selection_model):
-        #     if item_ in items:
-        #         indices.append(i)
-        #         items.remove(item_)
-        # if items:
-        #     raise RuntimeError
-        deltas = []
+        self.edit_stack.hold_transaction()
         i = j = positions[0]
         for k in positions[1:] + [0]:
             j += 1
             if j != k:
                 values = [self.edit_stack_getter(item) for item in self.item_selection_model[i:j]]
-                deltas.append(editstack.SimpleDelta(values, i, True))
+                self.edit_stack.append_delta(editstack.Delta(values, i, False))
                 i = j = k
-        self.edit_stack.set_from_here([editstack.MetaDelta(deltas, False)])
-        self.step_edit_stack(True)
+        self.edit_stack.release_transaction()
 
     def add_items(self, values, position):
         if not values:
             return
-        self.edit_stack.set_from_here([editstack.SimpleDelta(values, position, True)])
-        self.step_edit_stack(True)
+        self.edit_stack.hold_transaction()
+        self.edit_stack.append_delta(editstack.Delta(values, position, True))
+        self.edit_stack.release_transaction()
 
     def edit_stack_changed(self):
         self.emit('edit-stack-changed')
         # self.actions['edit-stack'].lookup_action('save').set_enabled(True)
-        self.actions['edit-stack'].lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.pos > 0)
-        self.actions['edit-stack'].lookup_action('redo').set_enabled(self.edit_stack and self.edit_stack.pos < len(self.edit_stack.deltas))
+        self.actions['edit-stack'].lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.index > 0)
+        self.actions['edit-stack'].lookup_action('redo').set_enabled(self.edit_stack and self.edit_stack.index < len(self.edit_stack.transactions))
+
+    def lock(self):
+        self.edit_stack.hold_transaction()
+
+    def unlock(self):
+        self.edit_stack.release_transaction()

@@ -32,17 +32,17 @@ columnview > listview:drop(active) > row.drop-row {
 
 
 class ListDragSource(Gtk.DragSource):
-    def __init__(self, content_from_items, remove_positions):
+    def __init__(self, content_from_items, remove_positions, lock, unlock):
         super().__init__(actions=Gdk.DragAction.COPY)
         icon = Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
         self.set_icon(icon, 5, 5)
-        self.connect('prepare', self.prepare_cb, content_from_items)
+        self.connect('prepare', self.prepare_cb, content_from_items, lock)
         # self.connect('drag-begin', self.drag_begin_cb)
         # self.connect('drag-cancel', self.drag_cancel_cb)
-        self.connect('drag-end', self.end_cb, remove_positions)
+        self.connect('drag-end', self.end_cb, remove_positions, unlock)
 
     @staticmethod
-    def prepare_cb(self, x, y, content_from_items):
+    def prepare_cb(self, x, y, content_from_items, lock):
         widget = self.get_widget()
         row, x, y = misc.find_descendant_at_xy(widget, x, y, 1)
         if row is None:
@@ -54,6 +54,7 @@ class ListDragSource(Gtk.DragSource):
         if pos not in self.selection:
             model.select_item(pos, True)
             self.selection = [pos]
+        lock()
         return content_from_items(model[pos] for pos in self.selection)
 
     # def drag_begin_cb(self, source, drag):
@@ -63,9 +64,10 @@ class ListDragSource(Gtk.DragSource):
     #     return False
 
     @staticmethod
-    def end_cb(self, drag, delete, remove_positions):
+    def end_cb(self, drag, delete, remove_positions, unlock):
         if delete:
             remove_positions(self.selection)
+        unlock()
         del self.selection
 
 
