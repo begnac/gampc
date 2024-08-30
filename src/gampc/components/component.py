@@ -33,7 +33,6 @@ class Component(cleanup.CleanupSignalMixin, GObject.Object):
         super().__init__(full_title=unit.title, **kwargs)
         self.unit = unit
         self.name = name or unit.name
-        self.manager = unit.manager
         self.config = self.unit.config
         self.ampd = self.unit.ampd.sub_executor()
 
@@ -44,16 +43,10 @@ class Component(cleanup.CleanupSignalMixin, GObject.Object):
             self.client_connected_cb(unit.unit_server.ampd_client)
 
     def cleanup(self):
-        if self.get_window() is not None:
-            raise RuntimeError
         self.status_binding.unbind()
         self.ampd.close()
         del self.widget
         super().cleanup()
-
-    def get_window(self):
-        root = self.widget.get_root()
-        return root if isinstance(root, Gtk.Window) else None
 
     @staticmethod
     def client_connected_cb(client):

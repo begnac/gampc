@@ -96,7 +96,7 @@ class __unit__(unit.Unit):
     def get_free_component(self):
         for components in self._components.values():
             for component in components:
-                if not component.get_window():
+                if not component.widget.get_root():
                     return component
 
     def remove_component(self, component):
@@ -112,7 +112,7 @@ class __unit__(unit.Unit):
     def component_start_cb(self, action, parameter):
         name, new_instance = parameter.unpack()
         component = self.get_component(name, new_instance)
-        window = component.get_window()
+        window = component.widget.get_root()
         if window is None:
             window = Gtk.Application.get_default().get_active_window()
             window.change_component(component)

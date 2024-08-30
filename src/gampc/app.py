@@ -106,8 +106,8 @@ class App(Gtk.Application):
     def shutdown_cb(self):
         logger.debug("Shutting down")
 
-        for win in self.get_windows():
-            win.destroy()
+        for window in self.get_windows():
+            window.destroy()
 
         misc.get_clipboard().set_content(None)
 
