@@ -70,12 +70,7 @@ class StreamView(ViewWithEditStack):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for column in self.item_view.get_columns():
-            column.get_factory().connect('item-edited', self.item_edited_cb)
-
-    def cleanup(self):
-        for column in self.item_view.get_columns():
-            column.get_factory().disconnect_by_func(self.item_edited_cb)
-        super().cleanup()
+            self.connect_clean(column.get_factory(), 'item-edited', self.item_edited_cb)
 
     def generate_editing_actions(self):
         yield from super().generate_editing_actions()

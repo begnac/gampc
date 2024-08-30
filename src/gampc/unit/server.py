@@ -44,16 +44,15 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
 
         # self.current_song_hooks = []
         self.ampd_client = ampd.ClientGLib()
-        self.ampd_client.connect('client-connected', self.client_connected_cb)
-        self.ampd_client.connect('client-disconnected', self.client_disconnected_cb)
+        self.connect_clean(self.ampd_client, 'client-connected', self.client_connected_cb)
+        self.connect_clean(self.ampd_client, 'client-disconnected', self.client_disconnected_cb)
 
         self.ampd = self.ampd_client.executor.sub_executor()
 
         self.ampd_server_properties = ampd.ServerPropertiesGLib(self.ampd_client.executor)
-        # self.ampd_server_properties.bind_property('current-song', self, 'current-song', GObject.BindingFlags.SYNC_CREATE, self.current_song_transform)
         self.ampd_server_properties.bind_property('current-song', self, 'current-song', GObject.BindingFlags.SYNC_CREATE)
-        self.ampd_server_properties.connect('server-error', self.server_error_cb)
-        self.ampd_server_properties.connect('notify::updating-db', self.set_server_label)
+        self.connect_clean(self.ampd_server_properties, 'server-error', self.server_error_cb)
+        self.connect_clean(self.ampd_server_properties, 'notify::updating-db', self.set_server_label)
 
         self.want_to_connect = False
 
@@ -64,18 +63,11 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.profile = self.unit_profiles.profile_from_repr(self.server_profile)
         self.set_server_label()
 
-        self.connect('notify::server-profile', self.notify_server_profile_cb)
+        self.connect_clean(self, 'notify::server-profile', self.notify_server_profile_cb)
 
     def cleanup(self):
-        # if self.current_song_hooks:
-        #     raise RuntimeError
         self.want_to_connect = False
         asyncio.get_event_loop().run_until_complete(self.ampd_client.close())
-        self.disconnect_by_func(self.notify_server_profile_cb)
-        self.ampd_client.disconnect_by_func(self.client_disconnected_cb)
-        self.ampd_client.disconnect_by_func(self.client_connected_cb)
-        self.ampd_server_properties.disconnect_by_func(self.set_server_label)
-        self.ampd_server_properties.disconnect_by_func(self.server_error_cb)
         del self.ampd_client
         del self.ampd_server_properties
         super().cleanup()

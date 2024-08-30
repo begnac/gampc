@@ -1,0 +1,45 @@
+# coding: utf-8
+#
+# Graphical Asynchronous Music Player Client
+#
+# Copyright (C) Itaï BEN YAACOV
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+from ..util.logger import logger
+
+
+class CleanupBaseMixin:
+    def __del__(self):
+        logger.debug('Deleting {}'.format(self))
+
+    def cleanup(self):
+        logger.debug('Cleaned up {}'.format(self))
+
+
+class CleanupSignalMixin(CleanupBaseMixin):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cleanup_signal = []
+
+    def cleanup(self):
+        for target, handler in self._cleanup_signal:
+            target.disconnect(handler)
+        del self._cleanup_signal
+        super().cleanup()
+
+    def connect_clean(self, target, *args):
+        handler = target.connect(*args)
+        self._cleanup_signal.append((target, handler))

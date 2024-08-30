@@ -42,9 +42,9 @@ class ItemList(component.Component):
         self.view.item_view.add_css_class('itemlist')
         self.focus_widget = self.view.item_view
 
-        self.signal_handler_connect(self.view.item_view, 'activate', self.view_activate_cb)
+        self.connect_clean(self.view.item_view, 'activate', self.view_activate_cb)
         if self.duplicate_test_columns:
-            self.signal_handler_connect(self.view.item_store, 'items-changed', self.mark_duplicates)
+            self.connect_clean(self.view.item_store, 'items-changed', self.mark_duplicates)
 
         # self.itemlist_actions = self.add_actions_provider('itemlist')
         # self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))

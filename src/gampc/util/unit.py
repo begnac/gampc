@@ -23,6 +23,7 @@ from gi.repository import GObject
 import importlib
 import collections
 
+from . import cleanup
 from .logger import logger
 
 
@@ -30,7 +31,7 @@ class UnitLoadError(Exception):
     pass
 
 
-class Unit(GObject.Object):
+class Unit(cleanup.CleanupSignalMixin, GObject.Object):
     def __init__(self, manager):
         super().__init__()
         self.manager = manager
@@ -39,13 +40,10 @@ class Unit(GObject.Object):
         self.loaded_required = []
 
     def cleanup(self):
-        logger.debug(f"Shutting down unit {self}")
         while self.loaded_required:
             self.manager._free_unit(self.loaded_required.pop())
         del self.manager
-
-    def __del__(self):
-        logger.debug("Deleting {self}".format(self=self))
+        super().cleanup()
 
     def require(self, name):
         unit = self.manager._use_unit(name)

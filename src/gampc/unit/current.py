@@ -196,14 +196,14 @@ class Current(component.Component):
         )
 
         self.layout = MyBoxLayout()
-        self.layout.connect('notify::size', self.notify_size_cb)
+        self.connect_clean(self.layout, 'notify::size', self.notify_size_cb)
         self.widget = self.main_box = Gtk.Box(margin_bottom=20, margin_start=20, margin_end=20, margin_top=20, layout_manager=self.layout)
         self.main_box.append(welcome)
         self.main_box.append(self.info)
 
         self.unit.unit_server.bind_property('current-song', welcome, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: not y)
         self.unit.unit_server.bind_property('current-song', self.info, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: bool(y))
-        self.signal_handler_connect(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
+        self.connect_clean(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
         # self.fading = None
 
         self.css_provider = Gtk.CssProvider()
@@ -214,7 +214,6 @@ class Current(component.Component):
         # if self.fading:
         #     self.fading.cancel()
         #     self.fading = None
-        self.layout.disconnect_by_func(self.notify_size_cb)
         super().cleanup()
 
     def notify_current_song_cb(self, server, param):

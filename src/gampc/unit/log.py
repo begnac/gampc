@@ -54,8 +54,8 @@ class Log(component.Component):
         self.scrolled_label.set_child(self.label)
 
         handler = unit.handler
-        self.signal_handler_connect(handler, 'notify::log', self.handler_notify_log_cb)
-        self.signal_handler_connect(self.scrolled_label.get_vadjustment(), 'changed', self.adjustment_changed_cb)
+        self.connect_clean(handler, 'notify::log', self.handler_notify_log_cb)
+        self.connect_clean(self.scrolled_label.get_vadjustment(), 'changed', self.adjustment_changed_cb)
         # self.scrolled_label.get_vadjustment().connect('changed', self.adjustment_changed_cb)
         self.handler_notify_log_cb(handler, None)
 

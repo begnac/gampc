@@ -152,8 +152,8 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongList):
         super().__init__(unit)
         self.view.item_view.add_css_class('queue')
 
-        self.signal_handler_connect(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
-        self.signal_handler_connect(self.view.item_selection_model, 'selection-changed', self.selection_changed_cb)
+        self.connect_clean(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
+        self.connect_clean(self.view.item_selection_model, 'selection-changed', self.selection_changed_cb)
 
         # for name in self.itemlist_actions.list_actions():
         #     if name.startswith('queue-ext-'):

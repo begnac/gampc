@@ -23,6 +23,7 @@ from gi.repository import GObject
 from gi.repository import Gtk
 
 from ..util import action
+from ..util import cleanup
 from ..util import unit
 from ..util.logger import logger
 
@@ -34,7 +35,7 @@ from .. import __application__
 from . import mixins
 
 
-class Window(Gtk.ApplicationWindow):
+class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
         super().__init__(show_menubar=True, **kwargs)
 
@@ -51,9 +52,9 @@ class Window(Gtk.ApplicationWindow):
         self.connect('notify::default-width', self.notify_default_size_cb)
         self.connect('notify::default-height', self.notify_default_size_cb)
 
-        self.unit.unit_server.connect('notify::current-song', self.notify_current_song_cb)
-        self.unit.unit_server.ampd_server_properties.connect('notify::state', self.update_title)
-        self.unit.unit_server.connect('notify::server-label', self.update_subtitle)
+        self.connect_clean(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
+        self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::state', self.update_title)
+        self.connect_clean(self.unit.unit_server, 'notify::server-label', self.update_subtitle)
 
         self.main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(self.main)
@@ -72,8 +73,8 @@ class Window(Gtk.ApplicationWindow):
         self.unit.unit_server.ampd_server_properties.bind_property('duration', self.headerbar.time_scale, 'duration', GObject.BindingFlags.SYNC_CREATE)
         self.unit.unit_server.ampd_server_properties.bind_property('elapsed', self.headerbar.time_scale, 'elapsed', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
 
-        self.unit.unit_server.ampd_server_properties.connect('notify::state', self.set_time_scale_sensitive)
-        self.unit.unit_persistent.connect('notify::protect-active', self.set_time_scale_sensitive)
+        self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::state', self.set_time_scale_sensitive)
+        self.connect_clean(self.unit.unit_persistent, 'notify::protect-active', self.set_time_scale_sensitive)
 
         self.logging_handler = logging.Handler(self.unit.config.message_timeout._get() * 1000)
         logger.addHandler(self.logging_handler)
@@ -82,21 +83,11 @@ class Window(Gtk.ApplicationWindow):
         self.update_title()
         self.update_subtitle()
 
-    def __del__(self):
-        logger.debug("Deleting {}".format(self))
-
     def cleanup(self):
-        logger.debug("Destroying window: {}".format(self))
         self.change_component(None)
         logger.removeHandler(self.logging_handler)
         self.logging_handler.cleanup()
-        # self.remove_action('toggle-fullscreen')
-        # self.remove_action('volume-popup')
-        self.unit.unit_server.disconnect_by_func(self.update_subtitle)
-        self.unit.unit_server.ampd_server_properties.disconnect_by_func(self.set_time_scale_sensitive)
-        self.unit.unit_server.ampd_server_properties.disconnect_by_func(self.update_title)
-        self.unit.unit_server.disconnect_by_func(self.notify_current_song_cb)
-        self.unit.unit_persistent.disconnect_by_func(self.set_time_scale_sensitive)
+        super().cleanup()
 
     def change_component(self, component):
         if self.component is not None:

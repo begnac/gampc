@@ -47,12 +47,11 @@ class UnitServerMixin:
 
         self.require('server')
         self.ampd = self.unit_server.ampd_client.executor.sub_executor()
-        self.unit_server.ampd_client.connect('client-connected', self.client_connected_cb)
+        self.connect_clean(self.unit_server.ampd_client, 'client-connected', self.client_connected_cb)
         if self.ampd.get_is_connected():
             self.client_connected_cb(self.unit_server.ampd_client)
 
     def cleanup(self):
-        self.unit_server.ampd_client.disconnect_by_func(self.client_connected_cb)
         self.ampd.close()
         super().cleanup()
 

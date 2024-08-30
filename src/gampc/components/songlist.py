@@ -48,7 +48,7 @@ class SongList(itemlist.ItemList):
 class SongListTotalsMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.signal_handler_connect(self.view.item_store, 'items-changed', self.set_totals)
+        self.connect_clean(self.view.item_store, 'items-changed', self.set_totals)
 
     def set_totals(self, store, *args):
         time = sum(int(item.get_field('Time', '0')) for item in store)

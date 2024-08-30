@@ -94,29 +94,3 @@ class TreeNode(GObject.Object):
         except ampd.ConnectionError:
             return
         self.filled_contents = True
-
-
-# class TreeListIconColumn(Gtk.TreeViewColumn):
-#     def __init__(self, name):
-#         super().__init__(name)
-#         icon_cell = Gtk.CellRendererPixbuf()
-#         self.pack_start(icon_cell, False)
-#         self.set_cell_data_func(icon_cell, self.icon_data_func)
-#         name_cell = Gtk.CellRendererText()
-#         self.pack_start(name_cell, False)
-#         self.set_cell_data_func(name_cell, self.name_data_func)
-
-#     @staticmethod
-#     def icon_data_func(self, cell, store, i, param):
-#         node = store.get_value(i, 0)
-#         cell.set_property('icon-name', node.icon)
-
-#     @staticmethod
-#     def name_data_func(self, cell, store, i, param):
-#         node = store.get_value(i, 0)
-#         if node.modified:
-#             cell.set_property('text', '* ' + node.name)
-#             cell.set_property('font', 'bold italic')
-#         else:
-#             cell.set_property('text', node.name)
-#             cell.set_property('font', None)

@@ -29,7 +29,7 @@ from ..util.logger import logger
 from .. import __application__
 
 
-class ConfigNode(object):
+class ConfigNode:
     def __init__(self, name, base=None):
         self._name = name
         self._base = base

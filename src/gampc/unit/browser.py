@@ -47,7 +47,7 @@ class Browser(songlist.SongList):
     def __init__(self, unit):
         super().__init__(unit)
         self.widget = BrowserWidget(self.view, self.config.pane_separator, unit.root.model)
-        self.signal_handler_connect(self.unit.root.model, 'items-changed', self.root_items_changed_cb)
+        self.connect_clean(self.unit.root.model, 'items-changed', self.root_items_changed_cb)
         if len(self.widget.left_selection) > 0:
             self.widget.left_selection[0].set_expanded(True)
 

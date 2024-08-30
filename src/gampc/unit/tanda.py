@@ -94,12 +94,12 @@ class Tanda(component.ComponentPaneMixin, component.Component):
         for i, genre in enumerate(self.GENRES):
             button = Gtk.Button(label=genre, can_focus=False, action_name='tanda.genre-filter', action_target=GLib.Variant.new_int32(i))
             self.button_box.append(button)
-        self.signal_handler_connect(self, 'notify::genre-filter', lambda *args: self.filter_tandas(False))
+        self.connect_clean(self, 'notify::genre-filter', lambda *args: self.filter_tandas(False))
 
         self.button_box.append(Gtk.Label(hexpand=True))
 
         self.problem_button = Gtk.ToggleButton(icon_name='object-select-symbolic', can_focus=False, active=unit.unit_persistent.protect_requested, tooltip_text=_("Filter zero note"))
-        self.signal_handler_connect(self.problem_button, 'toggled', lambda *args: self.filter_tandas(False))
+        self.connect_clean(self.problem_button, 'toggled', lambda *args: self.filter_tandas(False))
 
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
         self.switcher = Gtk.StackSwitcher(stack=self.stack)
@@ -119,9 +119,9 @@ class Tanda(component.ComponentPaneMixin, component.Component):
             self.bind_property('current-tandaid', c, 'current-tandaid', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.subcomponent_index = 0
 
-        self.signal_handler_connect(self.unit.db, 'changed', self.db_changed_cb)
-        self.signal_handler_connect(self.unit.db, 'verify-progress', self.db_verify_progress_cb)
-        self.signal_handler_connect(self.unit.db, 'missing-song', self.db_missing_song_cb)
+        self.connect_clean(self.unit.db, 'changed', self.db_changed_cb)
+        self.connect_clean(self.unit.db, 'verify-progress', self.db_verify_progress_cb)
+        self.connect_clean(self.unit.db, 'missing-song', self.db_missing_song_cb)
 
         self.actions.add_action(resource.Action('switch-subcomponent', self.action_subcomponent_next_cb))
         self.actions.add_action(resource.Action('verify', self.unit.db.action_tanda_verify_cb))
@@ -133,7 +133,7 @@ class Tanda(component.ComponentPaneMixin, component.Component):
             self.actions_dict[name] = Gio.SimpleActionGroup()
         self.change_subcomponent_actions(True)
 
-        self.signal_handler_connect(self.unit.unit_persistent, 'notify::protect-requested', lambda unit_persistent, param_spec: unit_persistent.protect_requested and self.problem_button.set_active(True))
+        self.connect_clean(self.unit.unit_persistent, 'notify::protect-requested', lambda unit_persistent, param_spec: unit_persistent.protect_requested and self.problem_button.set_active(True))
 
         self.read_db()
 
@@ -272,11 +272,11 @@ class TandaSubComponent(component.Component):
 
     def __init__(self, unit, *, name):
         super().__init__(unit, name=name)
-        self.signal_handler_connect(self.widget, 'map', lambda widget: self.set_cursor_tandaid(self.current_tandaid))
+        self.connect_clean(self.widget, 'map', lambda widget: self.set_cursor_tandaid(self.current_tandaid))
 
     def init_tandaid_view(self, view):
         self.tandaid_view = view
-        self.signal_handler_connect(self.tandaid_view.record_selection, 'selection-changed', self.tandaid_selection_changed_cb)
+        self.connect_clean(self.tandaid_view.record_selection, 'selection-changed', self.tandaid_selection_changed_cb)
 
     def set_cursor_tandaid(self, tandaid):
         if tandaid is None:
@@ -318,7 +318,7 @@ class TandaEdit(TandaSubComponent, itemlist.ItemListEditStackMixin, songlist.Son
         #     col.renderer.set_property('editable', True)
         #     col.renderer.connect('editing-started', self.renderer_editing_started_cb, name)
         self.tanda_store = self.tanda_view.record_store
-        self.signal_handler_connect(self.tanda_view.record_selection, 'selection-changed', self.tanda_selection_changed_cb)
+        self.connect_clean(self.tanda_view.record_selection, 'selection-changed', self.tanda_selection_changed_cb)
 
         # Ugly hack but works
         self.itemlist_actions.remove('filter')

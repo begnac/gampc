@@ -25,6 +25,7 @@ from gi.repository import Gtk
 
 import re
 
+from ..util import cleanup
 from ..util import item
 from ..util import misc
 
@@ -211,7 +212,7 @@ class ItemView(Gtk.ColumnView):
         columns.handler_unblock_by_func(self.columns_changed_cb)
 
 
-class ViewBase(Gtk.Box):
+class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
     def __init__(self, fields, factory_factory, item_factory, *, sortable, selection_model=Gtk.MultiSelection):
@@ -229,7 +230,7 @@ class ViewBase(Gtk.Box):
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, vscrollbar_policy=Gtk.PolicyType.NEVER)
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
         self.append(self.scrolled_filter_view)
-        self.filter_item.connect('notify::value', self.notify_filter_cb)
+        self.connect_clean(self.filter_item, 'notify::value', self.notify_filter_cb)
 
         self.item_selection_model = selection_model()
         self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_selection_model, vexpand=True, enable_rubberband=False)
@@ -255,12 +256,12 @@ class ViewBase(Gtk.Box):
         self.connect('notify::filtering', self.notify_filtering_cb)
 
     def cleanup(self):
-        self.filter_item.disconnect_by_func(self.notify_filter_cb)
         self.filter_filter.set_filter_func(None)
         self.filter_view.cleanup()
         self.item_store.remove_all()
         self.item_view.cleanup()
         self.view_search.cleanup()
+        super().cleanup()
 
     def grab_focus(self):
         self.item_view.grab_focus()
