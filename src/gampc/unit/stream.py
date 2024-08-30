@@ -33,7 +33,6 @@ from ..ui import dialog
 from ..view.base import EditableItemFactory
 from ..view.editstack import ViewWithEditStack
 from ..view.cache import ItemFilenameTransfer
-from ..view.cache import ViewWithCopyPasteSong
 
 from ..components import itemlist
 
@@ -97,15 +96,8 @@ class Stream(itemlist.ItemList):
 
     def __init__(self, unit):
         super().__init__(unit)
-
         self.view.add_to_context_menu(self.generate_save_actions(), 'stream', _("Save"))
-
         self.widget.item_view.add_css_class('stream')
-
-        self.signal_handler_connect(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
-
-        self.css_provider = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(self.widget.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
         self.load_streams()
 
@@ -133,20 +125,6 @@ class Stream(itemlist.ItemList):
                     stream[key] = ''
         self.view.set_edit_stack(editstack.EditStack(streams))
 
-    def notify_current_song_cb(self, server_properties, pspec):
-        url = server_properties.current_song.get('file')
-        if url is not None and (url.startswith('http://') or url.startswith('https://')):
-            PLAYING_CSS = f'''
-            columnview.stream > listview > row > cell.{STREAM_URL_CSS_PREFIX}-{encode_url(url)} {{
-              background: rgba(128,128,128,0.1);
-              font-style: italic;
-              font-weight: bold;
-            }}
-            '''
-        else:
-            PLAYING_CSS = ''
-        self.css_provider.load_from_string(PLAYING_CSS)
-
 
 class StreamDatabase(db.Database):
     def __init__(self, name, fields):
@@ -168,24 +146,11 @@ class StreamDatabase(db.Database):
                                                                                                        ':' + ',:'.join(self.fields.basic_names)), stream_)
 
 
-class __unit__(mixins.UnitComponentMixin, mixins.UnitCssMixin, unit.Unit):
+class __unit__(mixins.UnitComponentMixin, unit.Unit):
     title = _("Internet Streams")
     key = '4'
 
     COMPONENT_CLASS = Stream
-    CSS = '''
-    columnview.stream > listview > row > cell.playing {
-      background: rgba(128,128,128,0.1);
-      font-style: italic;
-      font-weight: bold;
-    }
-    columnview > listview > row > cell > editablelabel:focus {
-      outline-color: yellow;
-      outline-offset: 0px;
-      outline-style: solid;
-      outline-width: 4px;
-    }
-    '''
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -204,6 +169,27 @@ class __unit__(mixins.UnitComponentMixin, mixins.UnitCssMixin, unit.Unit):
             self.unit_database.cache[song['file']] = song
 
         self.config.edit_dialog_size._get(default=[500, 500])
+
+        self.css_provider = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(misc.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self.unit_server.connect('notify::current-song', self.notify_current_song_cb, self.css_provider)
+
+    # shutdown remove css_provider
+
+    @staticmethod
+    def notify_current_song_cb(server_properties, pspec, css_provider):
+        url = server_properties.current_song.get('file')
+        if url is not None and (url.startswith('http://') or url.startswith('https://')):
+            PLAYING_CSS = f'''
+            columnview.stream > listview > row > cell.{STREAM_URL_CSS_PREFIX}-{encode_url(url)} {{
+              background: rgba(128,128,128,0.1);
+              font-style: italic;
+              font-weight: bold;
+            }}
+            '''
+        else:
+            PLAYING_CSS = ''
+        css_provider.load_from_string(PLAYING_CSS)
 
     # def current_song_hook(self, song):
     #     if 'file' not in song or 'Title' not in song:
