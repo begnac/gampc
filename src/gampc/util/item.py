@@ -61,3 +61,26 @@ class ItemStringTransfer(ItemKeyTransfer):
 
 def transfer_union(items, *transfers):
     return Gdk.ContentProvider.new_union([transfer(items).get_content() for transfer in transfers])
+
+
+def setup_find_duplicate_items(model, test_fields, ignore):
+    model.connect('items-changed', lambda m, p, r, a, t, i: find_duplicate_items(m, t, i), test_fields, ignore)
+
+
+def find_duplicate_items(items, test_fields, ignore):
+    marker = 0
+    firsts = {}
+    for i, item in enumerate(items):
+        if item.get_key() in ignore:
+            continue
+        test = tuple(item.get_field(name) for name in test_fields)
+        first = firsts.get(test)
+        if first is None:
+            firsts[test] = i
+            if item.duplicate is not None:
+                item.duplicate = None
+        else:
+            if items[first].duplicate is None:
+                items[first].duplicate = marker
+                marker += 1
+            item.duplicate = items[first].duplicate

@@ -95,10 +95,9 @@ class Stream(itemlist.ItemList):
         self.view.add_to_context_menu(self.generate_save_actions(), 'stream', _("Save"))
         self.widget.item_view.add_css_class('stream')
 
-        self.load_streams()
+        item.setup_find_duplicate_items(self.view.item_store, ['file'], [self.unit.unit_database.SEPARATOR_FILE])
 
-    def create_view(self, view_class=StreamView):
-        return super().create_view(StreamView)
+        self.load_streams()
 
     def generate_save_actions(self):
         yield action.ActionInfo('save', self.action_save_cb, _("Save"), ['<Control>s'])

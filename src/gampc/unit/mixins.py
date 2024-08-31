@@ -65,23 +65,12 @@ class UnitComponentMixin(UnitConfigMixin, UnitServerMixin):
         super().__init__(*args)
         self.require('component').register_component(self.name, self.title, self.key, self.new_component)
 
-        # for menu in menus:
-        #     self.setup_menu(self.name, menu, self.COMPONENT_CLASS.use_resources)
-
     def cleanup(self):
-        # for aggregator in self.menu_aggregators.values():
-        #     self.manager.remove_aggregator(aggregator)
-        # del self.menu_aggregators
         self.unit_component.unregister_component(self.name)
         super().cleanup()
 
     def new_component(self):
         return self.COMPONENT_CLASS(self)
-
-    # def setup_menu(self, name, kind, providers=[]):
-    #     aggregator = util.resource.MenuAggregator([f'{provider}.{kind}.menu' for provider in [name] + providers])
-    #     self.manager.add_aggregator(aggregator)
-    #     self.menu_aggregators[f'{name}.{kind}'] = aggregator
 
 
 class UnitPanedComponentMixin(UnitComponentMixin, UnitConfigMixin):

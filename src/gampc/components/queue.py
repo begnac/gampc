@@ -142,13 +142,11 @@ class QueueView(ViewWithCopyPasteSong):
 
 
 class Queue(songlist.SongListTotalsMixin, songlist.SongList):
-    editable = True
-    duplicate_test_columns = ['Title']
-
     def __init__(self, unit):
         super().__init__(unit, QueueView(fields=unit.unit_fields.fields, item_factory=QueueItem, factory_factory=QueueItemFactory, separator_file=unit.unit_database.SEPARATOR_FILE, ampd=unit.ampd))
         self.view.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=unit.unit_persistent.protect)
         self.view.item_view.add_css_class('queue')
+        item.setup_find_duplicate_items(self.view.item_store, ['Title'], [self.unit.unit_database.SEPARATOR_FILE])
 
         self.widget = self.view
 

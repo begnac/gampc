@@ -19,6 +19,7 @@
 
 
 from ..util import action
+from ..util import item
 from ..util import misc
 
 from ..ui import compound
@@ -63,13 +64,12 @@ class PlaylistWidget(compound.WidgetWithPanedTreeList):
 
 
 class Playlist(songlist.SongListTotalsMixin, songlist.SongList):
-    duplicate_test_columns = ['file']
-
     def __init__(self, unit):
         super().__init__(unit, ViewWithCopyPasteEditStackSong(fields=unit.unit_fields.fields, separator_file=unit.unit_database.SEPARATOR_FILE, cache=unit.unit_database.cache))
         self.widget = PlaylistWidget(self.view, self.config.pane_separator, unit.root.model)
 
         self.view.connect('edit-stack-changed', self.edit_stack_changed_cb)
+        item.setup_find_duplicate_items(self.view.item_store, ['file'], [self.unit.unit_database.SEPARATOR_FILE])
 
         self.view.add_to_context_menu(self.generate_actions(), 'playlist-local', _("Playlist"), below='edit-stack')
         self.widget.add_to_context_menu(self.generate_left_actions(), 'playlist-global', _("Playlist global"))

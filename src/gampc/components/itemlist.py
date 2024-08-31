@@ -24,9 +24,6 @@ from . import component
 
 
 class ItemList(component.Component):
-    duplicate_test_columns = []
-    duplicate_extra_items = None
-
     def __init__(self, unit, view, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
@@ -34,17 +31,11 @@ class ItemList(component.Component):
         self.view.item_view.add_css_class('itemlist')
 
         self.connect_clean(self.view.item_view, 'activate', self.view_activate_cb)
-        if self.duplicate_test_columns:
-            self.connect_clean(self.view.item_store, 'items-changed', self.mark_duplicates)
-
-        # self.itemlist_actions = self.add_actions_provider('itemlist')
-        # self.itemlist_actions.add_action(util.resource.Action('reset', self.action_reset_cb))
-        # self.itemlist_actions.add_action(util.resource.Action('copy', self.action_copy_delete_cb))
 
     def cleanup(self):
         self.widget.cleanup()
-        super().cleanup()
         del self.view
+        super().cleanup()
 
     @ampd.task
     async def view_activate_cb(self, view, position):
@@ -57,25 +48,3 @@ class ItemList(component.Component):
         else:
             item_id = await self.ampd.addid(filename)
         await self.ampd.playid(item_id)
-
-    def mark_duplicates(self, *args):
-        items = list(self.view.item_store)
-        if self.duplicate_extra_items:
-            items += list(self.duplicate_extra_items)
-
-        marker = 0
-        firsts = {}
-        for i, item_ in enumerate(items):
-            if item_.get_key() == self.unit.unit_database.SEPARATOR_FILE:
-                continue
-            test = tuple(item_.get_field(name) for name in self.duplicate_test_columns)
-            first = firsts.get(test)
-            if first is None:
-                firsts[test] = i
-                if item_.duplicate is not None:
-                    item_.duplicate = None
-            else:
-                if items[first].duplicate is None:
-                    items[first].duplicate = marker
-                    marker += 1
-                item_.duplicate = items[first].duplicate

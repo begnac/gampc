@@ -56,7 +56,7 @@ class EditableLabel(Gtk.EditableLabel):
         self.start_editing()
 
     @staticmethod
-    def notify_editing_cb(self, *args):
+    def notify_editing_cb(self, pspec):
         if not self.get_editing():
             self.set_editable(self.always_editable)
             if self.get_text() != self.label:

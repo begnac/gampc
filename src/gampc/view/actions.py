@@ -67,11 +67,11 @@ class ViewWithCopy(ViewWithContextMenu):
     remove_positions = NotImplemented
 
     @staticmethod
-    def lock(self):
+    def lock():
         pass
 
     @staticmethod
-    def unlock(self):
+    def unlock():
         pass
 
     transfer_type = NotImplemented

@@ -21,6 +21,7 @@
 import ampd
 
 from ..util import action
+from ..util import item
 from ..util import unit
 
 from ..ui import compound
@@ -33,12 +34,11 @@ from . import mixins
 
 
 class Search(songlist.SongList):
-    duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
-
     def __init__(self, unit):
         super().__init__(unit, ViewCacheWithCopy(fields=unit.unit_fields.fields, cache=unit.unit_database.cache))
 
         self.view.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
+        item.setup_find_duplicate_items(self.view.item_store, ['Title', 'Artist', 'Performer', 'Date'], [self.unit.unit_database.SEPARATOR_FILE])
 
         self.widget = compound.WidgetWithEntry(self.view, self.entry_activate_cb)
 
