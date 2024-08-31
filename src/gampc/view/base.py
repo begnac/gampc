@@ -266,7 +266,8 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     def grab_focus(self):
         self.item_view.grab_focus()
 
-    def filter_factory_factory(self, name):
+    @staticmethod
+    def filter_factory_factory(name):
         return EditableItemFactory(name, always_editable=True)
 
     def notify_filter_cb(self, item, param):

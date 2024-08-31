@@ -81,8 +81,8 @@ class StreamView(ViewWithEditStack):
         new = dict(old)
         new[name] = value
         self.edit_stack.hold_transaction()
+        self.edit_stack.append_delta(editstack.Delta([new], pos, True))
         self.edit_stack.append_delta(editstack.Delta([old], pos, False))
-        self.edit_stack.append_delta(editstack.Delta([new], pos + 1, True))
         self.edit_stack.release_transaction()
 
 
