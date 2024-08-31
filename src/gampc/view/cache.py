@@ -22,7 +22,7 @@ from ..util import action
 from ..util import aioqueue
 from ..util import item
 
-from .actions import ViewWithCopy
+from .actions import ViewWithCopySortable
 from .actions import ViewWithCopyPaste
 from .editstack import ViewWithEditStack
 
@@ -55,7 +55,7 @@ class ViewCacheMixin(ViewFilenameMixin):
         self.splice_values(pos, remove, (self.cache[key] for key in keys))
 
 
-class ViewCacheWithCopy(ViewCacheMixin, ViewWithCopy):
+class ViewCacheWithCopy(ViewCacheMixin, ViewWithCopySortable):
     pass
 
 

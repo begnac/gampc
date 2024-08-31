@@ -54,7 +54,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
 
         self.connect_clean(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
         self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::state', self.update_title)
-        self.connect_clean(self.unit.unit_server, 'notify::server-label', self.update_subtitle)
+        self.connect_clean(self.unit.unit_server, 'notify::server-label', self.update_title)
 
         self.main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(self.main)
@@ -81,7 +81,6 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.main.append(self.logging_handler.box)
 
         self.update_title()
-        self.update_subtitle()
 
     def cleanup(self):
         self.change_component(None)
@@ -91,14 +90,16 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
 
     def change_component(self, component):
         if self.component is not None:
-            self.component.disconnect_by_func(self.update_subtitle)
+            self.component_binding.unbind()
+            del self.component_binding
             self.main.remove(self.component.widget)
         self.component = component
         if self.component is not None:
             self.main.prepend(self.component.widget)
+            self.component_binding = self.component.bind_property('full-title', self.headerbar.subtitle, 'label', GObject.BindingFlags.SYNC_CREATE)
             self.component.widget.grab_focus()
-            self.component.connect('notify::full-title', self.update_subtitle)
-        self.update_subtitle()
+        else:
+            self.headerbar.subtitle.set_label("")
 
     def set_time_scale_sensitive(self, *args):
         if self.unit.unit_persistent.protect_active or self.unit.unit_server.ampd_server_properties.state not in ('play', 'pause'):
@@ -111,23 +112,17 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.update_title()
 
     def update_title(self, *args):
-        if self.unit.unit_server.ampd_server_properties.state == 'play':
-            window_title = _("{artist} / {title}")
-        elif self.unit.unit_server.ampd_server_properties.state == 'pause':
-            window_title = _("{artist} / {title} (paused)")
+        if self.unit.unit_server.ampd_server_properties.state in ('play', 'pause'):
+            song = self.unit.unit_server.current_song
+            title = song.get('Title') or song.get('Name') or _("Unknown song")
+            if 'Artist' in song:
+                title = f"{title} / {song['Artist']}"
+            if self.unit.unit_server.ampd_server_properties.state == 'pause':
+                title = _("{title} (paused)").format(title=title)
         else:
-            window_title = __application__.upper()
-        artist = self.unit.unit_server.current_song.get('Artist', _("Unknown Artist"))
-        title = self.unit.unit_server.current_song.get('Title', _("Unknown Title"))
-        self.headerbar.set_title(window_title.format(artist=artist, title=title))
-
-    def update_subtitle(self, *args):
-        chunks = []
-        if self.component:
-            chunks.append(self.component.full_title)
-        if self.unit.unit_server.server_label:
-            chunks.append(self.unit.unit_server.server_label)
-        self.headerbar.set_subtitle(' / '.join(chunks))
+            title = __application__.upper()
+        server = self.unit.unit_server.server_label.rsplit('@', 1)[-1].strip()
+        self.headerbar.set_title(f"{title} @ {server}")
 
     @staticmethod
     def notify_default_size_cb(self, param):
