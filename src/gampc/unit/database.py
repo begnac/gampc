@@ -58,8 +58,8 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         try:
             songs = await self.ampd.find('file', key)
         except Exception as e:
-            print(key, e)
-            return {}
+            print(key, type(e))
+            songs = []
         if len(songs) == 0:
             song = {'file': key, '_missing': True}
         elif len(songs) == 1:

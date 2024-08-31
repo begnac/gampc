@@ -544,12 +544,15 @@ class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
         # self.init_tandaid_view(self.view)
 
     def set_tandas(self, tandas):
-        songs = [self.cache[self.separator_file]]
+        filenames = [self.separator_file]
         for tanda in tandas:
-            tandaid = tanda['tandaid']
+            # tandaid = tanda['tandaid']
             for song in tanda['songs'].items:
-                songs.append(songs)
-        self.set_values(songs)
+                filenames.append(song['file'])
+                if song['file'] not in self.cache:
+                    self.cache[song['file']] = song
+            filenames.append(self.separator_file)
+        self.set_keys(filenames)
 
 
 class Tanda(component.Component):
