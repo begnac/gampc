@@ -34,6 +34,7 @@ import ampd
 from ..util import action
 from ..util import cleanup
 from ..util import db
+from ..util import editstack
 from ..util import field
 from ..util import misc
 from ..util import unit
@@ -86,8 +87,10 @@ class TandaWidget(cleanup.CleanupSignalMixin, compound.WidgetWithPaned):
     GENRE_ALL = len(GENRES) - 1
 
     genre_filter = GObject.Property(type=int, default=0)
+    current_tandaid = GObject.Property()
 
-    def __init__(self, config, separator_file, cache):
+    def __init__(self, config, db, song_fields, separator_file, cache):
+        self.db = db
         self.button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         for i, genre in enumerate(self.GENRES):
             button = Gtk.Button(label=genre, can_focus=False, action_name='tanda.genre-filter', action_target=GLib.Variant.new_int32(i))
@@ -113,15 +116,14 @@ class TandaWidget(cleanup.CleanupSignalMixin, compound.WidgetWithPaned):
         self.selected_artists = ['*']
 
         # self.edit = TandaEdit(unit)
-        self.view = TandaView(separator_file=separator_file, cache=cache)
+        self.view = TandaView(song_fields, separator_file=separator_file, cache=cache)
         # self.stack.add_titled(self.edit.widget, 'edit', _("Edit tandas"))
-        self.stack.add_titled(self.view.widget, 'view', _("View tandas"))
-        self.subcomponents = [self.edit, self.view]
+        self.stack.add_titled(self.view, 'view', _("View tandas"))
+        # self.subcomponents = [self.edit, self.view]
+        self.subcomponents = [self.view]
         for c in self.subcomponents:
             self.bind_property('current-tandaid', c, 'current-tandaid', GObject.BindingFlags.BIDIRECTIONAL)
         self.subcomponent_index = 0
-
-
 
         # self.actions_dict['tanda-edit'] = self.edit.actions
         # self.subcomponent_actions_names = 'itemlist', 'fields'
@@ -129,10 +131,10 @@ class TandaWidget(cleanup.CleanupSignalMixin, compound.WidgetWithPaned):
         #     self.actions_dict[name] = Gio.SimpleActionGroup()
         # self.change_subcomponent_actions(True)
 
-        self.connect_clean(self.unit.unit_persistent, 'notify::protect-requested', lambda unit_persistent, param_spec: unit_persistent.protect_requested and self.problem_button.set_active(True))
-        self.connect_clean(self.unit.db, 'changed', self.db_changed_cb)
-        self.connect_clean(self.unit.db, 'verify-progress', self.db_verify_progress_cb)
-        self.connect_clean(self.unit.db, 'missing-song', self.db_missing_song_cb)
+        # self.connect_clean(self.unit.unit_persistent, 'notify::protect-requested', lambda unit_persistent, param_spec: unit_persistent.protect_requested and self.problem_button.set_active(True))
+        self.connect_clean(self.db, 'changed', self.db_changed_cb)
+        self.connect_clean(self.db, 'verify-progress', self.db_verify_progress_cb)
+        self.connect_clean(self.db, 'missing-song', self.db_missing_song_cb)
         self.connect_clean(self.problem_button, 'toggled', lambda *args: self.filter_tandas(False))
         self.connect_clean(self, 'notify::genre-filter', lambda *args: self.filter_tandas(False))
         self.read_db()
@@ -144,29 +146,142 @@ class TandaWidget(cleanup.CleanupSignalMixin, compound.WidgetWithPaned):
         yield action.ActionInfo('cleanup-db', self.unit.db.action_cleanup_db_cb, _("Cleanup database"))
 
 
+
+
+
+    def read_db(self):
+        self.all_tandas = list(self.db.get_tandas())
+        self.filter_tandas()
+
+    def filter_tandas(self, sort=True):
+        if sort:
+            self.all_tandas.sort(key=self.tanda_key_func)
+        self.filtered_tandas = list(filter(self.tanda_filter_holds, self.all_tandas))
+        artists = ['*'] + sorted(set(tanda.get('Artist', '') for tanda in self.filtered_tandas))
+        self.artist_selection.handler_block_by_func(self.left_selection_changed_cb)
+        self.artist_selection.unselect_all()
+        self.artist_store.splice(0, len(self.artist_store), artists)
+        for i, artist in enumerate(artists):
+            if artist in self.selected_artists:
+                self.artist_selection.select_item(i, False)
+        self.artist_selection.handler_unblock_by_func(self.left_selection_changed_cb)
+        self.filter_artists()
+
+    def filter_artists(self):
+        tandas = [tanda for tanda in self.filtered_tandas if '*' in self.selected_artists or tanda.get('Artist') in self.selected_artists]
+        for c in self.subcomponents:
+            c.set_tandas(tandas)
+            # c.set_cursor_tandaid(self.current_tandaid)
+
+    @staticmethod
+    def tanda_key_func(tanda):
+        return (
+            tanda.get('Artist'),
+            99 if tanda.get('Genre') is None else 1 if 'Tango' in tanda.get('Genre') else 2 if 'Vals' in tanda.get('Genre') else 3 if 'Milonga' in tanda.get('Genre') else 4,
+            tanda.get('Years', ''),
+            tanda.get('Performer', ''),
+            tanda.get('First_Song', ''),
+        )
+
+    def tanda_filter_holds(self, tanda):
+        if tanda.get('Note') == '0' and self.problem_button.get_active():
+            return False
+        if self.genre_filter == self.GENRE_ALL:
+            return True
+
+        genre = tanda.get('Genre', '')
+
+        def test(i):
+            return self.GENRES[i] in genre
+
+        return test(self.genre_filter) if self.genre_filter < self.GENRE_OTHER else not any(test(i) for i in range(self.GENRE_OTHER))
+
+
+
+
+
+
+
+
+
+
+
+    def db_changed_cb(self, db, tandaid):
+        if tandaid == -1:
+            return self.read_db()
+
+        for tanda in self.all_tandas:
+            if tanda.get('tandaid') == tandaid:
+                if not self.unit.db.reread_tanda(tanda):
+                    self.all_tandas.remove(tanda)
+                break
+        else:
+            tanda = self.unit.db.get_tanda(tandaid)
+            if tanda:
+                self.all_tandas.append(tanda)
+        self.filter_tandas()
+
+    def db_verify_progress_cb(self, db, progress):
+        if progress < 1:
+            self.status = _("verifying tandas: {progress}%").format(progress=int(progress * 100))
+        else:
+            self.status = None
+
+    def db_missing_song_cb(self, db, song_file, *fields):
+        search_window = Gtk.Window(destroy_with_parent=True, transient_for=self.widget.get_root(), window_position=Gtk.WindowPosition.CENTER_ON_PARENT,
+                                   default_width=500, default_height=500,
+                                   title=_("Replace {}").format(' / '.join(fields)))
+        search_window.update_title = lambda *args: None
+        search_component = search.Search(self.unit)
+        search_component.entry.set_text(' '.join('{}="{}"'.format(field, fields[i]) for i, field in enumerate(db.MISSING_SONG_FIELDS)))
+        button_box = Gtk.ButtonBox(layout_style=Gtk.ButtonBoxStyle.CENTER)
+        cancel_button = Gtk.Button(label=_("_Cancel"), use_underline=True)
+        cancel_button.connect('clicked', lambda button: button.get_root().destroy())
+        button_box.add(cancel_button)
+        ok_button = Gtk.Button(label=_("_OK"), use_underline=True)
+        ok_button.connect('clicked', self.db_missing_song_ok_cb, db, search_component, song_file)
+        button_box.add(ok_button)
+        search_component.widget.add(button_box)
+        search_window.add(search_component.widget)
+        search_window.present()
+
+    @staticmethod
+    def db_missing_song_ok_cb(button, db, search_component, song_file):
+        path, focus = search_component.view.get_cursor()
+        if path:
+            i = search_component.store.get_iter(path)
+            song = search_component.store.get_record(i).get_data()
+            db.replace_song(song_file, song)
+            db.emit('changed', -1)
+            search_component.widget.get_root().destroy()
+
+
+
 class TandaSubWidgetMixin:
-    current_tandaid = GObject.Property()
-
-    def __init__(self, separator_file, **kwargs):
+    def __init__(self, *args, separator_file, **kwargs):
         self.separator_file = separator_file
-        super().__init__(**kwargs)
-        self.signal_handler_connect(self.widget, 'map', lambda widget: self.set_cursor_tandaid(self.current_tandaid))
+        super().__init__(*args, **kwargs)
+        # self.connect('map', self.map_cb)
 
-    def init_tandaid_view(self, view):
-        self.tandaid_view = view
-        self.signal_handler_connect(self.tandaid_view.record_selection, 'selection-changed', self.tandaid_selection_changed_cb)
+    # @staticmethod
+    # def map_cb(self):
+    #     self.set_cursor_tandaid(self.current_tandaid)
 
-    def set_cursor_tandaid(self, tandaid):
-        if tandaid is None:
-            return
-        for i, item in enumerate(self.tandaid_view.record_selection):
-            if item._tandaid == tandaid:
-                self.tandaid_view.record_view.scroll_to(i, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
-                return
+    # def init_tandaid_view(self, view):
+    #     self.tandaid_view = view
+    #     self.connect_clean(self.tandaid_view.record_selection, 'selection-changed', self.tandaid_selection_changed_cb)
 
-    def tandaid_selection_changed_cb(self, model, *args):
-        selection = list(misc.get_selection(model))
-        self.current_tandaid = model[selection[0]]._tandaid if selection else None
+    # def set_cursor_tandaid(self, tandaid):
+    #     if tandaid is None:
+    #         return
+    #     for i, item in enumerate(self.tandaid_view.record_selection):
+    #         if item._tandaid == tandaid:
+    #             self.tandaid_view.record_view.scroll_to(i, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
+    #             return
+
+    # def tandaid_selection_changed_cb(self, model, *args):
+    #     selection = list(misc.get_selection(model))
+    #     self.current_tandaid = model[selection[0]]._tandaid if selection else None
 
 
 class TandaEdit(TandaSubWidgetMixin, ViewWithEditStack):
@@ -420,27 +535,27 @@ class TandaEdit(TandaSubWidgetMixin, ViewWithEditStack):
 
 
 class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
+    current_tandaid = GObject.Property()
+
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.init_tandaid_view(self.view)
+        # self.init_tandaid_view(self.view)
 
     def set_tandas(self, tandas):
-        filenames = [self.separator_file]
+        songs = [self.cache[self.separator_file]]
         for tanda in tandas:
             tandaid = tanda['tandaid']
-            for item_ in tanda.edit_stack.items:
-                print(item_)
-        self.view.set_items(filenames)
+            for song in tanda['songs'].items:
+                songs.append(songs)
+        self.set_values(songs)
 
 
 class Tanda(component.Component):
-    current_tandaid = GObject.Property()
-
     def __init__(self, unit):
         super().__init__(unit)
-        self.widget = TandaWidget(self.config.pane_separator, unit.unit_database.SEPARATOR_FILE, cache=unit.unit_database.cache)
+        self.widget = TandaWidget(self.config.pane_separator, unit.db, unit.unit_fields.fields, unit.unit_database.SEPARATOR_FILE, cache=unit.unit_database.cache)
 
     def cleanup(self):
         self.change_subcomponent_actions(False)
@@ -468,47 +583,6 @@ class Tanda(component.Component):
         self.stack.set_visible_child(self.subcomponents[self.subcomponent_index].widget)
         self.change_subcomponent_actions(True)
 
-    def tanda_filter_holds(self, tanda):
-        if tanda.get('Note') == '0' and self.problem_button.get_active():
-            return False
-        if self.genre_filter == self.GENRE_ALL:
-            return True
-
-        genre = tanda.get('Genre', '')
-
-        def test(i):
-            return self.GENRES[i] in genre
-
-        return test(self.genre_filter) if self.genre_filter < self.GENRE_OTHER else not any(test(i) for i in range(self.GENRE_OTHER))
-
-    def read_db(self):
-        self.all_tandas = list(self.unit.db.get_tandas())
-        self.filter_tandas()
-
-    def filter_tandas(self, sort=True):
-        if sort:
-            self.all_tandas.sort(key=self.tanda_key_func)
-        self.filtered_tandas = list(filter(self.tanda_filter_holds, self.all_tandas))
-        artists = ['*'] + sorted(set(tanda.get('Artist', '') for tanda in self.filtered_tandas))
-        self.artist_selection.handler_block_by_func(self.left_selection_changed_cb)
-        self.artist_selection.unselect_all()
-        self.artist_store.splice(0, len(self.artist_store), artists)
-        for i, artist in enumerate(artists):
-            if artist in self.selected_artists:
-                self.artist_selection.select_item(i, False)
-        self.artist_selection.handler_unblock_by_func(self.left_selection_changed_cb)
-        self.filter_artists()
-
-    @staticmethod
-    def tanda_key_func(tanda):
-        return (
-            tanda.Artist,
-            99 if tanda.Genre is None else 1 if 'Tango' in tanda.Genre else 2 if 'Vals' in tanda.Genre else 3 if 'Milonga' in tanda.Genre else 4,
-            tanda.Years or '',
-            tanda.Performer or '',
-            tanda.First_Song or '',
-        )
-
     def left_selection_changed_cb(self, selection, *args):
         super().left_selection_changed_cb(selection, *args)
         if not self.filtered_tandas:
@@ -516,60 +590,6 @@ class Tanda(component.Component):
         self.selected_artists = [selection[i].get_string() for i in self.left_selection] or ['*']
         self.filter_artists()
 
-    def filter_artists(self):
-        tandas = [tanda for tanda in self.filtered_tandas if '*' in self.selected_artists or tanda.get('Artist') in self.selected_artists]
-        for c in self.subcomponents:
-            c.set_tandas(tandas)
-            c.set_cursor_tandaid(self.current_tandaid)
-
-    def db_changed_cb(self, db, tandaid):
-        if tandaid == -1:
-            return self.read_db()
-
-        for tanda in self.all_tandas:
-            if tanda.get('tandaid') == tandaid:
-                if not self.unit.db.reread_tanda(tanda):
-                    self.all_tandas.remove(tanda)
-                break
-        else:
-            tanda = self.unit.db.get_tanda(tandaid)
-            if tanda:
-                self.all_tandas.append(tanda)
-        self.filter_tandas()
-
-    def db_verify_progress_cb(self, db, progress):
-        if progress < 1:
-            self.status = _("verifying tandas: {progress}%").format(progress=int(progress * 100))
-        else:
-            self.status = None
-
-    def db_missing_song_cb(self, db, song_file, *fields):
-        search_window = Gtk.Window(destroy_with_parent=True, transient_for=self.widget.get_root(), window_position=Gtk.WindowPosition.CENTER_ON_PARENT,
-                                   default_width=500, default_height=500,
-                                   title=_("Replace {}").format(' / '.join(fields)))
-        search_window.update_title = lambda *args: None
-        search_component = search.Search(self.unit)
-        search_component.entry.set_text(' '.join('{}="{}"'.format(field, fields[i]) for i, field in enumerate(db.MISSING_SONG_FIELDS)))
-        button_box = Gtk.ButtonBox(layout_style=Gtk.ButtonBoxStyle.CENTER)
-        cancel_button = Gtk.Button(label=_("_Cancel"), use_underline=True)
-        cancel_button.connect('clicked', lambda button: button.get_root().destroy())
-        button_box.add(cancel_button)
-        ok_button = Gtk.Button(label=_("_OK"), use_underline=True)
-        ok_button.connect('clicked', self.db_missing_song_ok_cb, db, search_component, song_file)
-        button_box.add(ok_button)
-        search_component.widget.add(button_box)
-        search_window.add(search_component.widget)
-        search_window.present()
-
-    @staticmethod
-    def db_missing_song_ok_cb(button, db, search_component, song_file):
-        path, focus = search_component.view.get_cursor()
-        if path:
-            i = search_component.store.get_iter(path)
-            song = search_component.store.get_record(i).get_data()
-            db.replace_song(song_file, song)
-            db.emit('changed', -1)
-            search_component.widget.get_root().destroy()
 
 
 class TandaDatabase(GObject.Object, db.Database):
@@ -667,8 +687,7 @@ class TandaDatabase(GObject.Object, db.Database):
             self.unit.unit_fields.fields.set_derived_fields(song)
             songs.append(song)
         self.fields.set_derived_fields(tanda)
-        tanda = record.Record(tanda)
-        tanda._edit_stack = editstack.EditStack(map(record.Record, songs))
+        tanda['songs'] = editstack.EditStack(songs)
         return tanda
 
     def update_tanda(self, tanda):

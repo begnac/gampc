@@ -22,8 +22,9 @@ import ampd
 
 from ..util import unit
 from ..util import cache
+from ..util.logger import logger
 
-from .. import ui
+from ..ui import dialog
 
 from . import mixins
 
@@ -51,7 +52,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
 
     async def separator_missing(self):
         await dialog.MessageDialogAsync(cancel_button=False,
-                                           message=_("Some features require a file named '{separator}' at the music root directory.  Such a file, consisting of a three second silence, is provided.").format(separator=self.SEPARATOR_FILE)).run()
+                                        message=_("Some features require a file named '{separator}' at the music root directory.  Such a file, consisting of a three second silence, is provided.").format(separator=self.SEPARATOR_FILE)).run()
 
     async def cache_retrieve(self, key):
         try:
