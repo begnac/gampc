@@ -36,7 +36,9 @@ class Search(songlist.SongList):
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
 
     def __init__(self, unit):
-        super().__init__(unit)
+        super().__init__(unit, ViewCacheWithCopy(fields=unit.unit_fields.fields, cache=unit.unit_database.cache))
+
+        self.view.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
 
         self.widget = compound.WidgetWithEntry(self.view, self.entry_activate_cb)
 
@@ -44,11 +46,6 @@ class Search(songlist.SongList):
         # self.field_choice.append_text(_("any field"))
         # for name in self.fields.names:
         #     self.field_choice.append_text(name)
-
-    def create_view(self):
-        widget = super().create_view(ViewCacheWithCopy, cache=self.unit.unit_database.cache)
-        widget.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
-        return widget
 
     def generate_actions(self):
         yield action.ActionInfo('search', self.action_search_cb, _("Search"), ['<Control><Alt>f'])

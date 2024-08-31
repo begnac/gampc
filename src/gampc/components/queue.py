@@ -145,12 +145,12 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongList):
     editable = True
     duplicate_test_columns = ['Title']
 
-    factory_factory = QueueItemFactory
-    item_factory = QueueItem
-
     def __init__(self, unit):
-        super().__init__(unit)
+        super().__init__(unit, QueueView(fields=unit.unit_fields.fields, item_factory=QueueItem, factory_factory=QueueItemFactory, separator_file=unit.unit_database.SEPARATOR_FILE, ampd=unit.ampd))
+        self.view.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=unit.unit_persistent.protect)
         self.view.item_view.add_css_class('queue')
+
+        self.widget = self.view
 
         self.connect_clean(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.connect_clean(self.view.item_selection_model, 'selection-changed', self.selection_changed_cb)
@@ -160,11 +160,6 @@ class Queue(songlist.SongListTotalsMixin, songlist.SongList):
         #         self.itemlist_actions.remove(name)
         self.cursor_by_profile = {}
         self.set_cursor = False
-
-    def create_view(self):
-        widget = super().create_view(QueueView, separator_file=self.unit.unit_database.SEPARATOR_FILE, ampd=self.ampd)
-        widget.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit.unit_persistent.protect)
-        return widget
 
     def generate_queue_actions(self):
         yield action.ActionInfo('shuffle', self.action_shuffle_cb, _("Shuffle"), dangerous=True)

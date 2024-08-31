@@ -20,11 +20,6 @@
 
 import ampd
 
-from ..util import item
-
-from ..view.base import LabelItemFactory
-from ..view.actions import ViewWithCopy
-
 from . import component
 
 
@@ -32,15 +27,11 @@ class ItemList(component.Component):
     duplicate_test_columns = []
     duplicate_extra_items = None
 
-    factory_factory = LabelItemFactory
-    item_factory = item.Item
-
-    def __init__(self, unit, *args, **kwargs):
+    def __init__(self, unit, view, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
-        self.widget = self.view = self.create_view()
+        self.view = view
         self.view.item_view.add_css_class('itemlist')
-        self.focus_widget = self.view.item_view
 
         self.connect_clean(self.view.item_view, 'activate', self.view_activate_cb)
         if self.duplicate_test_columns:
@@ -54,9 +45,6 @@ class ItemList(component.Component):
         self.widget.cleanup()
         super().cleanup()
         del self.view
-
-    def create_view(self, view_class=ViewWithCopy, /, **kwargs):
-        return view_class(self.get_fields(), self.factory_factory, self.item_factory, **kwargs)
 
     @ampd.task
     async def view_activate_cb(self, view, position):

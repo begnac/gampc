@@ -215,7 +215,7 @@ class ItemView(Gtk.ColumnView):
 class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, factory_factory, item_factory, *, sortable, selection_model=Gtk.MultiSelection):
+    def __init__(self, fields, *, item_factory=item.Item, factory_factory=LabelItemFactory, sortable, selection_model=Gtk.MultiSelection):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, focusable=True)
         self.item_factory = item_factory
 

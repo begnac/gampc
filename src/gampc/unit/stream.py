@@ -68,7 +68,7 @@ class StreamView(ViewWithEditStack):
         return item.value
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs, factory_factory=StreamItemFactory)
         for column in self.item_view.get_columns():
             self.connect_clean(column.get_factory(), 'item-edited', self.item_edited_cb)
 
@@ -87,10 +87,11 @@ class StreamView(ViewWithEditStack):
 
 
 class Stream(itemlist.ItemList):
-    factory_factory = StreamItemFactory
-
     def __init__(self, unit):
-        super().__init__(unit)
+        super().__init__(unit, StreamView(fields=unit.fields))
+
+        self.widget = self.view
+
         self.view.add_to_context_menu(self.generate_save_actions(), 'stream', _("Save"))
         self.widget.item_view.add_css_class('stream')
 
@@ -108,9 +109,6 @@ class Stream(itemlist.ItemList):
             self.unit.db.save_streams(self.view.edit_stack.items)
             self.view.edit_stack.reset()
             self.view.edit_stack_changed()
-
-    def get_fields(self):
-        return self.unit.fields
 
     def load_streams(self):
         streams = list(self.unit.db.get_streams())

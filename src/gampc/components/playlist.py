@@ -66,16 +66,13 @@ class Playlist(songlist.SongListTotalsMixin, songlist.SongList):
     duplicate_test_columns = ['file']
 
     def __init__(self, unit):
-        super().__init__(unit)
+        super().__init__(unit, ViewWithCopyPasteEditStackSong(fields=unit.unit_fields.fields, separator_file=unit.unit_database.SEPARATOR_FILE, cache=unit.unit_database.cache))
         self.widget = PlaylistWidget(self.view, self.config.pane_separator, unit.root.model)
 
         self.view.connect('edit-stack-changed', self.edit_stack_changed_cb)
 
         self.view.add_to_context_menu(self.generate_actions(), 'playlist-local', _("Playlist"), below='edit-stack')
         self.widget.add_to_context_menu(self.generate_left_actions(), 'playlist-global', _("Playlist global"))
-
-    def create_view(self):
-        return super().create_view(ViewWithCopyPasteEditStackSong, separator_file=self.unit.unit_database.SEPARATOR_FILE, cache=self.unit.unit_database.cache)
 
     def generate_actions(self):
         yield action.ActionInfo('save', self.global_action_cb, _("Save"), ['<Control>s'])

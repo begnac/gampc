@@ -45,14 +45,12 @@ class BrowserWidget(compound.WidgetWithPanedTreeList):
 
 class Browser(songlist.SongList):
     def __init__(self, unit):
-        super().__init__(unit)
+        super().__init__(unit, ViewCacheWithCopy(fields=unit.unit_fields.fields, cache=unit.unit_database.cache))
+
         self.widget = BrowserWidget(self.view, self.config.pane_separator, unit.root.model)
-        self.connect_clean(self.unit.root.model, 'items-changed', self.root_items_changed_cb)
+        self.connect_clean(unit.root.model, 'items-changed', self.root_items_changed_cb)
         if len(self.widget.left_selection) > 0:
             self.widget.left_selection[0].set_expanded(True)
-
-    def create_view(self):
-        return super().create_view(ViewCacheWithCopy, cache=self.unit.unit_database.cache)
 
     def root_items_changed_cb(self, model, p, r, a):
         if a:

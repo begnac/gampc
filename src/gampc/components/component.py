@@ -19,10 +19,8 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gtk
 
 from ..util import cleanup
-from ..util.logger import logger
 
 
 class Component(cleanup.CleanupSignalMixin, GObject.Object):
