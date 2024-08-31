@@ -35,9 +35,9 @@ class DialogAsync(Gtk.Window):
 
         self.connect('close-request', self.button_clicked_cb, self.future, Gtk.ResponseType.CANCEL)
 
-        controller = Gtk.EventControllerKey()
-        controller.connect('key-pressed', self.key_pressed_cb, self.future)
-        self.add_controller(controller)
+        self.shortcut = Gtk.ShortcutController()
+        self.add_controller(self.shortcut)
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Escape, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK), action=Gtk.CallbackAction.new(self.escape_pressed_cb, self.future)))
 
     def add_button(self, label, response):
         button = Gtk.Button.new_with_mnemonic(label)
@@ -50,12 +50,8 @@ class DialogAsync(Gtk.Window):
         future.set_result(response)
 
     @staticmethod
-    def key_pressed_cb(controller, keyval, keycode, state, future):
-        if keyval == Gdk.KEY_Escape:
-            future.set_result(Gtk.ResponseType.CANCEL)
-            return True
-        else:
-            return False
+    def escape_pressed_cb(widget, arg, future):
+        future.set_result(Gtk.ResponseType.CANCEL)
 
     async def run(self):
         if self.future.done():
