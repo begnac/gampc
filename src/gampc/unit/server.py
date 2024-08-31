@@ -40,7 +40,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         super().__init__(*args)
 
         self.require('profiles')
-        self.require('songlist')
+        self.require('fields')
 
         # self.current_song_hooks = []
         self.ampd_client = ampd.ClientGLib()

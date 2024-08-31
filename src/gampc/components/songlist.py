@@ -24,25 +24,13 @@ from . import itemlist
 
 class SongList(itemlist.ItemList):
     def get_fields(self):
-        return self.unit.unit_songlist.fields
+        return self.unit.unit_fields.fields
 
     def set_songs(self, songs):
         for song in songs:
-            self.unit.unit_songlist.fields.set_derived_fields(song)
+            self.unit.unit_fields.fields.set_derived_fields(song)
             self.unit.unit_database.cache[song['file']] = song
         self.view.set_values(songs)
-
-    # def get_filenames(self, selection):
-    #     return self.view.get_filenames(selection)
-
-    # def records_set_fields(self, songs):
-    #     for song in songs:
-    #         gfile = Gio.File.new_for_path(GLib.build_filenamev([self.unit.unit_songlist.config.music_dir._get(), song['file']]))
-    #         if gfile.query_exists():
-    #             song['_gfile'] = gfile
-    #         else:
-    #             song['_status'] = self.RECORD_MODIFIED
-    #     super().records_set_fields(songs)
 
 
 class SongListTotalsMixin:

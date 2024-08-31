@@ -102,7 +102,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
         self.require('database')
-        self.require('songlist')
+        self.require('fields')
         self.require('persistent')
 
         self.playlist_cache = cache.AsyncCache(self.playlist_retrieve)

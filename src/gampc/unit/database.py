@@ -33,7 +33,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.require('songlist')
+        self.require('fields')
         self.cache = cache.AsyncCache(self.cache_retrieve)
 
     def cleanup(self):
@@ -63,7 +63,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
             song = {'file': key, '_missing': True}
         elif len(songs) == 1:
             song = songs[0]
-            self.unit_songlist.fields.set_derived_fields(song)
+            self.unit_fields.fields.set_derived_fields(song)
         else:
             raise ValueError
         return song

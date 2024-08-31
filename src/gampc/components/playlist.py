@@ -71,7 +71,7 @@ class Playlist(songlist.SongListTotalsMixin, songlist.SongList):
 
         self.view.connect('edit-stack-changed', self.edit_stack_changed_cb)
 
-        self.view.add_to_context_menu(self.generate_actions(), 'playlist-local', _("Playlist"))
+        self.view.add_to_context_menu(self.generate_actions(), 'playlist-local', _("Playlist"), below='edit-stack')
         self.widget.add_to_context_menu(self.generate_left_actions(), 'playlist-global', _("Playlist global"))
 
     def create_view(self):

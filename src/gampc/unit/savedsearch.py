@@ -202,14 +202,14 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
                             ssde.Tuple(
                                 label=_("Search criterion"),
                                 substructs=[
-                                    ssde.Choice(label=_("Field"), choices=self.unit_songlist.fields.basic_names),
+                                    ssde.Choice(label=_("Field"), choices=self.unit_fields.fields.basic_names),
                                     ssde.Text(label=_("Value"), validator=lambda x: x),
                                 ])])),
                 ssde.List(
                     label=_("Sort by"), name='sort',
                     substruct=ssde.Tuple(
                         substructs=[
-                            ssde.Choice(label=_("Field"), choices=self.unit_songlist.fields.names),
+                            ssde.Choice(label=_("Field"), choices=self.unit_fields.fields.names),
                             ssde.Boolean(label=_("Reversed"))
                         ])),
                 ssde.Integer(label=_("Separator depth"), name='separator'),

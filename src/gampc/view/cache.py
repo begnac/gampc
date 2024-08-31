@@ -37,8 +37,8 @@ class ViewFilenameMixin:
 
 
 class ViewCacheMixin(ViewFilenameMixin):
-    def __init__(self, unit, *args, cache, **kwargs):
-        super().__init__(unit, *args, **kwargs)
+    def __init__(self, *args, cache, **kwargs):
+        super().__init__(*args, **kwargs)
         self.aioqueue = aioqueue.AIOQueue()
         self.cache = cache
 

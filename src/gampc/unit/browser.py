@@ -68,7 +68,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.require('database')
-        self.require('songlist')
+        self.require('fields')
         self.require('persistent')
 
         self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)

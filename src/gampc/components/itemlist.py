@@ -91,9 +91,3 @@ class ItemList(component.Component):
                     items[first].duplicate = marker
                     marker += 1
                 item_.duplicate = items[first].duplicate
-
-    # def action_reset_cb(self, action, parameter):
-    #     self.view.filter_item.set_data({})
-    #     self.view.filtering = False
-    #     if self.sortable:
-    #         self.view.item_view.sort_by_column(None, Gtk.SortType.ASCENDING)

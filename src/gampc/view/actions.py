@@ -19,6 +19,7 @@
 
 
 from gi.repository import Gdk
+from gi.repository import Gtk
 
 from ..util import action
 from ..util import item
@@ -38,13 +39,11 @@ class ViewWithContextMenu(contextmenu.ContextMenuMixin, ViewBase):
 
     def generate_view_actions(self):
         yield action.PropertyActionInfo('filtering', self, _("Filter view"), ['<Control><Shift>f'])
-        # util.resource.MenuAction('edit/global', 'itemlist.save', _("Save"), ['<Control>s']),
-        # util.resource.MenuAction('edit/global', 'itemlist.reset', _("Reset"), ['<Control>r']),
 
 
 class ViewWithCopy(ViewWithContextMenu):
-    def __init__(self, *args, sortable=True, **kwargs):
-        super().__init__(*args, **kwargs, sortable=sortable)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.add_to_context_menu(self.generate_editing_actions(), 'view-edit', _("Edit"))
 
@@ -81,6 +80,21 @@ class ViewWithCopy(ViewWithContextMenu):
     @classmethod
     def content_from_items(cls, items):
         return item.transfer_union(items, cls.transfer_type, *cls.extra_transfer_types)
+
+
+class ViewWithCopySortable(ViewWithCopy):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, sortable=True)
+
+    def generate_view_actions(self):
+        yield from super().generate_view_actions()
+        yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
+
+    def action_reset_cb(self, action, parameter):
+        self.view.filter_item.set_data({})
+        self.view.filtering = False
+        if self.sortable:
+            self.view.item_view.sort_by_column(None, Gtk.SortType.ASCENDING)
 
 
 class ViewWithCopyPaste(ViewWithCopy):

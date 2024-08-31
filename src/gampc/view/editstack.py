@@ -47,9 +47,9 @@ class ViewWithEditStack(ViewWithCopyPaste):
         super().cleanup()
 
     def generate_edit_stack_actions(self):
-        yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
         yield action.ActionInfo('undo', self.action_do_cb, _("Undo"), ['<Control>z'], arg=False, arg_format='b')
         yield action.ActionInfo('redo', self.action_do_cb, _("Redo"), ['<Shift><Control>z'], arg=True, arg_format='b')
+        yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
         # util.resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
 
     def action_do_cb(self, action, parameter):
@@ -73,10 +73,6 @@ class ViewWithEditStack(ViewWithCopyPaste):
             self.edit_stack.set_splicer(self.edit_stack_splicer, self.step_cb)
         else:
             self.item_store.remove_all()
-
-    # def step_edit_stack(self, push):
-    #     focus, selection = self.edit_stack.step(push)
-    #     self.refocus(focus, selection)
 
     def step_cb(self, focus, selection):
         self.refocus(focus, selection)

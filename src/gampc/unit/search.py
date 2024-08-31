@@ -120,4 +120,4 @@ class __unit__(mixins.UnitComponentMixin, unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
         self.require('database')
-        self.require('songlist')
+        self.require('fields')

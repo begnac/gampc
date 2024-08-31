@@ -18,6 +18,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import urllib
+import os
+
 from gi.repository import GLib
 
 from ..util import field
@@ -30,21 +33,12 @@ from . import mixins
 class __unit__(mixins.UnitConfigMixin, unit.Unit):
     def __init__(self, *args):
         super().__init__(*args)
+
         self.require('itemlist')
-
-        # menu = [
-        #     resource.MenuPath('edit/songlist/special'),
-        #     resource.MenuAction('edit/songlist/special', 'songlist.add-separator', _("Add separator")),
-        #     resource.MenuAction('edit/songlist/special', 'songlist.add-url', _("Add URL or filename")),
-        #     resource.MenuAction('edit/songlist/special', 'songlist.delete-file', _("Move files to trash"), ['<Control>Delete']),
-        # ]
-
-        # self.add_resources('app.menu', *menu)
-        # self.add_resources('itemlist.context.menu', *menu)
 
         self.config.music_dir._get(default=GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC))
 
-        self.fields = field.FieldFamily(self.config.fields)
+        self.fields = field.FieldFamily(self.config)
         self.fields.register_field(field.Field('Album', _("Album")))
         self.fields.register_field(field.Field('AlbumArtist', _("Album artist")))
         self.fields.register_field(field.Field('Artist', _("Artist")))
@@ -57,9 +51,9 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.fields.register_field(field.Field('Performer', _("Performer")))
         self.fields.register_field(field.Field('Time', _("Seconds"), visible=False))
         self.fields.register_field(field.Field('FormattedTime', _("Duration"), get_value=lambda song: misc.format_time(song['Time']) if 'Time' in song else ''))
-        self.fields.register_field(field.Field('Title', _("Title")))
-        # self.fields.register_field(field.Field('Title', _("Title (partial)")))
-        # self.fields.register_field(field.Field('FullTitle', _("Title"), get_value=self.song_title))
+        # self.fields.register_field(field.Field('Title', _("Title")))
+        self.fields.register_field(field.Field('Title', _("Title (partial)")))
+        self.fields.register_field(field.Field('FullTitle', _("Title"), get_value=self.song_title))
         self.fields.register_field(field.Field('Track', _("Track")))
         self.fields.register_field(field.FieldWithTable(
             'Extension', _("Extension"),
@@ -186,15 +180,15 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
     # except:
     #     mutagen = None
 
-    # @staticmethod
-    # def song_title(song):
-    #     title = song.get('Title') or song.get('Name', '')
-    #     filename = song.get('file', '')
-    #     url = urllib.parse.urlparse(filename)
-    #     if url.scheme:
-    #         url_basename = os.path.basename(url.path)
-    #         title = '{0} [{1}]'.format(title, url_basename) if title else url_basename
-    #     return title
+    @staticmethod
+    def song_title(song):
+        title = song.get('Title') or song.get('Name', '')
+        filename = song.get('file', '')
+        url = urllib.parse.urlparse(filename)
+        if url.scheme:
+            url_basename = os.path.basename(url.path)
+            title = '{0} [{1}]'.format(title, url_basename) if title else url_basename
+        return title
 
     # def get_mutagen_file(self, song):
     #     return None
