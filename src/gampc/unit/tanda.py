@@ -47,7 +47,6 @@ from ..view.cache import ViewCacheWithCopy
 from ..view.editstack import ViewWithEditStack
 
 from ..components import component
-from ..components import songlist
 from ..components import itemlist
 
 from . import mixins

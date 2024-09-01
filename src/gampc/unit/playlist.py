@@ -18,21 +18,116 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GLib
 from gi.repository import Gtk
 
 import ampd
 
+from ..util import action
 from ..util import cache
 from ..util import editstack
+from ..util import item
+from ..util import misc
 from ..util import unit
 
+from ..ui import compound
 from ..ui import dialog
 from ..ui import treelist
 
-from ..components import playlist
+from ..view.cache import ViewWithCopyPasteEditStackSong
+
+from ..components import itemlist
 
 from . import mixins
+
+
+NODE_FOLDER = 0
+NODE_PLAYLIST = 1
+
+ICONS = {
+    NODE_FOLDER: 'folder-symbolic',
+    NODE_PLAYLIST: 'view-list-symbolic',
+}
+
+
+class PlaylistWidget(compound.WidgetWithPanedTreeList):
+    def left_selection_changed_cb(self, selection, position, n_items):
+        super().left_selection_changed_cb(selection, position, n_items)
+        if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
+            self.main.set_edit_stack(self.left_selected_item.edit_stack)
+            self.main.set_editable(True)
+        else:
+            self.main.set_edit_stack(None)
+            self.main.set_editable(False)
+            self.main.set_keys(sum(map(lambda node: list(node.edit_stack.items),
+                                       filter(lambda node: node.kind == NODE_PLAYLIST,
+                                              map(lambda pos: selection[pos].get_item(),
+                                                  self.left_selection_pos))), []))
+        self.main.edit_stack_changed()
+
+    @staticmethod
+    def left_view_activate_cb(left_view, position):
+        row = left_view.get_model()[position]
+        node = row.get_item()
+        if node.kind is NODE_FOLDER:
+            compound.WidgetWithPanedTreeList.left_view_activate_cb(left_view, position)
+        else:
+            left_view.activate_action('playlist-global.rename')
+
+
+class Playlist(itemlist.SongListTotalsMixin, itemlist.ItemList):
+    def __init__(self, unit):
+        super().__init__(unit, ViewWithCopyPasteEditStackSong(fields=unit.unit_fields.fields, separator_file=unit.unit_database.SEPARATOR_FILE, cache=unit.unit_database.cache))
+        self.widget = PlaylistWidget(self.view, self.config.pane_separator, unit.root.model)
+
+        self.view.connect('edit-stack-changed', self.edit_stack_changed_cb)
+        item.setup_find_duplicate_items(self.view.item_store, ['file'], [self.unit.unit_database.SEPARATOR_FILE])
+
+        self.view.add_to_context_menu(self.generate_actions(), 'playlist-local', _("Playlist"), below='edit-stack')
+        self.widget.add_to_context_menu(self.generate_left_actions(), 'playlist-global', _("Playlist global"))
+
+    def generate_actions(self):
+        yield action.ActionInfo('save', self.global_action_cb, _("Save"), ['<Control>s'])
+
+    def generate_left_actions(self):
+        yield from self.generate_actions()
+        yield action.ActionInfo('rename', self.global_action_cb, _("Rename"))
+        yield action.ActionInfo('delete', self.global_action_cb, _("Delete"))
+        yield action.ActionInfo('update-from-queue', self.global_action_cb, _("Update from play queue"))
+
+    @misc.create_task
+    async def global_action_cb(self, action, parameter):
+        if not self.widget.left_selected_item:
+            return
+        path = self.widget.left_selected_item.joined_path
+        window = self.widget.get_root()
+        if action.get_name() == 'save':
+            if not self.view.edit_stack.transactions:
+                return
+            if await self.unit.save_playlist(window, path, [item.get_key() for item in self.view.item_store]):
+                self.view.edit_stack.reset()
+                self.view.edit_stack_changed()
+        elif action.get_name() == 'rename':
+            await self.unit.rename_playlist(window, path, self.widget.left_selected_item.kind == NODE_FOLDER)
+        elif action.get_name() == 'delete':
+            await self.unit.delete_playlist(window, path)
+        elif action.get_name() == 'update-from-queue':
+            await self.unit.save_playlist(window, path, await self.ampd.playlist())
+        else:
+            raise RuntimeError
+
+    @staticmethod
+    def edit_stack_changed_cb(view):
+        if not view.get_editable():
+            return
+        widget = view.get_parent()
+        if view.edit_stack.index and not widget.left_selected_item.modified:
+            widget.left_selected_item.modified = True
+        elif not view.edit_stack.index and widget.left_selected_item.modified:
+            widget.left_selected_item.modified = False
+        else:
+            return
+        pos = widget.left_selected_item.parent_model.find(widget.left_selected_item).position
+        widget.left_selected_item.parent_model.items_changed(pos, 1, 1)
 
 
 class PlaylistCacheItem:
@@ -87,7 +182,7 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
     title = _("Playlists")
     key = '5'
 
-    COMPONENT_CLASS = playlist.Playlist
+    COMPONENT_CLASS = Playlist
 
     PSEUDO_SEPARATOR = ' % '
     TEMPNAME = '$$TEMP$$'
@@ -107,35 +202,33 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
 
         self.playlist_cache = cache.AsyncCache(self.playlist_retrieve)
         self.playlists = {}
-        self.root = treelist.TreeNode(kind=playlist.NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node), fill_contents_cb=self.fill_contents_cb)
+        self.root = treelist.TreeNode(kind=NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node), fill_contents_cb=self.fill_contents_cb)
 
+        # self.add_resources(
+        #     'app.menu',
+        #     util.resource.MenuAction('edit/component', 'songlist.playlist-saveas(false)', _("Save as playlist")),
+        # )
 
-        return
-        self.add_resources(
-            'app.menu',
-            util.resource.MenuAction('edit/component', 'songlist.playlist-saveas(false)', _("Save as playlist")),
-        )
+        # self.add_resources(
+        #     'songlist.action',
+        #     util.resource.ActionModel('playlist-add', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b')),
+        #     util.resource.ActionModel('playlist-saveas', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b'))
+        # )
 
-        self.add_resources(
-            'songlist.action',
-            util.resource.ActionModel('playlist-add', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b')),
-            util.resource.ActionModel('playlist-saveas', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b'))
-        )
+        # self.add_resources(
+        #     'songlist.context.menu',
+        #     util.resource.MenuAction('other', 'songlist.playlist-add(true)', _("Add to playlist")),
+        # )
 
-        self.add_resources(
-            'songlist.context.menu',
-            util.resource.MenuAction('other', 'songlist.playlist-add(true)', _("Add to playlist")),
-        )
+        # self.add_resources(
+        #     'songlist.left-context.menu',
+        #     util.resource.MenuAction('other', 'songlist.playlist-add(false)', _("Add to playlist")),
+        # )
 
-        self.add_resources(
-            'songlist.left-context.menu',
-            util.resource.MenuAction('other', 'songlist.playlist-add(false)', _("Add to playlist")),
-        )
-
-        self.add_resources(
-            self.name + '.left-context.menu',
-            util.resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
-        )
+        # self.add_resources(
+        #     self.name + '.left-context.menu',
+        #     util.resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
+        # )
 
     def cleanup(self):
         super().cleanup()
@@ -162,15 +255,15 @@ class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
         return PlaylistCacheItem(files, self.playlists[name])
 
     async def fill_sub_nodes_cb(self, node):
-        if node.kind == playlist.NODE_FOLDER:
+        if node.kind == NODE_FOLDER:
             folders, playlists = self.get_pseudo_folder_contents(node.path)
             for name in folders:
-                node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_FOLDER], kind=playlist.NODE_FOLDER))
+                node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=ICONS[NODE_FOLDER], kind=NODE_FOLDER))
             for name in playlists:
-                node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=playlist.ICONS[playlist.NODE_PLAYLIST], kind=playlist.NODE_PLAYLIST))
+                node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=ICONS[NODE_PLAYLIST], kind=NODE_PLAYLIST))
 
     async def fill_contents_cb(self, node):
-        if node.kind == playlist.NODE_PLAYLIST:
+        if node.kind == NODE_PLAYLIST:
             item = await self.playlist_cache.get_async(self.PSEUDO_SEPARATOR.join(node.path))
             node.edit_stack = editstack.EditStack(item.files)
 

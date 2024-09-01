@@ -50,7 +50,6 @@ class ViewWithEditStack(ViewWithCopyPaste):
         yield action.ActionInfo('undo', self.action_do_cb, _("Undo"), ['<Control>z'], arg=False, arg_format='b')
         yield action.ActionInfo('redo', self.action_do_cb, _("Redo"), ['<Shift><Control>z'], arg=True, arg_format='b')
         yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
-        # util.resource.MenuAction('edit/songlist/base', 'itemlist.undelete', _("Undelete"), ['<Alt>Delete'], accels_fragile=True),
 
     def action_do_cb(self, action, parameter):
         self.edit_stack.step(parameter.unpack())

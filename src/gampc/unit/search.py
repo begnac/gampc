@@ -28,12 +28,12 @@ from ..ui import compound
 
 from ..view.cache import ViewCacheWithCopy
 
-from ..components import songlist
+from ..components import itemlist
 
 from . import mixins
 
 
-class Search(songlist.SongList):
+class Search(itemlist.ItemList):
     def __init__(self, unit):
         super().__init__(unit, ViewCacheWithCopy(fields=unit.unit_fields.fields, cache=unit.unit_database.cache))
 
@@ -77,7 +77,8 @@ class Search(songlist.SongList):
         condition = sum((['any', s] if '=' not in s else s.split('=', 1) for s in self.parse(query)), [])
         if condition:
             songs = await (self.ampd.find if find else self.ampd.search)(*condition)
-            self.set_songs(songs)
+            self.unit.unit_database.update(songs)
+            self.view.set_values(songs)
 
     @staticmethod
     def parse(s):

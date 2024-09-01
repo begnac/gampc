@@ -50,6 +50,11 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
             self.cache.clear()
             logger.info(_("Database changed"))
 
+    def update(self, songs):
+        for song in songs:
+            self.unit_fields.fields.set_derived_fields(song)
+            self.cache[song['file']] = song
+
     async def separator_missing(self):
         await dialog.MessageDialogAsync(cancel_button=False,
                                         message=_("Some features require a file named '{separator}' at the music root directory.  Such a file, consisting of a three second silence, is provided.").format(separator=self.SEPARATOR_FILE)).run()

@@ -29,7 +29,7 @@ from ..ui import treelist
 
 from ..view.cache import ViewCacheWithCopy
 
-from ..components import songlist
+from ..components import itemlist
 
 from . import mixins
 
@@ -43,7 +43,7 @@ class BrowserWidget(compound.WidgetWithPanedTreeList):
         self.main.set_keys(sum((selection[pos].get_item().keys for pos in self.left_selection_pos), []))
 
 
-class Browser(songlist.SongList):
+class Browser(itemlist.ItemList):
     def __init__(self, unit):
         super().__init__(unit, ViewCacheWithCopy(fields=unit.unit_fields.fields, cache=unit.unit_database.cache))
 
