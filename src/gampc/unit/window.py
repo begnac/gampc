@@ -90,16 +90,12 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
 
     def change_component(self, component):
         if self.component is not None:
-            self.component_binding.unbind()
-            del self.component_binding
             self.main.remove(self.component)
+            self.set_subtitle()
         self.component = component
         if self.component is not None:
             self.main.prepend(self.component)
-            self.component_binding = self.component.bind_property('subtitle', self.headerbar.subtitle, 'label', GObject.BindingFlags.SYNC_CREATE)
             self.component.grab_focus()
-        else:
-            self.headerbar.subtitle.set_label("")
 
     def set_time_scale_sensitive(self, *args):
         if self.unit.unit_persistent.protect_active or self.unit.unit_server.ampd_server_properties.state not in ('play', 'pause'):
@@ -130,6 +126,9 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
             width, height = self.get_default_size()
             self.unit.config.width._set(width)
             self.unit.config.height._set(height)
+
+    def set_subtitle(self, subtitle=""):
+        self.headerbar.subtitle.set_label(subtitle)
 
 
 class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):

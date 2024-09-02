@@ -24,7 +24,6 @@ from ..util.logger import logger
 class CleanupBaseMixin:
     def __del__(self):
         logger.debug(f"Deleting {self}")
-        print('Deleting {}'.format(self))
 
     def cleanup(self):
         logger.debug(f"Cleaned up {self}")

@@ -163,6 +163,10 @@ class __unit__(mixins.UnitItemListMixin, mixins.UnitCssMixin, unit.Unit):
         self.require('component')
         self.unit_component.register_component('queue', _("Play Queue"), '1', self.new_component)
 
+    def cleanup(self):
+        self.unit_component.unregister_component(self.name)
+        super().cleanup()
+
     def new_component(self):
         component = QueueView(fields=self.unit_fields.fields, item_factory=QueueItem, factory_factory=QueueItemFactory, separator_file=self.unit_database.SEPARATOR_FILE, ampd=self.ampd)
         component.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
