@@ -65,10 +65,3 @@ class ContextMenuMixin:
         menu = Gtk.PopoverMenu(menu_model=self.context_menu, flags=Gtk.PopoverMenuFlags.NESTED, has_arrow=False, pointing_to=misc.Rectangle(x, y), halign=Gtk.Align.START)
         menu.set_parent(self)
         menu.popup()
-
-
-class ContextMenuAcceptExtraMixin:
-    def __init__(self, *args, extra, **kwargs):
-        super().__init__(*args, **kwargs)
-        for extra_args in self.extra:
-            self.add_to_context_menu(*extra_args)

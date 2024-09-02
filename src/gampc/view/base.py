@@ -215,8 +215,8 @@ class ItemView(Gtk.ColumnView):
 class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, *, item_factory=item.Item, factory_factory=LabelItemFactory, sortable, selection_model=Gtk.MultiSelection):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, focusable=True)
+    def __init__(self, fields, *, item_factory=item.Item, factory_factory=LabelItemFactory, sortable, selection_model=Gtk.MultiSelection, **kwargs):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, focusable=True, **kwargs)
         self.item_factory = item_factory
 
         self.filter_filter = Gtk.CustomFilter()
@@ -233,6 +233,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         self.connect_clean(self.filter_item, 'notify::value', self.notify_filter_cb)
 
         self.item_selection_model = selection_model()
+        self.item_selection_filter_model = Gtk.SelectionFilterModel(model=self.item_selection_model)
         self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_selection_model, vexpand=True, enable_rubberband=False)
         self.item_view.add_css_class('items')
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view)
@@ -299,11 +300,8 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     def get_items(self, positions):
         return list(map(lambda i: self.item_selection_model[i], positions))
 
-    # def get_filenames(self, selection):
-    #     if selection:
-    #         return list(map(lambda i: self.item_selection_model[i].file, self._get_selection()))
-    #     else:
-    #         return list(map(lambda item: item.file, self.item_selection_model))
+    def get_filenames(self, selection):
+        return list(map(lambda item: item.get_key(), self.item_selection_filter_model if selection else self.item_selection_model))
 
     def set_values(self, values):
         self.splice_values(0, None, values)

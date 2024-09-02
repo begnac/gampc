@@ -21,6 +21,7 @@
 from gi.repository import GObject
 
 from ..util import cleanup
+from ..util import misc
 
 
 class Component(cleanup.CleanupSignalMixin, GObject.Object):
@@ -51,5 +52,21 @@ class Component(cleanup.CleanupSignalMixin, GObject.Object):
         pass
 
 
-def component_widget(widget_class):
-    return type(widget_class.__name__, (widget_class,), dict(subtitle=GObject.Property(type=str)))
+class _ComponentWidgetMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.connect('notify::subtitle', self.notify_subtitle_cb)
+        self.connect('map', self.map_cb)
+
+    @staticmethod
+    def notify_subtitle_cb(self, pspec):
+        window = self.get_root()
+        if window is not None:
+            window.set_subtitle(self.subtitle)
+
+    @staticmethod
+    def map_cb(self):
+        self.get_root().set_subtitle(self.subtitle)
+
+
+component_widget = misc.prepend_mixin(_ComponentWidgetMixin, dict(subtitle=GObject.Property(type=str)))

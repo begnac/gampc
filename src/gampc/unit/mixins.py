@@ -83,7 +83,6 @@ class UnitItemListMixin:
         await self.ampd.playid(item_id)
 
 
-
 # class UnitComponentMixin(UnitConfigMixin, UnitServerMixin):
 #     def __init__(self, *args, menus=[]):
 #         super().__init__(*args)
@@ -103,35 +102,40 @@ class UnitItemListMixin:
 #         self.config.pane_separator._get(default=100)
 
 
-# class UnitComponentQueueActionMixin:
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.config.pane_separator._get(default=100)
+class UnitComponentQueueActionMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.config.pane_separator._get(default=100)
 
-#     def generate_global_queue_actions(self):
-#         yield action.ActionInfo('queue-add-high-priority', self.action_queue_add_high_priority_cb, _("Add to play queue with high priority"), arg=False, arg_format='b')
-#         yield action.ActionInfo('queue-add', self.action_queue_add_high_priority_cb, _("Add to play queue"), arg=False, arg_format='b')
-#         yield action.ActionInfo('queue-replace', self.action_queue_add_high_priority_cb, _("Replace play queue"), arg=False, arg_format='b', dangerous=True)
+    @ampd.task
+    async def view_activate_cb(self, item_view, position):
+        if self.unit_persistent.protect_active:
+            return
+        filename = item_view.get_model()[position].get_key()
+        items = await self.ampd.playlistfind('file', filename)
+        if items:
+            item_id = sorted(items, key=lambda item: item['Pos'])[0]['Id']
+        else:
+            item_id = await self.ampd.addid(filename)
+        await self.ampd.playid(item_id)
 
-#     def generate_local_queue_actions(self):
-#         for action_ in self.generate_global_queue_actions():
-#             yield action_.derive(arg=True)
+    def generate_global_queue_actions(self, view):
+        yield action.ActionInfo('queue-add-high-priority', self.action_queue_add_cb, _("Add to play queue with high priority"), arg=False, arg_format='b', activate_args=(view,))
+        yield action.ActionInfo('queue-add', self.action_queue_add_cb, _("Add to play queue"), arg=False, arg_format='b', activate_args=(view,))
+        yield action.ActionInfo('queue-replace', self.action_queue_add_cb, _("Replace play queue"), arg=False, arg_format='b', dangerous=True, activate_args=(view,))
 
-#     @ampd.task
-#     async def action_queue_add_replace_cb(self, action, parameter):
-#         filenames = self.get_filenames(parameter.get_boolean())
-#         replace = '-replace' in action.get_name()
-#         if replace:
-#             await self.ampd.clear()
-#         print(await self.ampd.command_list(self.ampd.addid(filename) for filename in filenames))
-#         if replace:
-#             await self.ampd.play()
+    def generate_local_queue_actions(self, view):
+        for action_ in self.generate_global_queue_actions(view):
+            yield action_.derive(action_.label, arg=True)
 
-#     @ampd.task
-#     async def action_queue_add_high_priority_cb(self, action, parameter):
-#         filenames = self.get_filenames(parameter.get_boolean())
-#         queue = {song['file']: song for song in await self.ampd.playlistinfo()}
-#         Ids = []
-#         for filename in filenames:
-#             Ids.append(queue[filename]['Id'] if filename in queue else await self.ampd.addid(filename))
-#         await self.ampd.prioid(255, *Ids)
+    @ampd.task
+    async def action_queue_add_cb(self, action, parameter, view):
+        filenames = view.get_filenames(parameter.unpack())
+        replace = '-replace' in action.get_name()
+        if replace:
+            await self.ampd.clear()
+        Ids = await self.ampd.command_list(self.ampd.addid(filename) for filename in filenames)
+        if replace:
+            await self.ampd.play()
+        if '-high-priority' in action.get_name():
+            await self.ampd.prioid(255, *Ids)

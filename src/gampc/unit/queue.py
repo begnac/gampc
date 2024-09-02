@@ -71,34 +71,13 @@ class QueueItemFactory(LabelItemFactory):
 
 
 @component.component_widget
-class QueueView(ViewWithCopyPasteSong):
-    def __init__(self, *args, ampd, **kwargs):
+class QueueView(misc.UseAMPDMixin, ViewWithCopyPasteSong):
+    current_Id = GObject.Property()
+
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
         self.add_to_context_menu(self.generate_priority_actions(), 'priority', _("Priority for random mode"), submenu=True)
-        self.ampd = ampd
-        self.current_Id = None
-
-        self.css_provider = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(self.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
-    def cleanup(self):
-        Gtk.StyleContext.remove_provider_for_display(self.get_display(), self.css_provider)
-        super().cleanup()
-
-    def set_current_Id(self, Id):
-        self.current_Id = Id
-        if Id is None:
-            PLAYING_CSS = ''
-        else:
-            PLAYING_CSS = f'''
-            columnview.queue > listview > row > cell.{QUEUE_ID_CSS_PREFIX}-{Id} {{
-              background: rgba(128,128,128,0.1);
-              font-style: italic;
-              font-weight: bold;
-            }}
-            '''
-        self.css_provider.load_from_string(PLAYING_CSS)
 
     def generate_queue_actions(self):
         yield action.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
@@ -115,10 +94,7 @@ class QueueView(ViewWithCopyPasteSong):
             return
         for position, item_ in enumerate(self.item_selection_model):
             if item_.Id == self.current_Id:
-                self.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
-                view_height = self.item_view.rows.get_allocation().height
-                # row_height = self.view.item_view.rows.get_focus_child().get_allocation().height
-                self.scrolled_item_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
+                self.scroll_to(position)
 
     @ampd.task
     async def action_priority_cb(self, action, parameter):
@@ -144,11 +120,23 @@ class QueueView(ViewWithCopyPasteSong):
     async def add_items(self, keys, position):
         await self.ampd.command_list(self.ampd.add(key, position) for key in reversed(keys))
 
+    def set_songs(self, songs, position):
+        self.set_values(songs)
+        if position is not None:
+            self.scroll_to(position)
 
-# class Queue(itemlist.SongListTotalsMixin, itemlist.ItemList):
+    def scroll_to(self, position):
+        self.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
+        view_height = self.item_view.rows.get_allocation().height
+        # row_height = self.view.item_view.rows.get_focus_child().get_allocation().height
+        self.scrolled_item_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
 
 
-class __unit__(mixins.UnitItemListMixin, mixins.UnitCssMixin, unit.Unit):
+class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
+    queue_songs = GObject.Property()
+    current_Id = GObject.Property()
+
+    TITLE = _("Play Queue")
     CSS = f'''
     columnview.queue > listview > row > cell.{QUEUE_PRIORITY_CSS_PREFIX}- {{
       background: rgba(0,255,0,0.5);
@@ -157,30 +145,34 @@ class __unit__(mixins.UnitItemListMixin, mixins.UnitCssMixin, unit.Unit):
 
     def __init__(self, *args):
         super().__init__(*args)
+        self.queue_songs = [], None
+        self.cursor_by_profile = {}
+        self.set_cursor = False
         self.require('database')
         self.require('fields')
         self.require('persistent')
         self.require('component')
-        self.unit_component.register_component('queue', _("Play Queue"), '1', self.new_component)
+
+        self.unit_component.register_component('queue', self.TITLE, '1', self.new_component)
 
     def cleanup(self):
         self.unit_component.unregister_component(self.name)
         super().cleanup()
 
     def new_component(self):
-        component = QueueView(fields=self.unit_fields.fields, item_factory=QueueItem, factory_factory=QueueItemFactory, separator_file=self.unit_database.SEPARATOR_FILE, ampd=self.ampd)
+        component = QueueView(fields=self.unit_fields.fields, item_factory=QueueItem, factory_factory=QueueItemFactory, separator_file=self.unit_database.SEPARATOR_FILE, ampd=self.ampd, subtitle=self.TITLE)
         component.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
         component.item_view.add_css_class('queue')
         item.setup_find_duplicate_items(component.item_store, ['Title'], [self.unit_database.SEPARATOR_FILE])
 
-        component.connect_clean(self.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
+        component.connect_clean(self, 'notify::queue-songs', self.notify_queue_songs_cb, component)
         component.connect_clean(component.item_selection_model, 'selection-changed', self.selection_changed_cb)
+        component.connect_clean(self.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
+        component.connect_clean(component.item_view, 'activate', self.view_activate_cb)
+        self.bind_property('current-Id', component, 'current-Id')
+        component.set_songs(*self.queue_songs)
 
-        # for name in self.itemlist_actions.list_actions():
-        #     if name.startswith('queue-ext-'):
-        #         self.itemlist_actions.remove(name)
-        self.cursor_by_profile = {}
-        self.set_cursor = False
+        return component
 
     def generate_queue_actions(self):
         yield action.ActionInfo('shuffle', self.action_shuffle_cb, _("Shuffle"), dangerous=True)
@@ -192,27 +184,44 @@ class __unit__(mixins.UnitItemListMixin, mixins.UnitCssMixin, unit.Unit):
     @ampd.task
     async def client_connected_cb(self, client):
         self.set_cursor = True
-        while True:
-            songs = await self.ampd.playlistinfo()
-            self.unit.unit_database.update(songs)
-            self.view.set_values(songs)
-            self.notify_current_song_cb(self.unit.unit_server.ampd_server_properties, None)
-            if self.set_cursor:
-                position = self.cursor_by_profile.get(self.unit.unit_server.server_profile)
-                if position is not None:
-                    self.view.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
+        try:
+            while True:
+                songs = await self.ampd.playlistinfo()
+                self.unit_database.update(songs)
+                if self.set_cursor:
+                    position = self.cursor_by_profile.get(self.unit_server.server_profile)
+                else:
+                    position = None
+                self.queue_songs = songs, position
                 self.set_cursor = False
-            await self.ampd.idle(ampd.PLAYLIST)
+                await self.ampd.idle(ampd.PLAYLIST)
+        finally:
+            self.queue_songs = [], None
+
+    @staticmethod
+    def notify_queue_songs_cb(self, pspec, component):
+        component.set_songs(*self.queue_songs)
 
     def selection_changed_cb(self, selection, *args):
         selection = list(misc.get_selection(selection))
         if len(selection) == 1:
-            self.cursor_by_profile[self.unit.unit_server.server_profile] = selection[0]
+            self.cursor_by_profile[self.unit_server.server_profile] = selection[0]
 
     def notify_current_song_cb(self, server_properties, pspec):
-        self.view.set_current_Id(server_properties.current_song.get('Id'))
+        self.current_Id = server_properties.current_song.get('Id')
+        if self.current_Id is None:
+            CSS = self.CSS
+        else:
+            CSS = self.CSS + f'''
+            columnview.queue > listview > row > cell.{QUEUE_ID_CSS_PREFIX}-{self.current_Id} {{
+              background: rgba(128,128,128,0.1);
+              font-style: italic;
+              font-weight: bold;
+            }}
+            '''
+        self.css_provider.load_from_string(CSS)
 
     @ampd.task
-    async def view_activate_cb(self, view, position):
-        if not self.unit.unit_persistent.protect_active:
-            await self.ampd.playid(self.view.item_selection_model[position].Id)
+    async def view_activate_cb(self, item_view, position):
+        if not self.unit_persistent.protect_active:
+            await self.ampd.playid(item_view.get_model()[position].Id)

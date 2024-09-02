@@ -49,27 +49,28 @@ class ShortcutControllerWithHelp(Gtk.ShortcutController):
 
 
 class ActionInfo:
-    def __init__(self, name, data, label=None, accels=None, arg=None, *, arg_format=None, state=None, dangerous=False):
+    def __init__(self, name, target, label=None, accels=None, arg=None, *, arg_format=None, state=None, dangerous=False, activate_args=()):
         self.name = name
-        self.data = data
+        self.target = target
         self.label = label
         self.accels = accels
 
         self.arg = None if arg is None else GLib.Variant(arg_format, arg)
-        self.arg_format = arg_format
 
+        self.arg_format = arg_format
         self.state = state
         self.dangerous = dangerous
+        self.activate_args = activate_args
 
     def add_to(self, *args):
         for arg in args:
             arg.add_action_info(self)
 
     def get_action(self, protect=None):
-        if self.data is not None:
+        if self.target is not None:
             parameter_type = None if self.arg_format is None else GLib.VariantType.new(self.arg_format)
             action = Gio.SimpleAction(name=self.name, parameter_type=parameter_type, state=self.state)
-            action.connect('activate', self.data)
+            action.connect('activate', self.target, *self.activate_args)
             if self.dangerous:
                 protect(action)
             return action
@@ -94,7 +95,7 @@ class ActionInfo:
         return item
 
     def derive(self, label, accels=None, arg=None):
-        return ActionInfo(self.name, None, label, accels, arg, arg_format=self.arg_format, dangerous=self.dangerous)
+        return ActionInfo(self.name, None, label, accels, arg, arg_format=self.arg_format)
 
     def __str__(self):
         return f"Action \"{self.name}\""
@@ -102,8 +103,8 @@ class ActionInfo:
 
 class PropertyActionInfo(ActionInfo):
     def get_action(self, protect=None):
-        if self.data is not None:
-            action = Gio.PropertyAction(name=self.name, property_name=self.name, object=self.data)
+        if self.target is not None:
+            action = Gio.PropertyAction(name=self.name, property_name=self.name, object=self.target)
             if self.dangerous:
                 protect(action)
             return action

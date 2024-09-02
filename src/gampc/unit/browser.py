@@ -29,7 +29,7 @@ from ..ui import treelist
 
 from ..view.cache import ViewCacheWithCopy
 
-from ..components import itemlist
+from ..components import component
 
 from . import mixins
 
@@ -37,43 +37,49 @@ from . import mixins
 DIRECTORY = 'directory'
 
 
+@component.component_widget
 class BrowserWidget(compound.WidgetWithPanedTreeList):
+    def __init__(self, main, config, root_model, **kwargs):
+        super().__init__(main, config, root_model, **kwargs)
+        self.connect_clean(root_model, 'items-changed', self.root_items_changed_cb)
+        if len(self.left_selection) > 0:
+            self.left_selection[0].set_expanded(True)
+
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
         self.main.set_keys(sum((selection[pos].get_item().keys for pos in self.left_selection_pos), []))
 
-
-class Browser(itemlist.ItemList):
-    def __init__(self, unit):
-        super().__init__(unit, ViewCacheWithCopy(fields=unit.unit_fields.fields, cache=unit.unit_database.cache))
-
-        self.widget = BrowserWidget(self.view, self.config.pane_separator, unit.root.model)
-        self.connect_clean(unit.root.model, 'items-changed', self.root_items_changed_cb)
-        if len(self.widget.left_selection) > 0:
-            self.widget.left_selection[0].set_expanded(True)
-
     def root_items_changed_cb(self, model, p, r, a):
         if a:
-            self.widget.left_selection[0].set_expanded(True)
+            self.left_selection[0].set_expanded(True)
 
 
-class __unit__(mixins.UnitPanedComponentMixin, unit.Unit):
-    title = _("Database Browser")
-    key = '2'
-
-    COMPONENT_CLASS = Browser
+class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
+    TITLE = _("Database Browser")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.config.pane_separator._get(default=100)
         self.require('database')
         self.require('fields')
         self.require('persistent')
+        self.require('component')
 
         self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)
+        self.unit_component.register_component('browser', self.TITLE, '2', self.new_component)
 
     def cleanup(self):
+        self.unit_component.unregister_component(self.name)
         del self.root
         super().cleanup()
+
+    def new_component(self):
+        view = ViewCacheWithCopy(fields=self.unit_fields.fields, cache=self.unit_database.cache)
+        component = BrowserWidget(view, self.config.pane_separator, self.root.model, subtitle=self.TITLE)
+        component.connect_clean(view.item_view, 'activate', self.view_activate_cb)
+        view.add_to_context_menu(self.generate_local_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
+        component.add_to_context_menu(self.generate_global_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
+        return component
 
     @ampd.task
     async def client_connected_cb(self, client):

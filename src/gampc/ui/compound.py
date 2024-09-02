@@ -20,6 +20,7 @@
 
 from gi.repository import Gtk
 
+from ..util import cleanup
 from ..util import misc
 
 from . import contextmenu
@@ -95,7 +96,7 @@ class ScrolledListView(Gtk.ScrolledWindow):
         super().__init__(child=self.view)
 
 
-class WidgetWithPaned(contextmenu.ContextMenuMixin, Gtk.Paned):
+class WidgetWithPaned(cleanup.CleanupSignalMixin, contextmenu.ContextMenuMixin, Gtk.Paned):
     def __init__(self, main, config, model, factory, **kwargs):
         self.main = main
         self.config = config
@@ -107,13 +108,13 @@ class WidgetWithPaned(contextmenu.ContextMenuMixin, Gtk.Paned):
 
         self.left_selection_pos = []
         self.left_selected_item = None
-        self.left_selection.connect('selection-changed', self.left_selection_changed_cb)
+        self.connect_clean(self.left_selection, 'selection-changed', self.left_selection_changed_cb)
         self.connect('notify::position', self.paned_notify_position_cb, config)
 
     def cleanup(self):
         self.main.cleanup()
         self.left.view_search.cleanup()
-        self.left_selection.disconnect_by_func(self.left_selection_changed_cb)
+        super().cleanup()
 
     def grab_focus(self):
         self.left.view.grab_focus()
