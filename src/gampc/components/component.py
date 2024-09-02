@@ -49,3 +49,7 @@ class Component(cleanup.CleanupSignalMixin, GObject.Object):
     @staticmethod
     def client_connected_cb(client):
         pass
+
+
+def component_widget(widget_class):
+    return type(widget_class.__name__, (widget_class,), dict(subtitle=GObject.Property(type=str)))

@@ -33,7 +33,7 @@ from ..ui import ssde
 from ..view.base import LabelItemFactory
 from ..view.cache import ViewWithCopyPasteSong
 
-from ..components import itemlist
+from ..components import component
 
 from . import mixins
 
@@ -70,6 +70,7 @@ class QueueItemFactory(LabelItemFactory):
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
+@component.component_widget
 class QueueView(ViewWithCopyPasteSong):
     def __init__(self, *args, ampd, **kwargs):
         super().__init__(*args, **kwargs)
@@ -144,17 +145,32 @@ class QueueView(ViewWithCopyPasteSong):
         await self.ampd.command_list(self.ampd.add(key, position) for key in reversed(keys))
 
 
-class Queue(itemlist.SongListTotalsMixin, itemlist.ItemList):
-    def __init__(self, unit):
-        super().__init__(unit, QueueView(fields=unit.unit_fields.fields, item_factory=QueueItem, factory_factory=QueueItemFactory, separator_file=unit.unit_database.SEPARATOR_FILE, ampd=unit.ampd))
-        self.view.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=unit.unit_persistent.protect)
-        self.view.item_view.add_css_class('queue')
-        item.setup_find_duplicate_items(self.view.item_store, ['Title'], [self.unit.unit_database.SEPARATOR_FILE])
+# class Queue(itemlist.SongListTotalsMixin, itemlist.ItemList):
 
-        self.widget = self.view
 
-        self.connect_clean(unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
-        self.connect_clean(self.view.item_selection_model, 'selection-changed', self.selection_changed_cb)
+class __unit__(mixins.UnitItemListMixin, mixins.UnitCssMixin, unit.Unit):
+    CSS = f'''
+    columnview.queue > listview > row > cell.{QUEUE_PRIORITY_CSS_PREFIX}- {{
+      background: rgba(0,255,0,0.5);
+    }}
+    '''
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.require('database')
+        self.require('fields')
+        self.require('persistent')
+        self.require('component')
+        self.unit_component.register_component('queue', _("Play Queue"), '1', self.new_component)
+
+    def new_component(self):
+        component = QueueView(fields=self.unit_fields.fields, item_factory=QueueItem, factory_factory=QueueItemFactory, separator_file=self.unit_database.SEPARATOR_FILE, ampd=self.ampd)
+        component.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
+        component.item_view.add_css_class('queue')
+        item.setup_find_duplicate_items(component.item_store, ['Title'], [self.unit_database.SEPARATOR_FILE])
+
+        component.connect_clean(self.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
+        component.connect_clean(component.item_selection_model, 'selection-changed', self.selection_changed_cb)
 
         # for name in self.itemlist_actions.list_actions():
         #     if name.startswith('queue-ext-'):
@@ -196,60 +212,3 @@ class Queue(itemlist.SongListTotalsMixin, itemlist.ItemList):
     async def view_activate_cb(self, view, position):
         if not self.unit.unit_persistent.protect_active:
             await self.ampd.playid(self.view.item_selection_model[position].Id)
-
-
-@ampd.task
-async def action_queue_add_replace_cb(songlist_, action, parameter):
-    filenames = songlist_.get_filenames(parameter.get_boolean())
-    replace = '-replace' in action.get_name()
-    if replace:
-        await songlist_.ampd.clear()
-    await songlist_.ampd.command_list(songlist_.ampd.add(filename) for filename in filenames)
-    if replace:
-        await songlist_.ampd.play()
-
-
-@ampd.task
-async def action_queue_add_high_priority_cb(songlist_, action, parameter):
-    filenames = songlist_.get_filenames(parameter.get_boolean())
-    queue = {song['file']: song for song in await songlist_.ampd.playlistinfo()}
-    Ids = []
-    for filename in filenames:
-        Ids.append(queue[filename]['Id'] if filename in queue else await songlist_.ampd.addid(filename))
-    await songlist_.ampd.prioid(255, *Ids)
-
-
-class __unit__(mixins.UnitComponentMixin, mixins.UnitCssMixin, unit.Unit):
-    title = _("Play Queue")
-    key = '1'
-
-    COMPONENT_CLASS = Queue
-    CSS = f'''
-    columnview.queue > listview > row > cell.{QUEUE_PRIORITY_CSS_PREFIX}- {{
-      background: rgba(0,255,0,0.5);
-    }}
-    '''
-
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.require('database')
-        self.require('fields')
-        self.require('persistent')
-
-        return
-        # self.add_resources(
-        #     'itemlist.action',
-        #     resource.ActionModel('queue-ext-add-high-priority', action_queue_add_high_priority_cb,
-        #                          dangerous=True, parameter_type=GLib.VariantType.new('b')),
-        #     *(resource.ActionModel('queue-ext' + verb, action_queue_add_replace_cb,
-        #                            dangerous=(verb == '-replace'), parameter_type=GLib.VariantType.new('b'))
-        #       for verb in ('-add', '-replace')),
-        # )
-
-        # for name, parameter in (('context', '(true)'), ('left-context', '(false)')):
-        #     self.add_resources(
-        #         f'itemlist.{name}.menu',
-        #         resource.MenuAction('action', 'itemlist.queue-ext-add' + parameter, _("Add to play queue")),
-        #         resource.MenuAction('action', 'itemlist.queue-ext-replace' + parameter, _("Replace play queue")),
-        #         resource.MenuAction('action', 'itemlist.queue-ext-add-high-priority' + parameter, _("Add to play queue with high priority")),
-        #     )

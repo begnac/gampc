@@ -92,12 +92,12 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         if self.component is not None:
             self.component_binding.unbind()
             del self.component_binding
-            self.main.remove(self.component.widget)
+            self.main.remove(self.component)
         self.component = component
         if self.component is not None:
-            self.main.prepend(self.component.widget)
-            self.component_binding = self.component.bind_property('full-title', self.headerbar.subtitle, 'label', GObject.BindingFlags.SYNC_CREATE)
-            self.component.widget.grab_focus()
+            self.main.prepend(self.component)
+            self.component_binding = self.component.bind_property('subtitle', self.headerbar.subtitle, 'label', GObject.BindingFlags.SYNC_CREATE)
+            self.component.grab_focus()
         else:
             self.headerbar.subtitle.set_label("")
 

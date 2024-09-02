@@ -25,12 +25,12 @@ from ..util import misc
 from . import component
 
 
+@component.component_widget
 class ItemList(component.Component):
     def __init__(self, unit, view, *args, **kwargs):
         super().__init__(unit, *args, **kwargs)
 
         self.view = view
-        self.view.item_view.add_css_class('itemlist')
 
         self.connect_clean(self.view.item_view, 'activate', self.view_activate_cb)
 

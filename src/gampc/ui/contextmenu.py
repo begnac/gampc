@@ -70,5 +70,5 @@ class ContextMenuMixin:
 class ContextMenuAcceptExtraMixin:
     def __init__(self, *args, extra, **kwargs):
         super().__init__(*args, **kwargs)
-        for args in self.extra:
-            self.add_to_context_menu(*args)
+        for extra_args in self.extra:
+            self.add_to_context_menu(*extra_args)

@@ -25,17 +25,13 @@ from gi.repository import Pango
 from gi.repository import Gtk
 
 import os
-# import time
-# import asyncio
-# import ampd
 
+from ..util import cleanup
 from ..util import unit
 
 from ..components import component
 
 from .. import __application__
-
-from . import mixins
 
 
 class PixbufCache(dict):
@@ -171,22 +167,28 @@ class Info(Gtk.Box):
         self.append(info_box)
 
 
-class MyBoxLayout(Gtk.BoxLayout):
+class MyLayout(Gtk.BinLayout):
     size = GObject.Property(type=int)
 
     def do_allocate(self, box, width, height, baseline):
         self.size = width + height
-        return Gtk.BoxLayout.do_allocate(self, box, width, height, baseline)
+        return Gtk.BinLayout.do_allocate(self, box, width, height, baseline)
 
 
-class Current(component.Component):
+@component.component_widget
+class Current(cleanup.CleanupSignalMixin, Gtk.Stack):
     size = GObject.Property(type=int)
+    current_song = GObject.Property()
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self):
+        self.layout = MyLayout()
+        super().__init__(margin_bottom=20, margin_start=20, margin_end=20, margin_top=20, layout_manager=self.layout)
 
-        welcome = Welcome()
+        self.welcome = Welcome()
         self.info = Info()
+
+        self.add_child(self.welcome)
+        self.add_child(self.info)
 
         self.labels = (
             ('Title', self.info.title_label),
@@ -195,73 +197,54 @@ class Current(component.Component):
             ('Composer', self.info.composer_label),
         )
 
-        self.layout = MyBoxLayout()
         self.connect_clean(self.layout, 'notify::size', self.notify_size_cb)
-        self.widget = self.main_box = Gtk.Box(margin_bottom=20, margin_start=20, margin_end=20, margin_top=20, layout_manager=self.layout)
-        self.main_box.append(welcome)
-        self.main_box.append(self.info)
-
-        self.unit.unit_server.bind_property('current-song', welcome, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: not y)
-        self.unit.unit_server.bind_property('current-song', self.info, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda x, y: bool(y))
-        self.connect_clean(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
-        # self.fading = None
+        self.connect('notify::current-song', self.notify_current_song_cb)
 
         self.css_provider = Gtk.CssProvider()
-        self.widget.get_style_context().add_provider(self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        self.bind_property('size', welcome, 'size')
+        Gtk.StyleContext.add_provider_for_display(self.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self.bind_property('size', self.welcome, 'size')
 
     def cleanup(self):
-        # if self.fading:
-        #     self.fading.cancel()
-        #     self.fading = None
+        Gtk.StyleContext.remove_provider_for_display(self.get_display(), self.css_provider)
         super().cleanup()
-
-    def notify_current_song_cb(self, server, param):
-        self.info.artist.set_name(server.current_song.get('Artist', ''))
-        self.info.performer.set_name(server.current_song.get('Performer', ''))
-        for field, label in self.labels:
-            label.set_label(server.current_song.get(field, ''))
-        self.set_size()
-        # self.fader()
-
-    # @ampd.task
-    # async def fader(self, *args):
-    #     START = 30
-    #     DURATION = 3
-    #     INTERVAL = 0.05
-
-    #     if self.fading:
-    #         self.fading.cancel()
-    #     task = self.fading = asyncio.current_task()
-    #     try:
-    #         if self.unit.unit_persistent.dark and self.unit.unit_server.current_song:
-    #             self.info.set_opacity(0)
-    #             await asyncio.sleep(START)
-    #             t0 = t1 = time.time()
-    #             while t1 < t0 + DURATION:
-    #                 self.info.set_opacity((t1 - t0) / DURATION)
-    #                 await asyncio.sleep(INTERVAL)
-    #                 t1 = time.time()
-    #         self.info.set_opacity(1)
-    #     finally:
-    #         if self.fading == task:
-    #             self.fading = None
 
     def set_size(self):
         scale = 100.0
-        song = self.unit.unit_server.current_song
+        song = self.current_song
         if song:
             scale += 3 * max(len(song.get('Artist', '')) - 20, len(song.get('Title', '')) - 20, 0)
         self.size = self.layout.size / scale
-        css = f'* {{ font-size: {self.size}px; }}'
+        css = f'box.current label {{ font-size: {self.size}px; }}'
         self.css_provider.load_from_data(css, -1)
 
-    def notify_size_cb(self, layout, param):
+    def notify_size_cb(self, layout, pspec):
         self.set_size()
 
+    @staticmethod
+    def notify_current_song_cb(self, pspec):
+        if self.current_song:
+            self.info.artist.set_name(self.current_song.get('Artist', ''))
+            self.info.performer.set_name(self.current_song.get('Performer', ''))
+            for field, label in self.labels:
+                label.set_label(self.current_song.get(field, ''))
+            self.set_size()
+            self.set_visible_child(self.info)
+        else:
+            self.set_visible_child(self.welcome)
 
-class __unit__(mixins.UnitComponentMixin, unit.Unit):
-    title = _("Current Song")
-    key = '0'
 
-    COMPONENT_CLASS = Current
+class __unit__(unit.Unit):
+    def __init__(self, *args, menus=[]):
+        super().__init__(*args)
+        self.require('server')
+        self.require('component')
+        self.unit_component.register_component('current', _("Current Song"), '0', self.new_component)
+
+    def cleanup(self):
+        self.unit_component.unregister_component(self.name)
+        super().cleanup()
+
+    def new_component(self):
+        component = Current()
+        self.unit_server.bind_property('current-song', component, 'current-song', GObject.BindingFlags.SYNC_CREATE)
+        return component
