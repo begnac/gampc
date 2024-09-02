@@ -52,7 +52,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.connect('notify::default-width', self.notify_default_size_cb)
         self.connect('notify::default-height', self.notify_default_size_cb)
 
-        self.connect_clean(self.unit.unit_server, 'notify::current-song', self.notify_current_song_cb)
+        self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::state', self.update_title)
         self.connect_clean(self.unit.unit_server, 'notify::server-label', self.update_title)
 
@@ -109,7 +109,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
 
     def update_title(self, *args):
         if self.unit.unit_server.ampd_server_properties.state in ('play', 'pause'):
-            song = self.unit.unit_server.current_song
+            song = self.unit.unit_server.ampd_server_properties.current_song
             title = song.get('Title') or song.get('Name') or _("Unknown song")
             if 'Artist' in song:
                 title = f"{title} / {song['Artist']}"

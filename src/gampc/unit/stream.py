@@ -18,8 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gtk
-
 from ..util import action
 from ..util import db
 from ..util import editstack
@@ -39,20 +37,6 @@ from ..components import itemlist
 from . import mixins
 
 
-STREAM_URL_CSS_PREFIX = 'stream-url'
-
-
-def encode_url(url):
-    return url.encode().hex()
-
-
-class StreamItemFactory(EditableItemFactory):
-    @staticmethod
-    def value_binder(widget, item, name):
-        misc.add_unique_css_class(widget.get_parent(), STREAM_URL_CSS_PREFIX, encode_url(item.get_key()))
-        EditableItemFactory.value_binder(widget, item, name)
-
-
 class ItemStreamTransfer(item.ItemValueTransfer):
     pass
 
@@ -68,7 +52,7 @@ class StreamView(ViewWithEditStack):
         return item.value
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, factory_factory=StreamItemFactory)
+        super().__init__(*args, **kwargs, factory_factory=EditableItemFactory)
         for column in self.item_view.get_columns():
             self.connect_clean(column.get_factory(), 'item-edited', self.item_edited_cb)
 
@@ -161,27 +145,6 @@ class __unit__(mixins.UnitComponentMixin, unit.Unit):
             self.unit_database.cache[song['file']] = song
 
         self.config.edit_dialog_size._get(default=[500, 500])
-
-        self.css_provider = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(misc.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        self.unit_server.connect('notify::current-song', self.notify_current_song_cb, self.css_provider)
-
-    # cleanup remove css_provider
-
-    @staticmethod
-    def notify_current_song_cb(server_properties, pspec, css_provider):
-        url = server_properties.current_song.get('file')
-        if url is not None and (url.startswith('http://') or url.startswith('https://')):
-            PLAYING_CSS = f'''
-            columnview.stream > listview > row > cell.{STREAM_URL_CSS_PREFIX}-{encode_url(url)} {{
-              background: rgba(128,128,128,0.1);
-              font-style: italic;
-              font-weight: bold;
-            }}
-            '''
-        else:
-            PLAYING_CSS = ''
-        css_provider.load_from_string(PLAYING_CSS)
 
     # def current_song_hook(self, song):
     #     if 'file' not in song or 'Title' not in song:

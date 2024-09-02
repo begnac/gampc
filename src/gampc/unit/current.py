@@ -246,5 +246,5 @@ class __unit__(unit.Unit):
 
     def new_component(self):
         component = Current()
-        self.unit_server.bind_property('current-song', component, 'current-song', GObject.BindingFlags.SYNC_CREATE)
+        self.unit_server.ampd_server_properties.bind_property('current-song', component, 'current-song', GObject.BindingFlags.SYNC_CREATE)
         return component

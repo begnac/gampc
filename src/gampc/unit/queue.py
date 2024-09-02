@@ -63,6 +63,7 @@ class QueueItemFactory(LabelItemFactory):
     @staticmethod
     def id_binder(widget, item):
         misc.add_unique_css_class(widget.get_parent(), QUEUE_ID_CSS_PREFIX, item.Id)
+        misc.add_unique_css_class(widget.get_parent(), 'playing', None)
 
     @staticmethod
     def prio_binder(widget, item, name):
@@ -154,6 +155,8 @@ class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
         self.require('component')
 
         self.unit_component.register_component('queue', self.TITLE, '1', self.new_component)
+        self.connect_clean(self.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
+        self.notify_current_song_cb(self.unit_server.ampd_server_properties, None)
 
     def cleanup(self):
         self.unit_component.unregister_component(self.name)
@@ -167,7 +170,6 @@ class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
 
         component.connect_clean(self, 'notify::queue-songs', self.notify_queue_songs_cb, component)
         component.connect_clean(component.item_selection_model, 'selection-changed', self.selection_changed_cb)
-        component.connect_clean(self.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         component.connect_clean(component.item_view, 'activate', self.view_activate_cb)
         self.bind_property('current-Id', component, 'current-Id')
         component.set_songs(*self.queue_songs)

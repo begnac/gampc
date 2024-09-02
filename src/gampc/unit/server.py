@@ -24,17 +24,16 @@ import asyncio
 import ampd
 
 from ..util import action
+from ..util import misc
 from ..util import unit
 from ..util.logger import logger
 
 from . import mixins
 
 
-class __unit__(mixins.UnitConfigMixin, unit.Unit):
+class __unit__(mixins.UnitCssMixin, mixins.UnitConfigMixin, unit.Unit):
     server_label = GObject.Property(type=str, default='')
     server_profile = GObject.Property(type=str)
-
-    current_song = GObject.Property()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -42,7 +41,6 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.require('profiles')
         self.require('fields')
 
-        # self.current_song_hooks = []
         self.ampd_client = ampd.ClientGLib()
         self.connect_clean(self.ampd_client, 'client-connected', self.client_connected_cb)
         self.connect_clean(self.ampd_client, 'client-disconnected', self.client_disconnected_cb)
@@ -50,7 +48,6 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.ampd = self.ampd_client.executor.sub_executor()
 
         self.ampd_server_properties = ampd.ServerPropertiesGLib(self.ampd_client.executor)
-        self.ampd_server_properties.bind_property('current-song', self, 'current-song', GObject.BindingFlags.SYNC_CREATE)
         self.connect_clean(self.ampd_server_properties, 'server-error', self.server_error_cb)
         self.connect_clean(self.ampd_server_properties, 'notify::updating-db', self.set_server_label)
 
@@ -64,6 +61,8 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.set_server_label()
 
         self.connect_clean(self, 'notify::server-profile', self.notify_server_profile_cb)
+        self.ampd_server_properties.connect('notify::current-song', self.notify_current_song_cb, self.css_provider)
+        self.notify_current_song_cb(self.ampd_server_properties, None, self.css_provider)
 
     def cleanup(self):
         self.want_to_connect = False
@@ -71,6 +70,20 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         del self.ampd_client
         del self.ampd_server_properties
         super().cleanup()
+
+    @staticmethod
+    def notify_current_song_cb(server_properties, pspec, css_provider):
+        if 'file' in server_properties.current_song:
+            PLAYING_CSS = f'''
+            columnview > listview > row > cell.playing-{misc.encode_url(server_properties.current_song['file'])} {{
+              background: rgba(128,128,128,0.1);
+              font-style: italic;
+              font-weight: bold;
+            }}
+            '''
+        else:
+            PLAYING_CSS = ''
+        css_provider.load_from_string(PLAYING_CSS)
 
     def generate_database_actions(self):
         yield action.ActionInfo('update', self.update_cb, _("Update database"))
@@ -149,17 +162,3 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
             self.config.server_profile_previous._set(self.server_profile_backup)
             self.server_profile_previous = self.server_profile_backup
             self.server_profile_backup = self.server_profile
-
-    # def add_current_song_hook(self, hook, priority=None):
-    #     self.current_song_hooks.append(hook)
-    #     self.current_song = self.current_song_transform(None, self.ampd_server_properties.current_song)
-
-    # def remove_current_song_hook(self, hook):
-    #     self.current_song_hooks.remove(hook)
-    #     self.current_song = self.current_song_transform(None, self.ampd_server_properties.current_song)
-
-    # def current_song_transform(self, binding, song):
-    #     song = song.copy()
-    #     for hook in self.current_song_hooks:
-    #         hook(song)
-    #     return song

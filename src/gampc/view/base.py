@@ -80,6 +80,7 @@ class ItemFactory(Gtk.SignalListItemFactory):
 
     @staticmethod
     def value_binder(widget, item_, name):
+        misc.add_unique_css_class(widget.get_parent(), 'playing', misc.encode_url(item_.get_key()))
         widget.set_label(item_.get_field(name))
 
     @staticmethod
