@@ -36,7 +36,7 @@ DIRECTORY = 'directory'
 
 
 class BrowserWidget(compound.WidgetWithPanedTreeList):
-    def __init__(self, fields, cache, config, root_model, **kwargs):
+    def __init__(self, fields, cache, config, root_model):
         main = ViewCacheWithCopy(fields=fields, cache=cache)
         super().__init__(main, config, root_model)
         self.connect_clean(root_model, 'items-changed', self.root_items_changed_cb)
@@ -56,13 +56,12 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
     TITLE = _("Database Browser")
     KEY = '2'
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, name):
+        super().__init__(name)
         self.config.pane_separator._get(default=100)
         self.require('database')
         self.require('fields')
         self.require('persistent')
-        self.require('component')
 
         self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)
 
