@@ -68,8 +68,8 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
 
 
 class __unit__(unit.Unit):
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
 
     def generate_actions(self):
         # yield action.ActionInfo('app', 'BAD', self.BAD_cb, _("BAD"), ['<Control><Shift>b'])

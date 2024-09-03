@@ -36,8 +36,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitConfigMixin, unit.Unit):
     server_label = GObject.Property(type=str, default='')
     server_profile = GObject.Property(type=str)
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
 
         self.require('profiles')
         self.require('fields')

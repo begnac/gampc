@@ -30,16 +30,12 @@ from ..ui import compound
 from . import mixins
 
 
-class Label(cleanup.CleanupBaseMixin, Gtk.Label):
-    pass
-
-
 class __unit__(mixins.UnitComponentMixin, mixins.UnitServerMixin, unit.Unit):
     TITLE = _("Execute MPD commands")
     KEY = '7'
 
     def new_widget(self):
-        return compound.WidgetWithEntry(Label(max_width_chars=50, wrap=True, selectable=True, vexpand=True), self.entry_activate_cb)
+        return compound.WidgetWithEntry(Gtk.Label(max_width_chars=50, wrap=True, selectable=True, vexpand=True), self.entry_activate_cb)
 
     @ampd.task
     async def entry_activate_cb(self, entry, label):

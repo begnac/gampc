@@ -25,10 +25,19 @@ from .logger import logger
 
 
 class CleanupBaseMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cleanup_below = []
+
     def __del__(self):
         logger.debug(f"Deleting {self}")
 
+    def add_cleanup_below(self, below):
+        self._cleanup_below.append(below)
+
     def cleanup(self):
+        for below in self._cleanup_below:
+            below.cleanup()
         logger.debug(f"Cleaned up {self}")
 
 

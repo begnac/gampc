@@ -30,15 +30,15 @@ from ..util import misc
 
 
 class UnitConfigMixin:
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
         self.require('config')
         self.config = self.unit_config.load_config(self.name)
 
 
-class UnitServerMixin:
-    def __init__(self, *args):
-        super().__init__(*args)
+class UnitServerMixin(cleanup.CleanupBaseMixin):
+    def __init__(self, manager):
+        super().__init__(manager)
 
         self.require('server')
         self.ampd = self.unit_server.ampd_client.executor.sub_executor()
@@ -64,10 +64,7 @@ class ComponentWidget(cleanup.CleanupBaseMixin, Gtk.Box):
         self.connect('map', self.map_cb)
         self.append(widget)
         self.widget = widget
-
-    def cleanup(self):
-        self.widget.cleanup()
-        super().cleanup()
+        self.add_cleanup_below(widget)
 
     @staticmethod
     def notify_subtitle_cb(self, pspec):
@@ -84,8 +81,8 @@ class ComponentWidget(cleanup.CleanupBaseMixin, Gtk.Box):
 
 
 class UnitComponentMixin:
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
         self.require('component').register_component(self.name, self.TITLE, self.KEY, self.factory)
 
     def cleanup(self):
@@ -111,8 +108,8 @@ class UnitComponentTotalsMixin(UnitComponentMixin):
 
 
 class UnitComponentQueueActionMixin(UnitComponentMixin, UnitServerMixin):
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
 
     @ampd.task
     async def view_activate_cb(self, item_view, position):

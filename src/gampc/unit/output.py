@@ -32,8 +32,8 @@ from . import mixins
 
 
 class __unit__(mixins.UnitServerMixin, unit.Unit):
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
 
         self.require('persistent')
 

@@ -65,8 +65,8 @@ class __unit__(mixins.UnitComponentMixin, unit.Unit):
     TITLE = _("View log")
     KEY = '8'
 
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, manager):
+        super().__init__(manager)
         self.handler = Handler()
         self.handler.setFormatter(logging.Formatter(fmt='%(asctime)s %(levelname)s: %(name)s: %(message)s (%(pathname)s %(lineno)d)'))
         logging.getLogger().addHandler(self.handler)

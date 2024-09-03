@@ -113,8 +113,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentTotalsMixin, mixins.
     }}
     '''
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
         self.queue_songs = [], None
         self.cursor_by_profile = {}
         self.set_cursor = False

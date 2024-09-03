@@ -42,6 +42,7 @@ class BrowserWidget(compound.WidgetWithPanedTreeList):
         self.connect_clean(root_model, 'items-changed', self.root_items_changed_cb)
         if len(self.left_selection) > 0:
             self.left_selection[0].set_expanded(True)
+        self.add_cleanup_below(main)
 
     def root_items_changed_cb(self, model, p, r, a):
         if a:
@@ -56,8 +57,8 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
     TITLE = _("Database Browser")
     KEY = '2'
 
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, manager):
+        super().__init__(manager)
         self.config.pane_separator._get(default=100)
         self.require('database')
         self.require('fields')

@@ -62,8 +62,8 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
     LOCAL_HOST_NAME = _("Local host")
     LOCAL_HOST_ADDRESS = 'localhost:6600'
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
 
         self.user_profiles_struct = ssde.List(
             label=_("Profiles"),

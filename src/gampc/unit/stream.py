@@ -116,8 +116,8 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
     TITLE = _("Internet Streams")
     KEY = '4'
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
 
         self.require('database')
         self.require('persistent')

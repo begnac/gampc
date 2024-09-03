@@ -35,8 +35,8 @@ class Component:
 
 
 class __unit__(unit.Unit):
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
         self._registered_components = {}
         self._components = {}
 

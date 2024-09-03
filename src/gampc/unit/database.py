@@ -32,8 +32,8 @@ from . import mixins
 class __unit__(mixins.UnitServerMixin, unit.Unit):
     SEPARATOR_FILE = 'separator.mp3'
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
         self.require('fields')
         self.cache = cache.AsyncCache(self.cache_retrieve)
 

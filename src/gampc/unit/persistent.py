@@ -37,8 +37,8 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
     protect_active = GObject.Property(type=bool, default=False)
     dark = GObject.Property(type=bool, default=False)
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
 
         self.require('database')
 

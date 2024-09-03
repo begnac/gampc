@@ -25,8 +25,8 @@ from ..util import unit
 
 
 class __unit__(unit.Unit):
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
 
         self.require('window')
         self.require('persistent')

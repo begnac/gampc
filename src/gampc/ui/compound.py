@@ -38,10 +38,6 @@ class WidgetWithEntry(cleanup.CleanupSignalMixin, Gtk.Box):
         self.append(self.entry)
         self.connect_clean(self.entry, 'activate', activate_cb, main)
 
-    def cleanup(self):
-        self.main.cleanup()
-        super().cleanup()
-
     def grab_focus(self):
         self.entry.grab_focus()
 
@@ -110,10 +106,7 @@ class WidgetWithPaned(contextmenu.ContextMenuMixin, cleanup.CleanupSignalMixin, 
         self.connect_clean(self.left_selection, 'selection-changed', self.left_selection_changed_cb)
         self.connect('notify::position', self.paned_notify_position_cb, config)
 
-    def cleanup(self):
-        self.main.cleanup()
-        self.left.view_search.cleanup()
-        super().cleanup()
+        self.add_cleanup_below(self.left.view_search)
 
     def grab_focus(self):
         self.left.view.grab_focus()

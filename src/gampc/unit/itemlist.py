@@ -45,6 +45,6 @@ for d in range(N ** 3):
 
 
 class __unit__(cleanup.CleanupCssMixin, unit.Unit):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, manager):
+        super().__init__(manager)
         self.css_provider.load_from_string(CSS)

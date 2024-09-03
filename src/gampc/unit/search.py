@@ -37,6 +37,7 @@ class SearchWidget(compound.WidgetWithEntry):
         super().__init__(view, activate_cb, **kwargs)
         view.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
         item.setup_find_duplicate_items(view.item_store, ['Title', 'Artist', 'Performer', 'Date'], [separator_file])
+        self.add_cleanup_below(view)
 
         # self.field_choice = Gtk.ComboBoxText()
         # self.field_choice.append_text(_("any field"))
@@ -59,8 +60,8 @@ class __unit__(mixins.UnitComponentQueueActionMixin, unit.Unit):
     TITLE = _("Search")
     KEY = '3'
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, manager):
+        super().__init__(manager)
         self.require('database')
         self.require('fields')
         self.require('persistent')

@@ -51,6 +51,7 @@ class PlaylistWidget(compound.WidgetWithPanedTreeList):
     def __init__(self, fields, separator_file, cache, config, root_model):
         main = ViewWithCopyPasteEditStackSong(fields=fields, separator_file=separator_file, cache=cache)
         super().__init__(main, config, root_model)
+        self.add_cleanup_below(main)
 
         main.connect('edit-stack-changed', self.edit_stack_changed_cb)
         item.setup_find_duplicate_items(main.item_store, ['file'], [separator_file])
@@ -155,8 +156,8 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
     }
     """
 
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, manager):
+        super().__init__(manager)
         self.config.pane_separator._get(default=100)
         self.require('database')
         self.require('fields')
