@@ -19,40 +19,43 @@
 
 
 from gi.repository import GObject
+from gi.repository import Gtk
 
-from ..util import cleanup
 from ..util import misc
+from ..util import cleanup
 
 
-class Component(cleanup.CleanupSignalMixin, GObject.Object):
-    status = GObject.Property()
-    full_title = GObject.Property(type=str)
+# class Component(cleanup.CleanupSignalMixin, GObject.Object):
+#     status = GObject.Property()
+#     full_title = GObject.Property(type=str)
 
-    def __init__(self, unit, *, name=None, **kwargs):
-        super().__init__(full_title=unit.title, **kwargs)
-        self.unit = unit
-        self.name = name or unit.name
-        self.config = self.unit.config
-        self.ampd = self.unit.ampd.sub_executor()
+#     def __init__(self, unit, *, name=None, **kwargs):
+#         super().__init__(full_title=unit.title, **kwargs)
+#         self.unit = unit
+#         self.name = name or unit.name
+#         self.config = self.unit.config
+#         self.ampd = self.unit.ampd.sub_executor()
 
-        self.status_binding = self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(unit.title, self.status) if self.status else unit.title)
+#         self.status_binding = self.bind_property('status', self, 'full-title', GObject.BindingFlags(0), lambda x, y: "{} [{}]".format(unit.title, self.status) if self.status else unit.title)
 
-        self.connect_clean(unit.unit_server.ampd_client, 'client-connected', self.client_connected_cb)
-        if self.ampd.get_is_connected():
-            self.client_connected_cb(unit.unit_server.ampd_client)
+#         self.connect_clean(unit.unit_server.ampd_client, 'client-connected', self.client_connected_cb)
+#         if self.ampd.get_is_connected():
+#             self.client_connected_cb(unit.unit_server.ampd_client)
 
-    def cleanup(self):
-        self.status_binding.unbind()
-        self.ampd.close()
-        del self.widget
-        super().cleanup()
+#     def cleanup(self):
+#         self.status_binding.unbind()
+#         self.ampd.close()
+#         del self.widget
+#         super().cleanup()
 
-    @staticmethod
-    def client_connected_cb(client):
-        pass
+#     @staticmethod
+#     def client_connected_cb(client):
+#         pass
 
 
-class _ComponentWidgetMixin:
+class ComponentWidget(misc.UseAMPDMixin, cleanup.CleanupSignalMixin, Gtk.Box):
+    subtitle = GObject.Property(type=str)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.connect('notify::subtitle', self.notify_subtitle_cb)
@@ -67,6 +70,3 @@ class _ComponentWidgetMixin:
     @staticmethod
     def map_cb(self):
         self.get_root().set_subtitle(self.subtitle)
-
-
-component_widget = misc.prepend_mixin(_ComponentWidgetMixin, dict(subtitle=GObject.Property(type=str)))

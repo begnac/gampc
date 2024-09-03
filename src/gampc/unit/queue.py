@@ -19,7 +19,6 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gtk
 
 import ampd
 
@@ -71,14 +70,26 @@ class QueueItemFactory(LabelItemFactory):
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
-@component.component_widget
-class QueueView(misc.UseAMPDMixin, ViewWithCopyPasteSong):
+class QueueView(ViewWithCopyPasteSong):
+    def __init__(self, fields, separator_file, add_items, remove_positions):
+        self.add_items = add_items
+        self.remove_positions = remove_positions
+        super().__init__(fields=fields, item_factory=QueueItem, factory_factory=QueueItemFactory, separator_file=separator_file)
+        self.item_view.add_css_class('queue')
+        item.setup_find_duplicate_items(self.item_store, ['Title'], [separator_file])
+
+
+class QueueWidget(component.ComponentWidget):
     current_Id = GObject.Property()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
-        self.add_to_context_menu(self.generate_priority_actions(), 'priority', _("Priority for random mode"), submenu=True)
+    def __init__(self, fields, separator_file, **kwargs):
+        self.view = QueueView(fields, separator_file, self.add_items, self.remove_positions)
+        item.setup_find_duplicate_items(self.view.item_store, ['Title'], [separator_file])
+        self.view.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
+        self.view.add_to_context_menu(self.generate_priority_actions(), 'priority', _("Priority for random mode"), submenu=True)
+
+        super().__init__(**kwargs)
+        self.append(self.view)
 
     def generate_queue_actions(self):
         yield action.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
@@ -93,9 +104,9 @@ class QueueView(misc.UseAMPDMixin, ViewWithCopyPasteSong):
     def action_go_to_current_cb(self, action, parameter):
         if self.current_Id is None:
             return
-        for position, item_ in enumerate(self.item_selection_model):
+        for position, item_ in enumerate(self.view.item_selection_model):
             if item_.Id == self.current_Id:
-                self.scroll_to(position)
+                self.view.scroll_to(position)
 
     @ampd.task
     async def action_priority_cb(self, action, parameter):
@@ -115,22 +126,16 @@ class QueueView(misc.UseAMPDMixin, ViewWithCopyPasteSong):
 
     @ampd.task
     async def remove_positions(self, positions):
-        await self.ampd.command_list(self.ampd.deleteid(self.item_selection_model[pos].Id) for pos in positions)
+        await self.ampd.command_list(self.ampd.deleteid(self.view.item_selection_model[pos].Id) for pos in positions)
 
     @ampd.task
     async def add_items(self, keys, position):
         await self.ampd.command_list(self.ampd.add(key, position) for key in reversed(keys))
 
     def set_songs(self, songs, position):
-        self.set_values(songs)
+        self.view.set_values(songs)
         if position is not None:
-            self.scroll_to(position)
-
-    def scroll_to(self, position):
-        self.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
-        view_height = self.item_view.rows.get_allocation().height
-        # row_height = self.view.item_view.rows.get_focus_child().get_allocation().height
-        self.scrolled_item_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
+            self.view.scroll_to(position)
 
 
 class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
@@ -154,7 +159,7 @@ class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
         self.require('persistent')
         self.require('component')
 
-        self.unit_component.register_component('queue', self.TITLE, '1', self.new_component)
+        self.unit_component.register_component('queue', self.TITLE, '1', self.new_widget)
         self.connect_clean(self.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.notify_current_song_cb(self.unit_server.ampd_server_properties, None)
 
@@ -162,15 +167,12 @@ class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
         self.unit_component.unregister_component(self.name)
         super().cleanup()
 
-    def new_component(self):
-        component = QueueView(fields=self.unit_fields.fields, item_factory=QueueItem, factory_factory=QueueItemFactory, separator_file=self.unit_database.SEPARATOR_FILE, ampd=self.ampd, subtitle=self.TITLE)
-        component.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
-        component.item_view.add_css_class('queue')
-        item.setup_find_duplicate_items(component.item_store, ['Title'], [self.unit_database.SEPARATOR_FILE])
-
+    def new_widget(self):
+        component = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, ampd=self.ampd, subtitle=self.TITLE)
+        component.view.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
         component.connect_clean(self, 'notify::queue-songs', self.notify_queue_songs_cb, component)
-        component.connect_clean(component.item_selection_model, 'selection-changed', self.selection_changed_cb)
-        component.connect_clean(component.item_view, 'activate', self.view_activate_cb)
+        component.connect_clean(component.view.item_selection_model, 'selection-changed', self.selection_changed_cb)
+        component.connect_clean(component.view.item_view, 'activate', self.view_activate_cb)
         self.bind_property('current-Id', component, 'current-Id')
         component.set_songs(*self.queue_songs)
 

@@ -37,21 +37,26 @@ from . import mixins
 DIRECTORY = 'directory'
 
 
-@component.component_widget
-class BrowserWidget(compound.WidgetWithPanedTreeList):
-    def __init__(self, main, config, root_model, **kwargs):
-        super().__init__(main, config, root_model, **kwargs)
-        self.connect_clean(root_model, 'items-changed', self.root_items_changed_cb)
-        if len(self.left_selection) > 0:
-            self.left_selection[0].set_expanded(True)
-
+class BrowserPaned(compound.WidgetWithPanedTreeList):
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
         self.main.set_keys(sum((selection[pos].get_item().keys for pos in self.left_selection_pos), []))
 
+
+class BrowserWidget(component.ComponentWidget):
+    def __init__(self, fields, cache, config, root_model, **kwargs):
+        self.view = ViewCacheWithCopy(fields=fields, cache=cache)
+        self.paned = BrowserPaned(self.view, config, root_model)
+
+        super().__init__(**kwargs)
+        self.append(self.paned)
+        self.connect_clean(root_model, 'items-changed', self.root_items_changed_cb)
+        if len(self.paned.left_selection) > 0:
+            self.paned.left_selection[0].set_expanded(True)
+
     def root_items_changed_cb(self, model, p, r, a):
         if a:
-            self.left_selection[0].set_expanded(True)
+            self.paned.left_selection[0].set_expanded(True)
 
 
 class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
@@ -66,20 +71,19 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, mix
         self.require('component')
 
         self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)
-        self.unit_component.register_component('browser', self.TITLE, '2', self.new_component)
+        self.unit_component.register_component('browser', self.TITLE, '2', self.new_widget)
 
     def cleanup(self):
         self.unit_component.unregister_component(self.name)
         del self.root
         super().cleanup()
 
-    def new_component(self):
-        view = ViewCacheWithCopy(fields=self.unit_fields.fields, cache=self.unit_database.cache)
-        component = BrowserWidget(view, self.config.pane_separator, self.root.model, subtitle=self.TITLE)
-        component.connect_clean(view.item_view, 'activate', self.view_activate_cb)
-        view.add_to_context_menu(self.generate_local_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
-        component.add_to_context_menu(self.generate_global_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
-        return component
+    def new_widget(self):
+        widget = BrowserWidget(self.unit_fields.fields, self.unit_database.cache, self.config.pane_separator, self.root.model, ampd=self.ampd, subtitle=self.TITLE)
+        widget.connect_clean(widget.view.item_view, 'activate', self.view_activate_cb)
+        widget.view.add_to_context_menu(self.generate_local_queue_actions(widget.view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
+        widget.paned.add_to_context_menu(self.generate_global_queue_actions(widget.view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
+        return widget
 
     @ampd.task
     async def client_connected_cb(self, client):

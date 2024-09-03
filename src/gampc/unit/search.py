@@ -28,14 +28,15 @@ from ..ui import compound
 
 from ..view.cache import ViewCacheWithCopy
 
-from ..components import itemlist
+from ..components import component
 
 from . import mixins
 
 
-class Search(itemlist.ItemList):
-    def __init__(self, unit):
-        super().__init__(unit, ViewCacheWithCopy(fields=unit.unit_fields.fields, cache=unit.unit_database.cache))
+@component.component_widget
+class SearchWidget(compound.WidgetWithEntry):
+    def __init__(self):
+        view = ViewCacheWithCopy(fields=unit.unit_fields.fields, cache=unit.unit_database.cache)
 
         self.view.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
         item.setup_find_duplicate_items(self.view.item_store, ['Title', 'Artist', 'Performer', 'Date'], [self.unit.unit_database.SEPARATOR_FILE])

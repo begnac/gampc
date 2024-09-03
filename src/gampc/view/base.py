@@ -33,7 +33,7 @@ from ..ui import editable
 from ..ui import listviewsearch
 
 
-class ItemFactory(Gtk.SignalListItemFactory):
+class ItemFactoryBase(Gtk.SignalListItemFactory):
     def __init__(self, name):
         super().__init__()
 
@@ -41,7 +41,6 @@ class ItemFactory(Gtk.SignalListItemFactory):
 
         self.binders = {}
         self.binders['value'] = (self.value_binder, name)
-        self.binders['duplicate'] = (self.duplicate_binder,)
 
         self.connect('setup', self.setup_cb)
         self.connect('bind', self.bind_cb)
@@ -80,8 +79,19 @@ class ItemFactory(Gtk.SignalListItemFactory):
 
     @staticmethod
     def value_binder(widget, item_, name):
-        misc.add_unique_css_class(widget.get_parent(), 'playing', misc.encode_url(item_.get_key()))
         widget.set_label(item_.get_field(name))
+
+
+class ItemFactory(ItemFactoryBase):
+    def __init__(self, name):
+        super().__init__(name)
+
+        self.binders['duplicate'] = (self.duplicate_binder,)
+
+    @staticmethod
+    def value_binder(widget, item_, name):
+        ItemFactoryBase.value_binder(widget, item_, name)
+        misc.add_unique_css_class(widget.get_parent(), 'playing', misc.encode_url(item_.get_key()))
 
     @staticmethod
     def duplicate_binder(widget, item_):
@@ -98,7 +108,7 @@ class LabelItemFactory(ItemFactory):
         return Gtk.Label(halign=Gtk.Align.START)
 
 
-class EditableItemFactory(ItemFactory):
+class EditableItemFactoryBase(ItemFactoryBase):
     __gsignals__ = {
         'item-edited': (GObject.SIGNAL_RUN_FIRST, None, (int, str, str)),
     }
@@ -120,6 +130,10 @@ class EditableItemFactory(ItemFactory):
 
     def label_edited_cb(self, widget, name):
         self.emit('item-edited', widget.pos, name, widget.get_text())
+
+
+class EditableItemFactory(EditableItemFactoryBase, ItemFactory):
+    pass
 
 
 class FieldItemColumn(Gtk.ColumnViewColumn):
@@ -217,7 +231,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
     def __init__(self, fields, *, item_factory=item.Item, factory_factory=LabelItemFactory, sortable, selection_model=Gtk.MultiSelection, **kwargs):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, focusable=True, **kwargs)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, focusable=True, hexpand=True, vexpand=True, **kwargs)
         self.item_factory = item_factory
 
         self.filter_filter = Gtk.CustomFilter()
@@ -231,7 +245,8 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, vscrollbar_policy=Gtk.PolicyType.NEVER)
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
         self.append(self.scrolled_filter_view)
-        self.connect_clean(self.filter_item, 'notify::value', self.notify_filter_cb)
+        for column in self.filter_view.get_columns():
+            self.connect_clean(column.get_factory(), 'item-edited', self.filter_edited_cb)
 
         self.item_selection_model = selection_model()
         self.item_selection_filter_model = Gtk.SelectionFilterModel(model=self.item_selection_model)
@@ -270,9 +285,10 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
 
     @staticmethod
     def filter_factory_factory(name):
-        return EditableItemFactory(name, always_editable=True)
+        return EditableItemFactoryBase(name, always_editable=True)
 
-    def notify_filter_cb(self, item, param):
+    def filter_edited_cb(self, factory, pos, name, value):
+        self.filter_item.value[name] = value
         self.filter_filter.changed(Gtk.FilterChange.DIFFERENT)
 
     @staticmethod
@@ -317,3 +333,9 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         for i in range(n):
             items[i].load(values[i])
         self.item_store[pos:pos + remove] = items[:n]
+
+    def scroll_to(self, position):
+        self.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
+        view_height = self.item_view.rows.get_allocation().height
+        # row_height = self.view.item_view.rows.get_focus_child().get_allocation().height
+        self.scrolled_item_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)

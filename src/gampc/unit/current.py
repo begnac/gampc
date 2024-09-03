@@ -175,20 +175,22 @@ class MyLayout(Gtk.BinLayout):
         return Gtk.BinLayout.do_allocate(self, box, width, height, baseline)
 
 
-@component.component_widget
-class Current(cleanup.CleanupSignalMixin, Gtk.Stack):
+class CurrentWidget(cleanup.CleanupCssMixin, component.ComponentWidget):
     size = GObject.Property(type=int)
     current_song = GObject.Property()
 
-    def __init__(self):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
         self.layout = MyLayout()
-        super().__init__(margin_bottom=20, margin_start=20, margin_end=20, margin_top=20, layout_manager=self.layout)
+        self.stack = Gtk.Stack(margin_bottom=20, margin_start=20, margin_end=20, margin_top=20, layout_manager=self.layout)
+        self.append(self.stack)
 
         self.welcome = Welcome()
         self.info = Info()
 
-        self.add_child(self.welcome)
-        self.add_child(self.info)
+        self.stack.add_child(self.welcome)
+        self.stack.add_child(self.info)
 
         self.labels = (
             ('Title', self.info.title_label),
@@ -200,13 +202,7 @@ class Current(cleanup.CleanupSignalMixin, Gtk.Stack):
         self.connect_clean(self.layout, 'notify::size', self.notify_size_cb)
         self.connect('notify::current-song', self.notify_current_song_cb)
 
-        self.css_provider = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(self.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.bind_property('size', self.welcome, 'size')
-
-    def cleanup(self):
-        Gtk.StyleContext.remove_provider_for_display(self.get_display(), self.css_provider)
-        super().cleanup()
 
     def set_size(self):
         scale = 100.0
@@ -228,23 +224,25 @@ class Current(cleanup.CleanupSignalMixin, Gtk.Stack):
             for field, label in self.labels:
                 label.set_label(self.current_song.get(field, ''))
             self.set_size()
-            self.set_visible_child(self.info)
+            self.stack.set_visible_child(self.info)
         else:
-            self.set_visible_child(self.welcome)
+            self.stack.set_visible_child(self.welcome)
 
 
 class __unit__(unit.Unit):
+    TITLE = _("Current Song")
+
     def __init__(self, *args, menus=[]):
         super().__init__(*args)
         self.require('server')
         self.require('component')
-        self.unit_component.register_component('current', _("Current Song"), '0', self.new_component)
+        self.unit_component.register_component('current', self.TITLE, '0', self.new_widget)
 
     def cleanup(self):
         self.unit_component.unregister_component(self.name)
         super().cleanup()
 
-    def new_component(self):
-        component = Current()
+    def new_widget(self):
+        component = CurrentWidget(subtitle=self.TITLE)
         self.unit_server.ampd_server_properties.bind_property('current-song', component, 'current-song', GObject.BindingFlags.SYNC_CREATE)
         return component

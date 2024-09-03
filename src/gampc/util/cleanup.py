@@ -18,7 +18,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from ..util.logger import logger
+from gi.repository import Gtk
+
+from .logger import logger
 
 
 class CleanupBaseMixin:
@@ -43,3 +45,14 @@ class CleanupSignalMixin(CleanupBaseMixin):
     def connect_clean(self, target, *args):
         handler = target.connect(*args)
         self._cleanup_signal.append((target, handler))
+
+
+class CleanupCssMixin(CleanupBaseMixin):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.css_provider = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(self.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+    def cleanup(self):
+        Gtk.StyleContext.remove_provider_for_display(self.get_display(), self.css_provider)
+        super().cleanup()
