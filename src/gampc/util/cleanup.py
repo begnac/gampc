@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import Gdk
 from gi.repository import Gtk
 
 from .logger import logger
@@ -51,8 +52,8 @@ class CleanupCssMixin(CleanupBaseMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.css_provider = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(self.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def cleanup(self):
-        Gtk.StyleContext.remove_provider_for_display(self.get_display(), self.css_provider)
+        Gtk.StyleContext.remove_provider_for_display(Gdk.Display.get_default(), self.css_provider)
         super().cleanup()

@@ -24,6 +24,7 @@ import asyncio
 import ampd
 
 from ..util import action
+from ..util import cleanup
 from ..util import misc
 from ..util import unit
 from ..util.logger import logger
@@ -31,7 +32,7 @@ from ..util.logger import logger
 from . import mixins
 
 
-class __unit__(mixins.UnitCssMixin, mixins.UnitConfigMixin, unit.Unit):
+class __unit__(cleanup.CleanupCssMixin, mixins.UnitConfigMixin, unit.Unit):
     server_label = GObject.Property(type=str, default='')
     server_profile = GObject.Property(type=str)
 

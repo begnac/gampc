@@ -29,20 +29,6 @@ from ..util import cleanup
 from ..util import misc
 
 
-class UnitCssMixin:
-    CSS = ''
-
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.css_provider = Gtk.CssProvider()
-        self.css_provider.load_from_string(self.CSS)
-        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
-    def cleanup(self):
-        Gtk.StyleContext.remove_provider_for_display(Gdk.Display.get_default(), self.css_provider)
-        super().cleanup()
-
-
 class UnitConfigMixin:
     def __init__(self, *args):
         super().__init__(*args)

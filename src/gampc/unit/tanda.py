@@ -593,7 +593,6 @@ class Tanda(component.Component):
         self.filter_artists()
 
 
-
 class TandaDatabase(GObject.Object, db.Database):
     __gsignals__ = {
         'changed': (GObject.SIGNAL_RUN_LAST, None, (int,)),
@@ -846,8 +845,8 @@ for p in range(5):
 
 
 class __unit__(mixins.UnitPanedComponentMixin, mixins.UnitCssMixin, unit.Unit):
-    title = _("Tandas")
-    key = '6'
+    TITLE = _("Tandas")
+    KEY = '6'
 
     CSS = CSS
 

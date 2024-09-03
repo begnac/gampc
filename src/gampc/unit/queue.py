@@ -23,6 +23,7 @@ from gi.repository import GObject
 import ampd
 
 from ..util import action
+from ..util import cleanup
 from ..util import item
 from ..util import misc
 from ..util import unit
@@ -99,7 +100,7 @@ class QueueWidget(ViewWithCopyPasteSong):
             self.scroll_to(position)
 
 
-class __unit__(mixins.UnitComponentTotalsMixin, mixins.UnitServerMixin, mixins.UnitCssMixin, unit.Unit):
+class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentTotalsMixin, mixins.UnitServerMixin, unit.Unit):
     queue_songs = GObject.Property()
     current_Id = GObject.Property()
 
@@ -123,6 +124,8 @@ class __unit__(mixins.UnitComponentTotalsMixin, mixins.UnitServerMixin, mixins.U
 
         self.connect_clean(self.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.notify_current_song_cb(self.unit_server.ampd_server_properties, None)
+
+        self.css_provider.load_from_string(self.CSS)
 
     def new_widget(self):
         queue = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, add_items=self.add_items, remove_ids=self.remove_ids)

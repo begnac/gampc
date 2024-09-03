@@ -18,11 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from ..util import cleanup
 from ..util import unit
 
 from ..ui import dnd
-
-from . import mixins
 
 
 CSS = ''
@@ -45,5 +44,7 @@ for d in range(N ** 3):
     '''
 
 
-class __unit__(mixins.UnitConfigMixin, mixins.UnitCssMixin, unit.Unit):
-    CSS = CSS
+class __unit__(cleanup.CleanupCssMixin, unit.Unit):
+    def __init__(self, name):
+        super().__init__(name)
+        self.css_provider.load_from_string(CSS)
