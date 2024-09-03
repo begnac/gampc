@@ -22,7 +22,6 @@ import ampd
 
 from ..util import action
 from ..util import item
-from ..util import misc
 from ..util import unit
 
 from ..ui import compound
@@ -32,7 +31,7 @@ from ..view.cache import ViewCacheWithCopy
 from . import mixins
 
 
-class SearchWidget(misc.UseAMPDMixin, compound.WidgetWithEntry):
+class SearchWidget(compound.WidgetWithEntry):
     def __init__(self, fields, cache, separator_file, activate_cb, **kwargs):
         view = ViewCacheWithCopy(fields=fields, cache=cache)
         super().__init__(view, activate_cb, **kwargs)
@@ -49,12 +48,6 @@ class SearchWidget(misc.UseAMPDMixin, compound.WidgetWithEntry):
 
     def action_search_cb(self, *args):
         self.entry.grab_focus()
-
-    @ampd.task
-    async def client_connected_cb(self):
-        while True:
-            self.entry.activate()
-            await self.ampd.idle(ampd.DATABASE)
 
     # def action_reset_cb(self, action, parameter):
     #     super().action_reset_cb(action, parameter)
@@ -73,9 +66,15 @@ class __unit__(mixins.UnitComponentQueueActionMixin, unit.Unit):
         self.require('persistent')
 
     def new_widget(self):
-        search = SearchWidget(self.unit_fields.fields, self.unit_database.cache, self.unit_database.SEPARATOR_FILE, self.entry_activate_cb, ampd=self.ampd)
-        search.connect_clean(search.main.item_view, 'activate', self.view_activate_cb)
+        search = SearchWidget(self.unit_fields.fields, self.unit_database.cache, self.unit_database.SEPARATOR_FILE, self.entry_activate_cb)
+        search.connect_clean(self.unit_server.ampd_client, 'client-connected', self.search_client_connected_cb, search)
         return search
+
+    @ampd.task
+    async def search_client_connected_cb(self, client, search):
+        while True:
+            search.entry.activate()
+            await self.ampd.idle(ampd.DATABASE)
 
     @ampd.task
     async def entry_activate_cb(self, entry, view):

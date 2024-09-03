@@ -68,25 +68,19 @@ class QueueItemFactory(LabelItemFactory):
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
-class QueueWidget(misc.UseAMPDMixin, ViewWithCopyPasteSong):
+class QueueWidget(ViewWithCopyPasteSong):
     current_Id = GObject.Property()
 
-    def __init__(self, **kwargs):
+    def __init__(self, add_items, remove_ids, **kwargs):
+        self.add_items = add_items
+        self.remove_ids = remove_ids
         super().__init__(item_factory=QueueItem, factory_factory=QueueItemFactory, **kwargs)
         self.item_view.add_css_class('queue')
         item.setup_find_duplicate_items(self.item_store, ['Title'], [self.separator_file])
         self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
-        self.add_to_context_menu(self.generate_priority_actions(), 'priority', _("Priority for random mode"), submenu=True)
 
     def generate_queue_actions(self):
         yield action.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
-
-    def generate_priority_actions(self):
-        priority = action.ActionInfo('priority', self.action_priority_cb, arg_format='i')
-        yield priority
-        yield priority.derive(_("High"), arg=255)
-        yield priority.derive(_("Normal"), arg=0)
-        # yield priority.derive(_("Choose"), arg=-1)
 
     def action_go_to_current_cb(self, action, parameter):
         if self.current_Id is None:
@@ -96,28 +90,8 @@ class QueueWidget(misc.UseAMPDMixin, ViewWithCopyPasteSong):
                 self.scroll_to(position)
 
     @ampd.task
-    async def action_priority_cb(self, action, parameter):
-        items = self.get_selection_items()
-        if not items:
-            return
-
-        priority = parameter.unpack()
-        if priority == -1:
-            priority = sum(int(item.Prio or '0') for item in items) // len(items)
-            struct = ssde.Integer(default=priority, min_value=0, max_value=255)
-            priority = await struct.edit(self.get_root())
-            if priority is None:
-                return
-
-        await self.ampd.prioid(priority, *(item_.Id for item_ in items))
-
-    @ampd.task
     async def remove_positions(self, positions):
-        await self.ampd.command_list(self.ampd.deleteid(self.item_selection_model[pos].Id) for pos in positions)
-
-    @ampd.task
-    async def add_items(self, keys, position):
-        await self.ampd.command_list(self.ampd.add(key, position) for key in reversed(keys))
+        await self.remove_ids(self.item_selection_model[pos].Id for pos in positions)
 
     def set_songs(self, songs, position):
         self.set_values(songs)
@@ -151,8 +125,9 @@ class __unit__(mixins.UnitComponentTotalsMixin, mixins.UnitServerMixin, mixins.U
         self.notify_current_song_cb(self.unit_server.ampd_server_properties, None)
 
     def new_widget(self):
-        queue = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, ampd=self.ampd)
+        queue = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, add_items=self.add_items, remove_ids=self.remove_ids)
 
+        queue.add_to_context_menu(self.generate_priority_actions(queue), 'priority', _("Priority for random mode"), submenu=True)
         queue.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
         queue.connect_clean(self, 'notify::queue-songs', self.notify_queue_songs_cb, queue)
         queue.connect_clean(queue.item_selection_model, 'selection-changed', self.selection_changed_cb)
@@ -162,6 +137,29 @@ class __unit__(mixins.UnitComponentTotalsMixin, mixins.UnitServerMixin, mixins.U
         queue.totals_store = queue.item_store
 
         return queue
+
+    def generate_priority_actions(self, queue):
+        priority = action.ActionInfo('priority', self.action_priority_cb, arg_format='i', activate_args=(queue,))
+        yield priority
+        yield priority.derive(_("High"), arg=255)
+        yield priority.derive(_("Normal"), arg=0)
+        # yield priority.derive(_("Choose"), arg=-1)
+
+    @ampd.task
+    async def action_priority_cb(self, action, parameter, queue):
+        items = list(queue.item_selection_filter_model)
+        if not items:
+            return
+
+        priority = parameter.unpack()
+        if priority == -1:
+            priority = sum(int(item.Prio or '0') for item in items) // len(items)
+            struct = ssde.Integer(default=priority, min_value=0, max_value=255)
+            priority = await struct.edit(queue.get_root())
+            if priority is None:
+                return
+
+        await self.ampd.prioid(priority, *(item_.Id for item_ in items))
 
     def generate_queue_actions(self):
         yield action.ActionInfo('shuffle', self.action_shuffle_cb, _("Shuffle"), dangerous=True)
@@ -214,3 +212,10 @@ class __unit__(mixins.UnitComponentTotalsMixin, mixins.UnitServerMixin, mixins.U
     async def view_activate_cb(self, item_view, position):
         if not self.unit_persistent.protect_active:
             await self.ampd.playid(item_view.get_model()[position].Id)
+
+    def remove_ids(self, ids):
+        return self.ampd.command_list(map(self.ampd.deleteid, ids))
+
+    @ampd.task
+    async def add_items(self, keys, position):
+        await self.ampd.command_list(self.ampd.add(key, position) for key in reversed(keys))

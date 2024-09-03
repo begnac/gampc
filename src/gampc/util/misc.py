@@ -100,21 +100,6 @@ def create_task(coro, *args, **kwargs):
     return asyncio.create_task(coro(*args, **kwargs), name=coro.__name__)
 
 
-class UseAMPDMixin:
-    def __init__(self, *args, ampd, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ampd = ampd.sub_executor()
-        self.ampd.set_callbacks(self.client_connected_cb, None)
-
-    def cleanup(self):
-        self.ampd.close()
-        super().cleanup()
-
-    @staticmethod
-    def client_connected_cb():
-        pass
-
-
 def prepend_mixin(mixin, extra={}):
     def prepender(cls):
         return type(cls.__name__, (mixin, cls,), extra)
