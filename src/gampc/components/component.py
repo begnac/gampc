@@ -53,13 +53,14 @@ from ..util import cleanup
 #         pass
 
 
-class ComponentWidget(misc.UseAMPDMixin, cleanup.CleanupSignalMixin, Gtk.Box):
+class ComponentWidget(cleanup.CleanupSignalMixin, Gtk.Box):
     subtitle = GObject.Property(type=str)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, widget, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.connect('notify::subtitle', self.notify_subtitle_cb)
         self.connect('map', self.map_cb)
+        self.append(widget)
 
     @staticmethod
     def notify_subtitle_cb(self, pspec):
@@ -70,3 +71,6 @@ class ComponentWidget(misc.UseAMPDMixin, cleanup.CleanupSignalMixin, Gtk.Box):
     @staticmethod
     def map_cb(self):
         self.get_root().set_subtitle(self.subtitle)
+
+    def grab_focus(self):
+        self.get_first_child().grab_focus()

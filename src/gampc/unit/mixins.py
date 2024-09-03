@@ -67,8 +67,8 @@ class UnitServerMixin:
 
 
 class UnitItemListMixin:
-    def new_widget(self):
-        component = super().new_widget()
+    def new_instance(self):
+        component = super().new_instance()
         component.connect_clean(self.view.item_view, 'activate', self.view_activate_cb)
         return component
 
@@ -88,13 +88,13 @@ class UnitItemListMixin:
 # class UnitComponentMixin(UnitConfigMixin, UnitServerMixin):
 #     def __init__(self, *args, menus=[]):
 #         super().__init__(*args)
-#         self.require('component').register_component(self.name, self.title, self.key, self.new_widget)
+#         self.require('component').register_component(self.name, self.title, self.key, self.new_instance)
 
 #     def cleanup(self):
 #         self.unit_component.unregister_component(self.name)
 #         super().cleanup()
 
-#     def new_widget(self):
+#     def new_instance(self):
 #         return self.COMPONENT_CLASS(self)
 
 

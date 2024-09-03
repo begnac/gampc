@@ -175,22 +175,19 @@ class MyLayout(Gtk.BinLayout):
         return Gtk.BinLayout.do_allocate(self, box, width, height, baseline)
 
 
-class CurrentWidget(cleanup.CleanupCssMixin, component.ComponentWidget):
+class CurrentWidget(cleanup.CleanupCssMixin, cleanup.CleanupSignalMixin, Gtk.Stack):
     size = GObject.Property(type=int)
     current_song = GObject.Property()
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
+    def __init__(self):
         self.layout = MyLayout()
-        self.stack = Gtk.Stack(margin_bottom=20, margin_start=20, margin_end=20, margin_top=20, layout_manager=self.layout)
-        self.append(self.stack)
+        super().__init__(margin_bottom=20, margin_start=20, margin_end=20, margin_top=20, layout_manager=self.layout)
 
         self.welcome = Welcome()
         self.info = Info()
 
-        self.stack.add_child(self.welcome)
-        self.stack.add_child(self.info)
+        self.add_child(self.welcome)
+        self.add_child(self.info)
 
         self.labels = (
             ('Title', self.info.title_label),
@@ -211,7 +208,7 @@ class CurrentWidget(cleanup.CleanupCssMixin, component.ComponentWidget):
             scale += 3 * max(len(song.get('Artist', '')) - 20, len(song.get('Title', '')) - 20, 0)
         self.size = self.layout.size / scale
         css = f'box.current label {{ font-size: {self.size}px; }}'
-        self.css_provider.load_from_data(css, -1)
+        self.css_provider.load_from_string(css)
 
     def notify_size_cb(self, layout, pspec):
         self.set_size()
@@ -224,9 +221,9 @@ class CurrentWidget(cleanup.CleanupCssMixin, component.ComponentWidget):
             for field, label in self.labels:
                 label.set_label(self.current_song.get(field, ''))
             self.set_size()
-            self.stack.set_visible_child(self.info)
+            self.set_visible_child(self.info)
         else:
-            self.stack.set_visible_child(self.welcome)
+            self.set_visible_child(self.welcome)
 
 
 class __unit__(unit.Unit):
@@ -236,13 +233,14 @@ class __unit__(unit.Unit):
         super().__init__(*args)
         self.require('server')
         self.require('component')
-        self.unit_component.register_component('current', self.TITLE, '0', self.new_widget)
+        self.unit_component.register_component('current', self.TITLE, '0', self.new_instance)
 
     def cleanup(self):
         self.unit_component.unregister_component(self.name)
         super().cleanup()
 
-    def new_widget(self):
-        component = CurrentWidget(subtitle=self.TITLE)
-        self.unit_server.ampd_server_properties.bind_property('current-song', component, 'current-song', GObject.BindingFlags.SYNC_CREATE)
-        return component
+    def new_instance(self):
+        current = CurrentWidget()
+        self.unit_server.ampd_server_properties.bind_property('current-song', current, 'current-song', GObject.BindingFlags.SYNC_CREATE)
+
+        return component.ComponentWidget(current, subtitle=self.TITLE)

@@ -70,26 +70,15 @@ class QueueItemFactory(LabelItemFactory):
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
-class QueueView(ViewWithCopyPasteSong):
-    def __init__(self, fields, separator_file, add_items, remove_positions):
-        self.add_items = add_items
-        self.remove_positions = remove_positions
-        super().__init__(fields=fields, item_factory=QueueItem, factory_factory=QueueItemFactory, separator_file=separator_file)
-        self.item_view.add_css_class('queue')
-        item.setup_find_duplicate_items(self.item_store, ['Title'], [separator_file])
-
-
-class QueueWidget(component.ComponentWidget):
+class QueueWidget(misc.UseAMPDMixin, ViewWithCopyPasteSong):
     current_Id = GObject.Property()
 
-    def __init__(self, fields, separator_file, **kwargs):
-        self.view = QueueView(fields, separator_file, self.add_items, self.remove_positions)
-        item.setup_find_duplicate_items(self.view.item_store, ['Title'], [separator_file])
-        self.view.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
-        self.view.add_to_context_menu(self.generate_priority_actions(), 'priority', _("Priority for random mode"), submenu=True)
-
-        super().__init__(**kwargs)
-        self.append(self.view)
+    def __init__(self, **kwargs):
+        super().__init__(item_factory=QueueItem, factory_factory=QueueItemFactory, **kwargs)
+        self.item_view.add_css_class('queue')
+        item.setup_find_duplicate_items(self.item_store, ['Title'], [self.separator_file])
+        self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
+        self.add_to_context_menu(self.generate_priority_actions(), 'priority', _("Priority for random mode"), submenu=True)
 
     def generate_queue_actions(self):
         yield action.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
@@ -104,9 +93,9 @@ class QueueWidget(component.ComponentWidget):
     def action_go_to_current_cb(self, action, parameter):
         if self.current_Id is None:
             return
-        for position, item_ in enumerate(self.view.item_selection_model):
+        for position, item_ in enumerate(self.item_selection_model):
             if item_.Id == self.current_Id:
-                self.view.scroll_to(position)
+                self.scroll_to(position)
 
     @ampd.task
     async def action_priority_cb(self, action, parameter):
@@ -126,16 +115,16 @@ class QueueWidget(component.ComponentWidget):
 
     @ampd.task
     async def remove_positions(self, positions):
-        await self.ampd.command_list(self.ampd.deleteid(self.view.item_selection_model[pos].Id) for pos in positions)
+        await self.ampd.command_list(self.ampd.deleteid(self.item_selection_model[pos].Id) for pos in positions)
 
     @ampd.task
     async def add_items(self, keys, position):
         await self.ampd.command_list(self.ampd.add(key, position) for key in reversed(keys))
 
     def set_songs(self, songs, position):
-        self.view.set_values(songs)
+        self.set_values(songs)
         if position is not None:
-            self.view.scroll_to(position)
+            self.scroll_to(position)
 
 
 class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
@@ -159,7 +148,7 @@ class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
         self.require('persistent')
         self.require('component')
 
-        self.unit_component.register_component('queue', self.TITLE, '1', self.new_widget)
+        self.unit_component.register_component('queue', self.TITLE, '1', self.new_instance)
         self.connect_clean(self.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.notify_current_song_cb(self.unit_server.ampd_server_properties, None)
 
@@ -167,16 +156,17 @@ class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
         self.unit_component.unregister_component(self.name)
         super().cleanup()
 
-    def new_widget(self):
-        component = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, ampd=self.ampd, subtitle=self.TITLE)
-        component.view.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
-        component.connect_clean(self, 'notify::queue-songs', self.notify_queue_songs_cb, component)
-        component.connect_clean(component.view.item_selection_model, 'selection-changed', self.selection_changed_cb)
-        component.connect_clean(component.view.item_view, 'activate', self.view_activate_cb)
-        self.bind_property('current-Id', component, 'current-Id')
-        component.set_songs(*self.queue_songs)
+    def new_instance(self):
+        queue = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, ampd=self.ampd)
 
-        return component
+        queue.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
+        queue.connect_clean(self, 'notify::queue-songs', self.notify_queue_songs_cb, queue)
+        queue.connect_clean(queue.item_selection_model, 'selection-changed', self.selection_changed_cb)
+        queue.connect_clean(queue.item_view, 'activate', self.view_activate_cb)
+        self.bind_property('current-Id', queue, 'current-Id')
+        queue.set_songs(*self.queue_songs)
+
+        return component.ComponentWidget(queue, subtitle=self.TITLE)
 
     def generate_queue_actions(self):
         yield action.ActionInfo('shuffle', self.action_shuffle_cb, _("Shuffle"), dangerous=True)
@@ -203,8 +193,8 @@ class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
             self.queue_songs = [], None
 
     @staticmethod
-    def notify_queue_songs_cb(self, pspec, component):
-        component.set_songs(*self.queue_songs)
+    def notify_queue_songs_cb(self, pspec, queue):
+        queue.set_songs(*self.queue_songs)
 
     def selection_changed_cb(self, selection, *args):
         selection = list(misc.get_selection(selection))

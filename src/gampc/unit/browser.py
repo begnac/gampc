@@ -37,7 +37,7 @@ from . import mixins
 DIRECTORY = 'directory'
 
 
-class BrowserPaned(compound.WidgetWithPanedTreeList):
+class BrowserWidget(compound.WidgetWithPanedTreeList):
     def __init__(self, fields, cache, config, root_model, **kwargs):
         main = ViewCacheWithCopy(fields=fields, cache=cache)
         super().__init__(main, config, root_model)
@@ -54,14 +54,6 @@ class BrowserPaned(compound.WidgetWithPanedTreeList):
         self.main.set_keys(sum((selection[pos].get_item().keys for pos in self.left_selection_pos), []))
 
 
-class BrowserWidget(component.ComponentWidget):
-    def __init__(self, fields, cache, config, root_model, **kwargs):
-        self.paned = BrowserPaned(fields, cache, config, root_model)
-        self.view = self.paned.main
-        super().__init__(**kwargs)
-        self.append(self.paned)
-
-
 class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
     TITLE = _("Database Browser")
 
@@ -74,19 +66,22 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, mix
         self.require('component')
 
         self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)
-        self.unit_component.register_component('browser', self.TITLE, '2', self.new_widget)
+        self.unit_component.register_component('browser', self.TITLE, '2', self.new_instance)
 
     def cleanup(self):
         self.unit_component.unregister_component(self.name)
         del self.root
         super().cleanup()
 
-    def new_widget(self):
-        widget = BrowserWidget(self.unit_fields.fields, self.unit_database.cache, self.config.pane_separator, self.root.model, ampd=self.ampd, subtitle=self.TITLE)
-        widget.connect_clean(widget.view.item_view, 'activate', self.view_activate_cb)
-        widget.view.add_to_context_menu(self.generate_local_queue_actions(widget.view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
-        widget.paned.add_to_context_menu(self.generate_global_queue_actions(widget.view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
-        return widget
+    def new_instance(self):
+        browser = BrowserWidget(self.unit_fields.fields, self.unit_database.cache, self.config.pane_separator, self.root.model)
+        view = browser.main
+
+        browser.add_to_context_menu(self.generate_global_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
+        view.add_to_context_menu(self.generate_local_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
+        browser.connect_clean(view.item_view, 'activate', self.view_activate_cb)
+
+        return component.ComponentWidget(browser, subtitle=self.TITLE)
 
     @ampd.task
     async def client_connected_cb(self, client):
