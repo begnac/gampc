@@ -38,6 +38,10 @@ DIRECTORY = 'directory'
 
 
 class BrowserPaned(compound.WidgetWithPanedTreeList):
+    def __init__(self, fields, cache, config, root_model, **kwargs):
+        main = ViewCacheWithCopy(fields=fields, cache=cache)
+        super().__init__(main, config, root_model)
+
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
         self.main.set_keys(sum((selection[pos].get_item().keys for pos in self.left_selection_pos), []))
@@ -45,8 +49,8 @@ class BrowserPaned(compound.WidgetWithPanedTreeList):
 
 class BrowserWidget(component.ComponentWidget):
     def __init__(self, fields, cache, config, root_model, **kwargs):
-        self.view = ViewCacheWithCopy(fields=fields, cache=cache)
-        self.paned = BrowserPaned(self.view, config, root_model)
+        self.paned = BrowserPaned(fields, cache, config, root_model)
+        self.view = self.paned.main
 
         super().__init__(**kwargs)
         self.append(self.paned)
