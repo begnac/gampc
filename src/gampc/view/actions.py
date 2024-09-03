@@ -180,3 +180,5 @@ class ViewWithCopyPaste(ViewWithCopy):
             item_ = item.Item(value=dict(file=url))
             transfer = self.transfer_type([item_])
             self.add_items(transfer.values, pos)
+
+    add_items = remove_positions = NotImplemented

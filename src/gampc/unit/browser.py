@@ -54,8 +54,9 @@ class BrowserWidget(compound.WidgetWithPanedTreeList):
         self.main.set_keys(sum((selection[pos].get_item().keys for pos in self.left_selection_pos), []))
 
 
-class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
+class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, unit.Unit):
     TITLE = _("Database Browser")
+    KEY = '2'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -66,14 +67,12 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, mix
         self.require('component')
 
         self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)
-        self.unit_component.register_component('browser', self.TITLE, '2', self.new_instance)
 
     def cleanup(self):
-        self.unit_component.unregister_component(self.name)
         del self.root
         super().cleanup()
 
-    def new_instance(self):
+    def new_widget(self):
         browser = BrowserWidget(self.unit_fields.fields, self.unit_database.cache, self.config.pane_separator, self.root.model)
         view = browser.main
 
@@ -81,7 +80,7 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, mix
         view.add_to_context_menu(self.generate_local_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
         browser.connect_clean(view.item_view, 'activate', self.view_activate_cb)
 
-        return component.ComponentWidget(browser, subtitle=self.TITLE)
+        return browser
 
     @ampd.task
     async def client_connected_cb(self, client):
@@ -100,5 +99,6 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, mix
             node.append_sub_node(treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic'))
         node.keys = [data['file'] for data in contents.get('file', [])]
 
-    async def fill_contents_cb(self, node):
+    @staticmethod
+    async def fill_contents_cb(node):
         pass

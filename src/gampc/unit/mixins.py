@@ -25,6 +25,8 @@ import ampd
 
 from ..util import action
 
+from ..components import component
+
 
 class UnitCssMixin:
     CSS = ''
@@ -66,36 +68,17 @@ class UnitServerMixin:
         pass
 
 
-class UnitItemListMixin:
-    def new_instance(self):
-        component = super().new_instance()
-        component.connect_clean(self.view.item_view, 'activate', self.view_activate_cb)
-        return component
+class UnitComponentMixin(UnitServerMixin):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.require('component').register_component(self.name, self.TITLE, self.KEY, self.factory)
 
-    @ampd.task
-    async def view_activate_cb(self, view, position):
-        if self.unit.unit_persistent.protect_active:
-            return
-        filename = self.view.item_selection_model[position].get_key()
-        items = await self.ampd.playlistfind('file', filename)
-        if items:
-            item_id = sorted(items, key=lambda item: item['Pos'])[0]['Id']
-        else:
-            item_id = await self.ampd.addid(filename)
-        await self.ampd.playid(item_id)
+    def cleanup(self):
+        self.unit_component.unregister_component(self.name)
+        super().cleanup()
 
-
-# class UnitComponentMixin(UnitConfigMixin, UnitServerMixin):
-#     def __init__(self, *args, menus=[]):
-#         super().__init__(*args)
-#         self.require('component').register_component(self.name, self.title, self.key, self.new_instance)
-
-#     def cleanup(self):
-#         self.unit_component.unregister_component(self.name)
-#         super().cleanup()
-
-#     def new_instance(self):
-#         return self.COMPONENT_CLASS(self)
+    def factory(self):
+        return component.ComponentWidget(self.new_widget(), subtitle=self.TITLE)
 
 
 # class UnitPanedComponentMixin(UnitComponentMixin):
@@ -104,9 +87,9 @@ class UnitItemListMixin:
 #         self.config.pane_separator._get(default=100)
 
 
-class UnitComponentQueueActionMixin:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class UnitComponentQueueActionMixin(UnitComponentMixin):
+    def __init__(self, *args):
+        super().__init__(*args)
 
     @ampd.task
     async def view_activate_cb(self, item_view, position):

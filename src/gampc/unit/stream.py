@@ -32,7 +32,7 @@ from ..view.base import EditableItemFactory
 from ..view.editstack import ViewWithEditStack
 from ..view.cache import ItemFilenameTransfer
 
-from ..components import itemlist
+from ..components import component
 
 from . import mixins
 
@@ -41,7 +41,7 @@ class ItemStreamTransfer(item.ItemValueTransfer):
     pass
 
 
-class StreamView(ViewWithEditStack):
+class StreamWidget(ViewWithEditStack):
     transfer_type = ItemStreamTransfer
     extra_transfer_types = (ItemFilenameTransfer, item.ItemStringTransfer)
 
@@ -51,10 +51,16 @@ class StreamView(ViewWithEditStack):
     def edit_stack_getter(item):
         return item.value
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, separator_file, db, *args, **kwargs):
+        self.db = db
         super().__init__(*args, **kwargs, factory_factory=EditableItemFactory)
         for column in self.item_view.get_columns():
             self.connect_clean(column.get_factory(), 'item-edited', self.item_edited_cb)
+        self.add_to_context_menu(self.generate_save_actions(), 'stream', _("Save"))
+        self.item_view.add_css_class('stream')
+        item.setup_find_duplicate_items(self.item_store, ['file'], [separator_file])
+
+        self.load_streams()
 
     def generate_editing_actions(self):
         yield from super().generate_editing_actions()
@@ -69,37 +75,23 @@ class StreamView(ViewWithEditStack):
         self.edit_stack.append_delta(editstack.Delta([old], pos, False))
         self.edit_stack.release_transaction()
 
-
-class Stream(itemlist.ItemList):
-    def __init__(self, unit):
-        super().__init__(unit, StreamView(fields=unit.fields))
-
-        self.widget = self.view
-
-        self.view.add_to_context_menu(self.generate_save_actions(), 'stream', _("Save"))
-        self.widget.item_view.add_css_class('stream')
-
-        item.setup_find_duplicate_items(self.view.item_store, ['file'], [self.unit.unit_database.SEPARATOR_FILE])
-
-        self.load_streams()
-
     def generate_save_actions(self):
         yield action.ActionInfo('save', self.action_save_cb, _("Save"), ['<Control>s'])
 
     @misc.create_task
     async def action_save_cb(self, action, parameter):
-        if self.view.edit_stack.transactions and await dialog.MessageDialogAsync(transient_for=self.widget.get_root(), message=_("Save stream database?")).run():
-            self.unit.db.save_streams(self.view.edit_stack.items)
-            self.view.edit_stack.reset()
-            self.view.edit_stack_changed()
+        if self.edit_stack.transactions and await dialog.MessageDialogAsync(transient_for=self.get_root(), message=_("Save stream database?")).run():
+            self.db.save_streams(self.edit_stack.items)
+            self.edit_stack.reset()
+            self.edit_stack_changed()
 
     def load_streams(self):
-        streams = list(self.unit.db.get_streams())
+        streams = list(self.db.get_streams())
         for stream in streams:
             for key in stream:
                 if stream[key] is None:
                     stream[key] = ''
-        self.view.set_edit_stack(editstack.EditStack(streams))
+        self.set_edit_stack(editstack.EditStack(streams))
 
 
 class StreamDatabase(db.Database):
@@ -122,11 +114,9 @@ class StreamDatabase(db.Database):
                                                                                                        ':' + ',:'.join(self.fields.basic_names)), stream_)
 
 
-class __unit__(mixins.UnitComponentMixin, unit.Unit):
-    title = _("Internet Streams")
-    key = '4'
-
-    COMPONENT_CLASS = Stream
+class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, unit.Unit):
+    TITLE = _("Internet Streams")
+    KEY = '4'
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -145,6 +135,11 @@ class __unit__(mixins.UnitComponentMixin, unit.Unit):
             self.unit_database.cache[song['file']] = song
 
         self.config.edit_dialog_size._get(default=[500, 500])
+
+    def new_widget(self):
+        stream = StreamWidget(self.unit_database.SEPARATOR_FILE, self.db, self.fields)
+        stream.connect_clean(stream.item_view, 'activate', self.view_activate_cb)
+        return stream
 
     # def current_song_hook(self, song):
     #     if 'file' not in song or 'Title' not in song:

@@ -29,9 +29,9 @@ import os
 from ..util import cleanup
 from ..util import unit
 
-from ..components import component
-
 from .. import __application__
+
+from . import mixins
 
 
 class PixbufCache(dict):
@@ -226,21 +226,11 @@ class CurrentWidget(cleanup.CleanupCssMixin, cleanup.CleanupSignalMixin, Gtk.Sta
             self.set_visible_child(self.welcome)
 
 
-class __unit__(unit.Unit):
+class __unit__(mixins.UnitComponentMixin, unit.Unit):
     TITLE = _("Current Song")
+    KEY = '0'
 
-    def __init__(self, *args, menus=[]):
-        super().__init__(*args)
-        self.require('server')
-        self.require('component')
-        self.unit_component.register_component('current', self.TITLE, '0', self.new_instance)
-
-    def cleanup(self):
-        self.unit_component.unregister_component(self.name)
-        super().cleanup()
-
-    def new_instance(self):
+    def new_widget(self):
         current = CurrentWidget()
         self.unit_server.ampd_server_properties.bind_property('current-song', current, 'current-song', GObject.BindingFlags.SYNC_CREATE)
-
-        return component.ComponentWidget(current, subtitle=self.TITLE)
+        return current

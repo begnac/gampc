@@ -127,11 +127,13 @@ class QueueWidget(misc.UseAMPDMixin, ViewWithCopyPasteSong):
             self.scroll_to(position)
 
 
-class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
+class __unit__(mixins.UnitComponentMixin, mixins.UnitCssMixin, unit.Unit):
     queue_songs = GObject.Property()
     current_Id = GObject.Property()
 
     TITLE = _("Play Queue")
+    KEY = '1'
+
     CSS = f'''
     columnview.queue > listview > row > cell.{QUEUE_PRIORITY_CSS_PREFIX}- {{
       background: rgba(0,255,0,0.5);
@@ -146,17 +148,11 @@ class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
         self.require('database')
         self.require('fields')
         self.require('persistent')
-        self.require('component')
 
-        self.unit_component.register_component('queue', self.TITLE, '1', self.new_instance)
         self.connect_clean(self.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.notify_current_song_cb(self.unit_server.ampd_server_properties, None)
 
-    def cleanup(self):
-        self.unit_component.unregister_component(self.name)
-        super().cleanup()
-
-    def new_instance(self):
+    def new_widget(self):
         queue = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, ampd=self.ampd)
 
         queue.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
@@ -166,7 +162,7 @@ class __unit__(mixins.UnitCssMixin, mixins.UnitServerMixin, unit.Unit):
         self.bind_property('current-Id', queue, 'current-Id')
         queue.set_songs(*self.queue_songs)
 
-        return component.ComponentWidget(queue, subtitle=self.TITLE)
+        return queue
 
     def generate_queue_actions(self):
         yield action.ActionInfo('shuffle', self.action_shuffle_cb, _("Shuffle"), dangerous=True)

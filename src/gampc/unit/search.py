@@ -21,7 +21,6 @@
 import ampd
 
 from ..util import action
-from ..util import cleanup
 from ..util import item
 from ..util import misc
 from ..util import unit
@@ -65,27 +64,21 @@ class SearchWidget(misc.UseAMPDMixin, compound.WidgetWithEntry):
     #     self.entry.activate()
 
 
-class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitServerMixin, unit.Unit):
+class __unit__(mixins.UnitComponentQueueActionMixin, unit.Unit):
     TITLE = _("Search")
+    KEY = '3'
 
     def __init__(self, *args):
         super().__init__(*args)
         self.require('database')
         self.require('fields')
         self.require('persistent')
-        self.require('component')
 
-        self.unit_component.register_component(self.name, self.TITLE, '3', self.new_instance)
-
-    def cleanup(self):
-        self.unit_component.unregister_component(self.name)
-        super().cleanup()
-
-    def new_instance(self):
+    def new_widget(self):
         search = SearchWidget(self.unit_fields.fields, self.unit_database.cache, self.unit_database.SEPARATOR_FILE, self.entry_activate_cb, ampd=self.ampd)
         search.connect_clean(search.entry, 'activate', self.entry_activate_cb, search.main)
         search.connect_clean(search.main.item_view, 'activate', self.view_activate_cb)
-        return component.ComponentWidget(search, subtitle=self.TITLE)
+        return search
 
     @ampd.task
     async def entry_activate_cb(self, entry, view):
