@@ -41,6 +41,13 @@ class BrowserPaned(compound.WidgetWithPanedTreeList):
     def __init__(self, fields, cache, config, root_model, **kwargs):
         main = ViewCacheWithCopy(fields=fields, cache=cache)
         super().__init__(main, config, root_model)
+        self.connect_clean(root_model, 'items-changed', self.root_items_changed_cb)
+        if len(self.left_selection) > 0:
+            self.left_selection[0].set_expanded(True)
+
+    def root_items_changed_cb(self, model, p, r, a):
+        if a:
+            self.left_selection[0].set_expanded(True)
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
@@ -51,16 +58,8 @@ class BrowserWidget(component.ComponentWidget):
     def __init__(self, fields, cache, config, root_model, **kwargs):
         self.paned = BrowserPaned(fields, cache, config, root_model)
         self.view = self.paned.main
-
         super().__init__(**kwargs)
         self.append(self.paned)
-        self.connect_clean(root_model, 'items-changed', self.root_items_changed_cb)
-        if len(self.paned.left_selection) > 0:
-            self.paned.left_selection[0].set_expanded(True)
-
-    def root_items_changed_cb(self, model, p, r, a):
-        if a:
-            self.paned.left_selection[0].set_expanded(True)
 
 
 class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
