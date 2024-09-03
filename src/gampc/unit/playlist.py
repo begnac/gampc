@@ -69,8 +69,6 @@ class PlaylistWidget(compound.WidgetWithPanedTreeList):
         pos = widget.left_selected_item.parent_model.find(widget.left_selected_item).position
         widget.left_selected_item.parent_model.items_changed(pos, 1, 1)
 
-
-
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
         if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:

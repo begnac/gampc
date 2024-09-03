@@ -34,17 +34,12 @@ class Label(cleanup.CleanupBaseMixin, Gtk.Label):
     pass
 
 
-class CommandWidget(compound.WidgetWithEntry):
-    def __init__(self, activate_cb):
-        super().__init__(Label(max_width_chars=50, wrap=True, selectable=True, vexpand=True), activate_cb)
-
-
 class __unit__(mixins.UnitComponentMixin, mixins.UnitServerMixin, unit.Unit):
     TITLE = _("Execute MPD commands")
     KEY = '7'
 
     def new_widget(self):
-        return CommandWidget(self.entry_activate_cb)
+        return compound.WidgetWithEntry(Label(max_width_chars=50, wrap=True, selectable=True, vexpand=True), self.entry_activate_cb)
 
     @ampd.task
     async def entry_activate_cb(self, entry, label):
