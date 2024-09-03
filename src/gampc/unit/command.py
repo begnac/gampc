@@ -22,29 +22,31 @@ from gi.repository import Gtk
 
 import ampd
 
+from ..util import cleanup
 from ..util import unit
 
 from ..ui import compound
 
-from ..components import component
-
 from . import mixins
 
 
-class Command(component.Component):
-    def __init__(self, unit):
-        super().__init__(unit)
-        self.label = Gtk.Label(max_width_chars=50, wrap=True, selectable=True)
-        self.widget = compound.WidgetWithEntry(Gtk.ScrolledWindow(vexpand=True, child=self.label), self.entry_activate_cb)
+class Label(cleanup.CleanupBaseMixin, Gtk.Label):
+    pass
+
+
+class CommandWidget(compound.WidgetWithEntry):
+    def __init__(self, activate_cb):
+        super().__init__(Label(max_width_chars=50, wrap=True, selectable=True, vexpand=True), activate_cb)
+
+
+class __unit__(mixins.UnitComponentMixin, mixins.UnitServerMixin, unit.Unit):
+    TITLE = _("Execute MPD commands")
+    KEY = '7'
+
+    def new_widget(self):
+        return CommandWidget(self.entry_activate_cb)
 
     @ampd.task
-    async def entry_activate_cb(self, entry):
+    async def entry_activate_cb(self, entry, label):
         reply = await self.ampd._raw(entry.get_text())
-        self.label.set_label('\n'.join(str(x) for x in reply) if reply else _("Empty reply"))
-
-
-class __unit__(mixins.UnitComponentMixin, unit.Unit):
-    title = _("Execute MPD commands")
-    key = '7'
-
-    COMPONENT_CLASS = Command
+        label.set_label('\n'.join(str(x) for x in reply) if reply else _("Empty reply"))

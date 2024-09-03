@@ -23,9 +23,8 @@ from gi.repository import Gtk
 
 import logging
 
+from ..util import cleanup
 from ..util import unit
-
-from ..components import component
 
 from . import mixins
 
@@ -46,17 +45,13 @@ class Handler(logging.Handler, GObject.Object):
         self.log = []
 
 
-class Log(component.Component):
-    def __init__(self, unit):
-        super().__init__(unit)
-        self.label = Gtk.Label(selectable=True, vexpand=True, halign=Gtk.Align.START, valign=Gtk.Align.START)
-        self.widget = self.scrolled_label = Gtk.ScrolledWindow()
-        self.scrolled_label.set_child(self.label)
+class LogWidget(cleanup.CleanupSignalMixin, Gtk.ScrolledWindow):
+    def __init__(self, handler):
+        self.label = Gtk.Label(selectable=True, vexpand=True, halign=Gtk.Align.START, valign=Gtk.Align.END, hexpand=True)
+        super().__init__(child=self.label)
 
-        handler = unit.handler
         self.connect_clean(handler, 'notify::log', self.handler_notify_log_cb)
-        self.connect_clean(self.scrolled_label.get_vadjustment(), 'changed', self.adjustment_changed_cb)
-        # self.scrolled_label.get_vadjustment().connect('changed', self.adjustment_changed_cb)
+        self.connect_clean(self.get_vadjustment(), 'changed', self.adjustment_changed_cb)
         self.handler_notify_log_cb(handler, None)
 
     def handler_notify_log_cb(self, handler, param):
@@ -67,13 +62,11 @@ class Log(component.Component):
 
 
 class __unit__(mixins.UnitComponentMixin, unit.Unit):
-    title = _("View log")
-    key = '8'
+    TITLE = _("View log")
+    KEY = '8'
 
-    COMPONENT_CLASS = Log
-
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, name):
+        super().__init__(name)
         self.handler = Handler()
         self.handler.setFormatter(logging.Formatter(fmt='%(asctime)s %(levelname)s: %(name)s: %(message)s (%(pathname)s %(lineno)d)'))
         logging.getLogger().addHandler(self.handler)
@@ -81,3 +74,6 @@ class __unit__(mixins.UnitComponentMixin, unit.Unit):
     def cleanup(self):
         logging.getLogger().removeHandler(self.handler)
         super().cleanup()
+
+    def new_widget(self):
+        return LogWidget(self.handler)

@@ -32,7 +32,7 @@ class WidgetWithEntry(cleanup.CleanupSignalMixin, Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
         self.main = main
-        self.entry = Gtk.Entry()
+        self.entry = Gtk.Entry(hexpand=True)
 
         self.append(self.main)
         self.append(self.entry)

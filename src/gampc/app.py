@@ -75,7 +75,7 @@ class App(Gtk.Application):
             'output', 'persistent',
             'playback', 'window',
             'current', 'queue', 'browser', 'search', 'stream', 'playlist', #'tanda',
-            #'command', 'log'
+            'command', 'log'
         ]
 
         # units = self.unit_manager.get_unit('config').config.access('units', default_units)
