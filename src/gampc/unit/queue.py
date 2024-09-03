@@ -32,8 +32,6 @@ from ..ui import ssde
 from ..view.base import LabelItemFactory
 from ..view.cache import ViewWithCopyPasteSong
 
-from ..components import component
-
 from . import mixins
 
 
@@ -127,7 +125,7 @@ class QueueWidget(misc.UseAMPDMixin, ViewWithCopyPasteSong):
             self.scroll_to(position)
 
 
-class __unit__(mixins.UnitComponentMixin, mixins.UnitCssMixin, unit.Unit):
+class __unit__(mixins.UnitComponentTotalsMixin, mixins.UnitServerMixin, mixins.UnitCssMixin, unit.Unit):
     queue_songs = GObject.Property()
     current_Id = GObject.Property()
 
@@ -161,6 +159,7 @@ class __unit__(mixins.UnitComponentMixin, mixins.UnitCssMixin, unit.Unit):
         queue.connect_clean(queue.item_view, 'activate', self.view_activate_cb)
         self.bind_property('current-Id', queue, 'current-Id')
         queue.set_songs(*self.queue_songs)
+        queue.totals_store = queue.item_store
 
         return queue
 

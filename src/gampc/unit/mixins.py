@@ -18,14 +18,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
 
 import ampd
 
 from ..util import action
-
-from ..components import component
+from ..util import cleanup
+from ..util import misc
 
 
 class UnitCssMixin:
@@ -68,7 +69,35 @@ class UnitServerMixin:
         pass
 
 
-class UnitComponentMixin(UnitServerMixin):
+class ComponentWidget(cleanup.CleanupBaseMixin, Gtk.Box):
+    subtitle = GObject.Property(type=str)
+
+    def __init__(self, widget, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.connect('notify::subtitle', self.notify_subtitle_cb)
+        self.connect('map', self.map_cb)
+        self.append(widget)
+        self.widget = widget
+
+    def cleanup(self):
+        self.widget.cleanup()
+        super().cleanup()
+
+    @staticmethod
+    def notify_subtitle_cb(self, pspec):
+        window = self.get_root()
+        if window is not None:
+            window.set_subtitle(self.subtitle)
+
+    @staticmethod
+    def map_cb(self):
+        self.get_root().set_subtitle(self.subtitle)
+
+    def grab_focus(self):
+        self.get_first_child().grab_focus()
+
+
+class UnitComponentMixin:
     def __init__(self, *args):
         super().__init__(*args)
         self.require('component').register_component(self.name, self.TITLE, self.KEY, self.factory)
@@ -78,16 +107,24 @@ class UnitComponentMixin(UnitServerMixin):
         super().cleanup()
 
     def factory(self):
-        return component.ComponentWidget(self.new_widget(), subtitle=self.TITLE)
+        return ComponentWidget(self.new_widget(), subtitle=self.TITLE)
 
 
-# class UnitPanedComponentMixin(UnitComponentMixin):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.config.pane_separator._get(default=100)
+class UnitComponentTotalsMixin(UnitComponentMixin):
+    def factory(self):
+        component = super().factory()
+        store = component.widget.totals_store
+        component.widget.connect_clean(store, 'items-changed', self.totals_items_changed_cb, component, self.TITLE)
+        self.totals_items_changed_cb(store, 0, 0, 0, component, self.TITLE)
+        return component
+
+    @staticmethod
+    def totals_items_changed_cb(store, p, r, a, component, title):
+        time = sum(int(item.get_field('Time', '0')) for item in store)
+        component.subtitle = f'{title} [{store.get_n_items()} / {misc.format_time(time)}]'
 
 
-class UnitComponentQueueActionMixin(UnitComponentMixin):
+class UnitComponentQueueActionMixin(UnitComponentMixin, UnitServerMixin):
     def __init__(self, *args):
         super().__init__(*args)
 

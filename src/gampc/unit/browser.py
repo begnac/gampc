@@ -29,8 +29,6 @@ from ..ui import treelist
 
 from ..view.cache import ViewCacheWithCopy
 
-from ..components import component
-
 from . import mixins
 
 

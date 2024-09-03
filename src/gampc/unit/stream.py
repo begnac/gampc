@@ -32,8 +32,6 @@ from ..view.base import EditableItemFactory
 from ..view.editstack import ViewWithEditStack
 from ..view.cache import ItemFilenameTransfer
 
-from ..components import component
-
 from . import mixins
 
 

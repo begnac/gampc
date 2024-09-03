@@ -226,7 +226,7 @@ class CurrentWidget(cleanup.CleanupCssMixin, cleanup.CleanupSignalMixin, Gtk.Sta
             self.set_visible_child(self.welcome)
 
 
-class __unit__(mixins.UnitComponentMixin, unit.Unit):
+class __unit__(mixins.UnitComponentMixin, mixins.UnitServerMixin, unit.Unit):
     TITLE = _("Current Song")
     KEY = '0'
 

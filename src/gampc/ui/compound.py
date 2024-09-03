@@ -38,6 +38,10 @@ class WidgetWithEntry(cleanup.CleanupSignalMixin, Gtk.Box):
         self.append(self.entry)
         self.connect_clean(self.entry, 'activate', activate_cb, main)
 
+    def cleanup(self):
+        self.main.cleanup()
+        super().cleanup()
+
     def grab_focus(self):
         self.entry.grab_focus()
 
