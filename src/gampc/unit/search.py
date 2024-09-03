@@ -21,7 +21,9 @@
 import ampd
 
 from ..util import action
+from ..util import cleanup
 from ..util import item
+from ..util import misc
 from ..util import unit
 
 from ..ui import compound
@@ -33,15 +35,12 @@ from ..components import component
 from . import mixins
 
 
-@component.component_widget
-class SearchWidget(compound.WidgetWithEntry):
-    def __init__(self):
-        view = ViewCacheWithCopy(fields=unit.unit_fields.fields, cache=unit.unit_database.cache)
-
-        self.view.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
-        item.setup_find_duplicate_items(self.view.item_store, ['Title', 'Artist', 'Performer', 'Date'], [self.unit.unit_database.SEPARATOR_FILE])
-
-        self.widget = compound.WidgetWithEntry(self.view, self.entry_activate_cb)
+class SearchWidget(misc.UseAMPDMixin, compound.WidgetWithEntry):
+    def __init__(self, fields, cache, separator_file, activate_cb, **kwargs):
+        view = ViewCacheWithCopy(fields=fields, cache=cache)
+        super().__init__(view, activate_cb, **kwargs)
+        view.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
+        item.setup_find_duplicate_items(view.item_store, ['Title', 'Artist', 'Performer', 'Date'], [separator_file])
 
         # self.field_choice = Gtk.ComboBoxText()
         # self.field_choice.append_text(_("any field"))
@@ -52,12 +51,12 @@ class SearchWidget(compound.WidgetWithEntry):
         yield action.ActionInfo('search', self.action_search_cb, _("Search"), ['<Control><Alt>f'])
 
     def action_search_cb(self, *args):
-        self.widget.entry.grab_focus()
+        self.entry.grab_focus()
 
     @ampd.task
-    async def client_connected_cb(self, client):
+    async def client_connected_cb(self):
         while True:
-            self.widget.entry.activate()
+            self.entry.activate()
             await self.ampd.idle(ampd.DATABASE)
 
     # def action_reset_cb(self, action, parameter):
@@ -65,8 +64,31 @@ class SearchWidget(compound.WidgetWithEntry):
     #     self.field_choice.set_active(0)
     #     self.entry.activate()
 
+
+class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitServerMixin, unit.Unit):
+    TITLE = _("Search")
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.require('database')
+        self.require('fields')
+        self.require('persistent')
+        self.require('component')
+
+        self.unit_component.register_component(self.name, self.TITLE, '3', self.new_instance)
+
+    def cleanup(self):
+        self.unit_component.unregister_component(self.name)
+        super().cleanup()
+
+    def new_instance(self):
+        search = SearchWidget(self.unit_fields.fields, self.unit_database.cache, self.unit_database.SEPARATOR_FILE, self.entry_activate_cb, ampd=self.ampd)
+        search.connect_clean(search.entry, 'activate', self.entry_activate_cb, search.main)
+        search.connect_clean(search.main.item_view, 'activate', self.view_activate_cb)
+        return component.ComponentWidget(search, subtitle=self.TITLE)
+
     @ampd.task
-    async def entry_activate_cb(self, entry):
+    async def entry_activate_cb(self, entry, view):
         query = entry.get_text()
         if not query:
             return
@@ -78,8 +100,8 @@ class SearchWidget(compound.WidgetWithEntry):
         condition = sum((['any', s] if '=' not in s else s.split('=', 1) for s in self.parse(query)), [])
         if condition:
             songs = await (self.ampd.find if find else self.ampd.search)(*condition)
-            self.unit.unit_database.update(songs)
-            self.view.set_values(songs)
+            self.unit_database.update(songs)
+            view.set_values(songs)
 
     @staticmethod
     def parse(s):
@@ -108,15 +130,3 @@ class SearchWidget(compound.WidgetWithEntry):
             if quote:
                 raise ValueError(_("Unbalanced quotes"))
             yield token
-
-
-class __unit__(mixins.UnitComponentMixin, unit.Unit):
-    title = _("Search")
-    key = '3'
-
-    COMPONENT_CLASS = Search
-
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.require('database')
-        self.require('fields')

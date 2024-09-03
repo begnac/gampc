@@ -107,7 +107,6 @@ class UnitItemListMixin:
 class UnitComponentQueueActionMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.config.pane_separator._get(default=100)
 
     @ampd.task
     async def view_activate_cb(self, item_view, position):

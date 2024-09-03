@@ -27,21 +27,16 @@ from . import contextmenu
 from . import listviewsearch
 
 
-class WidgetWithEntry(Gtk.Box):
+class WidgetWithEntry(cleanup.CleanupSignalMixin, Gtk.Box):
     def __init__(self, main, activate_cb):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
         self.main = main
         self.entry = Gtk.Entry()
-        self.activate_cb = activate_cb
 
         self.append(self.main)
         self.append(self.entry)
-        self.entry.connect('activate', activate_cb)
-
-    def cleanup(self):
-        self.entry.disconnect_by_func(self.activate_cb)
-        self.main.cleanup()
+        self.connect_clean(self.entry, 'activate', activate_cb, main)
 
     def grab_focus(self):
         self.entry.grab_focus()
