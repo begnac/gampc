@@ -26,6 +26,11 @@ class Item(GObject.Object):
     value = GObject.Property()
     duplicate = GObject.Property()
 
+    def __init__(self, value=None):
+        super().__init__()
+        if value is not None:
+            self.load(value)
+
     def load(self, value):
         self.value = value
         self.duplicate = None

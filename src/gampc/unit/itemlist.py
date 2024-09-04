@@ -28,7 +28,13 @@ CSS = ''
 
 CSS += '''
 columnview.filter > listview > row {
-  background: yellow;
+  background: green;
+}
+'''
+
+CSS += '''
+columnview > listview > row > cell:focus-visible {
+  background: green;
 }
 '''
 
