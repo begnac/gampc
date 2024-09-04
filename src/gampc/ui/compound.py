@@ -113,10 +113,6 @@ class WidgetWithPaned(contextmenu.ContextMenuMixin, cleanup.CleanupSignalMixin, 
 
     def left_selection_changed_cb(self, selection, position, n_items):
         self.left_selection_pos = list(misc.get_selection(selection))
-        if len(self.left_selection_pos) == 1:
-            self.left_selected_item = selection[self.left_selection_pos[0]].get_item()
-        else:
-            self.left_selected_item = None
 
     @staticmethod
     def paned_notify_position_cb(paned, param, config):
@@ -132,6 +128,13 @@ class WidgetWithPanedTreeList(WidgetWithPaned):
         super().__init__(main, config, model, TreeItemFactory(), **kwargs)
 
         self.left.view.connect('activate', self.left_view_activate_cb)
+
+    def left_selection_changed_cb(self, selection, position, n_items):
+        super().left_selection_changed_cb(selection, position, n_items)
+        if len(self.left_selection_pos) == 1:
+            self.left_selected_item = selection[self.left_selection_pos[0]].get_item()
+        else:
+            self.left_selected_item = None
 
     @staticmethod
     def left_view_activate_cb(view, position):
