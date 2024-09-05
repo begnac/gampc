@@ -77,7 +77,7 @@ class QueueWidget(ViewWithCopyPasteSong):
         self.remove_ids = remove_ids
         super().__init__(item_factory=QueueItem, factory_factory=QueueItemFactory, **kwargs)
         self.item_view.add_css_class('queue')
-        item.setup_find_duplicate_items(self.item_store, ['Title'], [self.separator_file])
+        item.setup_find_duplicate_items(self.item_model, ['Title'], [self.separator_file])
         self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
 
     def generate_queue_actions(self):
@@ -137,7 +137,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentTotalsMixin, mixins.
         queue.connect_clean(queue.item_view, 'activate', self.view_activate_cb)
         self.bind_property('current-Id', queue, 'current-Id')
         queue.set_songs(*self.queue_songs)
-        queue.totals_store = queue.item_store
+        queue.totals_store = queue.item_model
 
         return queue
 

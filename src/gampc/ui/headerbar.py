@@ -30,7 +30,7 @@ class PlaybackButtons(Gtk.Box):
     playing = GObject.Property(type=bool, default=False)
 
     def __init__(self):
-        super().__init__()
+        super().__init__(can_focus=False)
 
         play_or_pause = Gtk.Button(action_name='app.play-or-pause')
         self.bind_property('playing', play_or_pause, 'icon-name', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: 'media-playback-pause-symbolic' if value else 'media-playback-start-symbolic')
@@ -43,7 +43,7 @@ class PlaybackButtons(Gtk.Box):
 
 class OptionButtons(Gtk.Box):
     def __init__(self):
-        super().__init__()
+        super().__init__(can_focus=False)
 
         self.append(Gtk.ToggleButton(action_name='app.random', icon_name='media-playlist-shuffle-symbolic'))
         self.append(Gtk.ToggleButton(action_name='app.repeat', icon_name='media-playlist-repeat-symbolic'))
@@ -56,7 +56,7 @@ class TimeScale(Gtk.Box):
     elapsed = GObject.Property(type=float, default=0)
 
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.HORIZONTAL)
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, can_focus=False)
 
         scale = self.scale = Gtk.Scale(restrict_to_fill_level=False, show_fill_level=True, width_request=150, draw_value=False, has_origin=False)
         self.elapsed_label = Gtk.Label()

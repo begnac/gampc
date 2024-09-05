@@ -36,7 +36,7 @@ class SearchWidget(compound.WidgetWithEntry):
         view = ViewCacheWithCopy(fields=fields, cache=cache)
         super().__init__(view, activate_cb, **kwargs)
         view.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
-        item.setup_find_duplicate_items(view.item_store, ['Title', 'Artist', 'Performer', 'Date'], [separator_file])
+        item.setup_find_duplicate_items(view.item_model, ['Title', 'Artist', 'Performer', 'Date'], [separator_file])
         self.add_cleanup_below(view)
 
         # self.field_choice = Gtk.ComboBoxText()

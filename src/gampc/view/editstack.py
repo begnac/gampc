@@ -71,7 +71,7 @@ class ViewWithEditStack(ViewWithCopyPaste):
         if edit_stack is not None:
             self.edit_stack.set_splicer(self.edit_stack_splicer, self.step_cb)
         else:
-            self.item_store.remove_all()
+            self.item_model.remove_all()
 
     def step_cb(self, focus, selection):
         self.refocus(focus, selection)

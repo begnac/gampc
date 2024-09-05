@@ -54,7 +54,7 @@ class PlaylistWidget(compound.WidgetWithPanedTreeList):
         self.add_cleanup_below(main)
 
         main.connect('edit-stack-changed', self.edit_stack_changed_cb)
-        item.setup_find_duplicate_items(main.item_store, ['file'], [separator_file])
+        item.setup_find_duplicate_items(main.item_model, ['file'], [separator_file])
 
     @staticmethod
     def edit_stack_changed_cb(view):
@@ -298,7 +298,7 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
         if action.get_name() == 'save':
             if not widget.main.edit_stack.transactions:
                 return
-            if await self.save_playlist(window, path, [item.get_key() for item in widget.main.item_store]):
+            if await self.save_playlist(window, path, [item.get_key() for item in widget.main.item_model]):
                 widget.main.edit_stack.reset()
                 widget.main.edit_stack_changed()
         elif action.get_name() == 'rename':

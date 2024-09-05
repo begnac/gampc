@@ -230,7 +230,7 @@ class ItemView(Gtk.ColumnView):
 class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, *, item_factory=item.Item, factory_factory=LabelItemFactory, sortable, selection_model=Gtk.MultiSelection, **kwargs):
+    def __init__(self, fields, *, model=None, item_factory=item.Item, factory_factory=LabelItemFactory, sortable, selection_model=Gtk.MultiSelection, **kwargs):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, **kwargs)
         self.item_factory = item_factory
 
@@ -255,8 +255,8 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         self.append(self.scrolled_item_view)
 
-        self.item_store = Gio.ListStore(item_type=item.Item)
-        self.item_filter_model = Gtk.FilterListModel(model=self.item_store)
+        self.item_model = Gio.ListStore(item_type=item.Item) if model is None else model
+        self.item_filter_model = Gtk.FilterListModel(model=self.item_model)
         if sortable:
             self.item_selection_model.set_model(Gtk.SortListModel(model=self.item_filter_model, sorter=self.item_view.get_sorter()))
         else:
@@ -274,7 +274,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     def cleanup(self):
         self.filter_filter.set_filter_func(None)
         self.filter_view.cleanup()
-        self.item_store.remove_all()
+        self.item_model.remove_all()
         self.item_view.cleanup()
         self.view_search.cleanup()
         super().cleanup()
@@ -324,14 +324,14 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
 
     def splice_values(self, pos, remove, values):
         if remove is None:
-            remove = self.item_store.get_n_items()
+            remove = self.item_model.get_n_items()
         values = list(values)
         n = len(values)
-        new_items = [] if remove >= n else [self.item_factory() for _ in range(n - remove)]
-        items = self.item_store[pos:pos + remove] + new_items
+        new_items = [] if remove >= n else [self.item_factory() for i in range(n - remove)]
+        items = self.item_model[pos:pos + remove] + new_items
         for i in range(n):
             items[i].load(values[i])
-        self.item_store[pos:pos + remove] = items[:n]
+        self.item_model[pos:pos + remove] = items[:n]
 
     def scroll_to(self, position):
         self.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)

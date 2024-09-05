@@ -98,7 +98,7 @@ class ViewWithCopyPasteSong(ViewFilenameMixin, ViewWithCopyPaste):
     #                 song._status = self.RECORD_MODIFIED
 
 
-class ViewWithCopyPasteEditStackSong(ViewCacheMixin, ViewWithEditStack, ViewWithCopyPasteSong):
+class ViewCacheWithEditStack(ViewCacheMixin, ViewWithEditStack):
     edit_stack_splicer = ViewCacheMixin.splice_keys
 
     @staticmethod
@@ -107,3 +107,7 @@ class ViewWithCopyPasteEditStackSong(ViewCacheMixin, ViewWithEditStack, ViewWith
 
     def refocus(self, *args):
         self.aioqueue.queue_task(super().refocus, *args, sync=True)
+
+
+class ViewWithCopyPasteEditStackSong(ViewCacheWithEditStack, ViewWithCopyPasteSong):
+    pass
