@@ -73,6 +73,7 @@ class App(Gtk.Application):
         default_units = [
             'menubar', 'help', 'profiles', 'server',
             'output', 'persistent',
+            'css',
             'playback', 'window',
             'current', 'queue', 'browser', 'search', 'stream', 'playlist', 'tanda',
             'command', 'log'

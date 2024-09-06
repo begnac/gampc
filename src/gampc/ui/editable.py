@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
@@ -25,11 +26,92 @@ from gi.repository import Gtk
 from ..util import misc
 
 
-class EditableLabel(Gtk.EditableLabel):
+class EditableLabel(Gtk.Stack):
+    __gsignals__ = {
+        'edited': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+    }
+
+    def __init__(self, *, always_editable=False, **kwargs):
+        self.always_editable = always_editable
+
+        super().__init__(**kwargs, focusable=True, css_name='editablelabel')
+
+        self.label = Gtk.Label()
+        self.entry = Gtk.Entry(text=self.label.get_label(), css_name='label', visible=False)
+        self.add_named(self.label, 'label')
+        self.add_named(self.entry, 'entry')
+        self.set_visible_child(self.label)
+
+        self.focus = Gtk.EventControllerFocus()
+        self.focus.connect('leave', self.leave_cb)
+        self.add_controller(self.focus)
+        # self.focus.connect('enter', lambda *args: print(args, self.get_focus_child()))
+
+        self.shortcut = Gtk.ShortcutController()
+        self.add_controller(self.shortcut)
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Return, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK), action=Gtk.CallbackAction.new(lambda self, arg: self.start_editing())))
+
+        self.editing_shortcuts = Gtk.ShortcutController()
+        # self.shortcut.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Return, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK), action=Gtk.CallbackAction.new(lambda self, arg: self.done_editing())))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Escape, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK), action=Gtk.CallbackAction.new(lambda self, arg: self.cancel_editing())))
+
+        # self.gesture = Gtk.GestureClick()
+        # self.gesture.connect('pressed', self.pressed_cb)
+        # self.add_controller(self.gesture)
+
+    def set_label(self, label):
+        self.label.set_label(label)
+
+    def start_editing(self):
+        if self.entry.get_visible():
+            return
+        self.entry.set_text(self.label.get_label())
+        self.set_visible_child(self.entry)
+        self.entry.grab_focus()
+        self.add_css_class('editing')
+
+    def done_editing(self):
+        print(888)
+        if self.entry is None:
+            return
+        text = self.entry.get_text()
+        print(text)
+        if text != self.label.get_label():
+            self.label.set_label(text)
+            print(3463563456)
+            GLib.timeout_add(0, lambda: self.emit('edited', text))
+        self._stop_editing()
+
+    def cancel_editing(self):
+        if self.entry is None:
+            return
+        self._stop_editing()
+
+    def _stop_editing(self):
+        self.set_visible_child(self.label)
+        self.remove_css_class('editing')
+        self.get_parent().grab_focus()
+
+    @staticmethod
+    def leave_cb(focus):
+        print(777777777777777777777777777)
+        focus.get_widget().done_editing()
+
+    @staticmethod
+    def pressed_cb(click, *args):
+        if misc.get_modifier_state() & Gdk.ModifierType.CONTROL_MASK and \
+           click.set_state(Gtk.EventSequenceState.CLAIMED):
+            click.get_widget().start_editing()
+
+
+
+
+
+class xEditableLabel(Gtk.EditableLabel):
     label = GObject.Property(type=str, default='')
 
     __gsignals__ = {
-        'edited': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'edited': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     }
 
     def __init__(self, *, always_editable, **kwargs):
@@ -60,7 +142,7 @@ class EditableLabel(Gtk.EditableLabel):
         if not self.get_editing():
             self.set_editable(self.always_editable)
             if self.get_text() != self.label:
-                self.emit('edited')
+                self.emit('edited', self.get_text())
 
     @staticmethod
     def pressed_cb(click, *args):

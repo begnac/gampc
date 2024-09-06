@@ -34,8 +34,6 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
     def __init__(self, manager):
         super().__init__(manager)
 
-        self.require('itemlist')
-
         self.config.music_dir._get(default=GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC))
 
         self.fields = field.FieldFamily(self.config)

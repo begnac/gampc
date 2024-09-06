@@ -28,9 +28,9 @@ from ..util import item
 from ..util import misc
 from ..util import unit
 
+from ..ui import listitem
 from ..ui import ssde
 
-from ..view.base import LabelListItemFactory
 from ..view.cache import ViewWithCopyPasteSong
 
 from . import mixins
@@ -51,7 +51,7 @@ class QueueItem(item.Item):
         super().load(value)
 
 
-class QueueListItemFactory(LabelListItemFactory):
+class QueueListItemFactory(listitem.LabelListItemFactory):
     def __init__(self, name):
         super().__init__(name)
 

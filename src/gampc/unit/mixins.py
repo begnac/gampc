@@ -77,7 +77,7 @@ class ComponentWidget(cleanup.CleanupBaseMixin, Gtk.Box):
         self.get_root().set_subtitle(self.subtitle)
 
     def grab_focus(self):
-        self.get_first_child().grab_focus()
+        return self.get_first_child().grab_focus()
 
 
 class UnitComponentMixin:

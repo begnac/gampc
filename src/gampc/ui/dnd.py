@@ -24,11 +24,13 @@ from gi.repository import Gtk
 from ..util import misc
 
 
-CSS = '''
-columnview > listview:drop(active) > row.drop-row {
-  border-bottom-color: rgb(46,194,126);
-}
-'''
+def get_css(dark):
+    css = '''
+      columnview > listview:drop(active) > row.drop-row {
+      border-bottom-color: rgb(46,194,126);
+    }
+    '''
+    return css
 
 
 class ListDragSource(Gtk.DragSource):

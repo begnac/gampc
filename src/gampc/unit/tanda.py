@@ -42,8 +42,8 @@ from ..util import unit
 
 from ..ui import compound
 from ..ui import contextmenu
+from ..ui import listitem
 
-from ..view.base import ListItemFactoryBase, EditableListItemFactoryBase
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy, ViewCacheWithEditStack
 
@@ -88,41 +88,6 @@ class TandaItem(item.ItemBase):
 
     def get_key(self):
         return '6666666'
-
-
-class MyEditableLabel(Gtk.Box):
-    def __init__(self, editable=False):
-        super().__init__()
-        self.editable = editable
-        self.label = Gtk.Label()
-        self.append(self.label)
-
-    def set_label(self, label):
-        self.label.set_label(label)
-
-
-class MyEditableListItemFactory(ListItemFactoryBase):
-    __gsignals__ = {
-        'item-edited': (GObject.SIGNAL_RUN_FIRST, None, (int, str, str)),
-    }
-
-    def __init__(self, name, always_editable=False):
-        super().__init__(name)
-        self.always_editable = always_editable
-
-    def make_widget(self):
-        return MyEditableLabel()
-
-    # def bind(self, widget, item_):
-    #     super().bind(widget, item_)
-    #     widget.connect('edited', self.label_edited_cb, self.name)
-
-    # def unbind(self, widget, item_):
-    #     super().unbind(widget, item_)
-    #     widget.disconnect_by_func(self.label_edited_cb)
-
-    # def label_edited_cb(self, widget, name):
-    #     self.emit('item-edited', widget.pos, name, widget.get_text())
 
 
 class TandaWidget(compound.WidgetWithPaned):
@@ -381,9 +346,7 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
         self.append(self.song_view)
 
     def factory_factory(self, name):
-        return MyEditableListItemFactory(name)
-        return LabelListItemFactory(name)
-        return EditableListItemFactoryBase(name)
+        return listitem.EditableListItemFactoryBase(name)
 
     #     self.current_tanda = None
     #     self.current_tanda_pos = None

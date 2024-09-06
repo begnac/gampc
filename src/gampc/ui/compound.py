@@ -39,7 +39,7 @@ class WidgetWithEntry(cleanup.CleanupSignalMixin, Gtk.Box):
         self.connect_clean(self.entry, 'activate', activate_cb, main)
 
     def grab_focus(self):
-        self.entry.grab_focus()
+        return self.entry.grab_focus()
 
 
 class TreeListItemFactory(Gtk.SignalListItemFactory):
@@ -109,7 +109,7 @@ class WidgetWithPaned(contextmenu.ContextMenuMixin, cleanup.CleanupSignalMixin, 
         self.add_cleanup_below(self.left.view_search)
 
     def grab_focus(self):
-        self.left.view.grab_focus()
+        return self.left.view.grab_focus()
 
     def left_selection_changed_cb(self, selection, position, n_items):
         self.left_selection_pos = list(misc.get_selection(selection))

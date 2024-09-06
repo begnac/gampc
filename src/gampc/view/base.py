@@ -29,118 +29,15 @@ from ..util import cleanup
 from ..util import item
 from ..util import misc
 
-from ..ui import editable
+from ..ui import listitem
 from ..ui import listviewsearch
-
-
-class ListItemFactoryBase(Gtk.SignalListItemFactory):
-    def __init__(self, name):
-        super().__init__()
-
-        self.name = name
-
-        self.binders = {}
-        self.binders['value'] = (self.value_binder, name)
-
-        self.connect('setup', self.setup_cb)
-        self.connect('bind', self.bind_cb)
-        self.connect('unbind', self.unbind_cb)
-        # self.connect('teardown', self.teardown_cb)
-
-    @staticmethod
-    def setup_cb(self, listitem):
-        listitem.set_child(self.make_widget())
-
-    @staticmethod
-    def bind_cb(self, listitem):
-        widget = listitem.get_child()
-        widget.pos = listitem.get_position()
-        self.bind(widget, listitem.get_item())
-
-    @staticmethod
-    def unbind_cb(self, listitem):
-        self.unbind(listitem.get_child(), listitem.get_item())
-
-    # @staticmethod
-    # def teardown_cb(self, listitem):
-    #     pass
-
-    def bind(self, widget, item_):
-        for binder, *args in self.binders.values():
-            binder(widget, item_, *args)
-        item_.connect('notify', self.notify_item_cb, widget)
-
-    def unbind(self, widget, item_):
-        item_.disconnect_by_func(self.notify_item_cb)
-
-    def notify_item_cb(self, item_, param, widget):
-        binder, *args = self.binders[param.name]
-        binder(widget, item_, *args)
-
-    @staticmethod
-    def value_binder(widget, item_, name):
-        widget.set_label(item_.get_field(name))
-
-
-class ListItemFactory(ListItemFactoryBase):
-    def __init__(self, name):
-        super().__init__(name)
-
-        self.binders['duplicate'] = (self.duplicate_binder,)
-
-    @staticmethod
-    def value_binder(widget, item_, name):
-        ListItemFactoryBase.value_binder(widget, item_, name)
-        misc.add_unique_css_class(widget.get_parent(), 'playing', misc.encode_url(item_.get_key()))
-
-    @staticmethod
-    def duplicate_binder(widget, item_):
-        if item_.duplicate is None:
-            suffix = None
-        else:
-            suffix = str(item_.duplicate % 64)
-        misc.add_unique_css_class(widget.get_parent(), 'duplicate', suffix)
-
-
-class LabelListItemFactory(ListItemFactory):
-    @staticmethod
-    def make_widget():
-        return Gtk.Label(halign=Gtk.Align.START)
-
-
-class EditableListItemFactoryBase(ListItemFactoryBase):
-    __gsignals__ = {
-        'item-edited': (GObject.SIGNAL_RUN_FIRST, None, (int, str, str)),
-    }
-
-    def __init__(self, name, always_editable=False):
-        super().__init__(name)
-        self.always_editable = always_editable
-
-    def make_widget(self):
-        return editable.EditableLabel(always_editable=self.always_editable)
-
-    def bind(self, widget, item_):
-        super().bind(widget, item_)
-        widget.connect('edited', self.label_edited_cb, self.name)
-
-    def unbind(self, widget, item_):
-        super().unbind(widget, item_)
-        widget.disconnect_by_func(self.label_edited_cb)
-
-    def label_edited_cb(self, widget, name):
-        self.emit('item-edited', widget.pos, name, widget.get_text())
-
-
-class EditableListItemFactory(EditableListItemFactoryBase, ListItemFactory):
-    pass
 
 
 class FieldItemColumn(Gtk.ColumnViewColumn):
     def __init__(self, field, *, sortable, **kwargs):
         self.name = field.name
 
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, id=field.name)
 
         field.bind_property('title', self, 'title', GObject.BindingFlags.SYNC_CREATE)
         field.bind_property('visible', self, 'visible', GObject.BindingFlags.SYNC_CREATE)
@@ -159,7 +56,7 @@ class FieldItemColumn(Gtk.ColumnViewColumn):
         return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
 
-def clean_shortcuts(widget):
+def remove_shortcuts(widget):
     if widget is None:   # Very odd but can happen.  Gtk bug?
         return
     for controller in list(widget.observe_controllers()):
@@ -179,10 +76,10 @@ def clean_shortcuts(widget):
                 widget.add_controller(new_controller)
 
 
-def clean_shortcuts_below(widget):
-    clean_shortcuts(widget)
+def remove_shortcuts_below(widget):
+    remove_shortcuts(widget)
     for child in widget:
-        clean_shortcuts_below(child)
+        remove_shortcuts_below(child)
 
 
 class ItemView(Gtk.ColumnView):
@@ -196,7 +93,7 @@ class ItemView(Gtk.ColumnView):
 
         self.rows = self.get_last_child()
         self.rows_model = self.rows.observe_children()
-        self.rows_model.connect('items-changed', lambda model, p, r, a: [clean_shortcuts(row_widget) for row_widget in model[p:p + a]])
+        self.rows_model.connect('items-changed', lambda model, p, r, a: [remove_shortcuts(row_widget) for row_widget in model[p:p + a]])
 
         self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name)) for field in fields.fields.values()}
         for name in fields.order:
@@ -230,7 +127,7 @@ class ItemView(Gtk.ColumnView):
 class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, *, model=None, item_factory=item.Item, factory_factory=LabelListItemFactory, sortable, selection_model=Gtk.MultiSelection, **kwargs):
+    def __init__(self, fields, *, model=None, item_factory=item.Item, factory_factory=listitem.LabelListItemFactory, sortable, selection_model=Gtk.MultiSelection, **kwargs):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, **kwargs)
         self.item_factory = item_factory
 
@@ -262,7 +159,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         else:
             self.item_selection_model.set_model(self.item_filter_model)
 
-        clean_shortcuts_below(self)
+        remove_shortcuts_below(self)
 
         self.bind_property('filtering', self.filter_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE)
         self.bind_property('filtering', self.item_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
@@ -280,13 +177,13 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         super().cleanup()
 
     def grab_focus(self):
-        self.item_view.grab_focus()
+        return self.item_view.grab_focus()
 
     @staticmethod
     def filter_factory_factory(name):
-        return EditableListItemFactoryBase(name, always_editable=True)
+        return listitem.EditableListItemFactoryBase(name, always_editable=True)
 
-    def filter_edited_cb(self, factory, pos, name, value):
+    def filter_edited_cb(self, factory, pos, value, name):
         self.filter_item.value[name] = value
         self.filter_filter.changed(Gtk.FilterChange.DIFFERENT)
 

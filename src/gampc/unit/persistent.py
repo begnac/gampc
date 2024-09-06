@@ -19,8 +19,6 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gdk
-from gi.repository import Gtk
 
 import ampd
 
@@ -44,14 +42,12 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
 
         self.unit_server.ampd_server_properties.connect('notify::state', self.notify_protect_requested_cb)
         self.connect('notify::protect-requested', self.notify_protect_requested_cb)
-        self.connect('notify::dark', self.notify_dark_cb)
         self.connect('notify', self.notify_sticker_cb)
         for option in ampd.OPTION_NAMES:
             self.unit_server.ampd_server_properties.connect('notify::' + option, self.notify_option_cb)
 
     def cleanup(self):
         self.disconnect_by_func(self.notify_sticker_cb)
-        self.disconnect_by_func(self.notify_dark_cb)
         self.disconnect_by_func(self.notify_protect_requested_cb)
         self.unit_server.ampd_server_properties.disconnect_by_func(self.notify_protect_requested_cb)
         super().cleanup()
@@ -98,13 +94,6 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         if self.protect_requested:
             for option in ampd.OPTION_NAMES:
                 self.unit_server.ampd_server_properties.set_property(option, False)
-
-    @staticmethod
-    def notify_dark_cb(self, param):
-        css = Gtk.CssProvider()
-        css.load_named('Adwaita', 'dark' if self.dark else None)
-        # open('/home/begnac/CSS', 'w').write(css.to_string())
-        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_SETTINGS)
 
     @ampd.task
     async def notify_option_cb(self, properties, param):
