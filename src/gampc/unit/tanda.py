@@ -43,7 +43,7 @@ from ..util import unit
 from ..ui import compound
 from ..ui import contextmenu
 
-from ..view.base import EditableItemFactoryBase, LabelItemFactory
+from ..view.base import ListItemFactoryBase, EditableListItemFactoryBase
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy, ViewCacheWithEditStack
 
@@ -51,7 +51,7 @@ from . import mixins
 from . import search
 
 
-class StringItemFactory(Gtk.SignalListItemFactory):
+class StringListItemFactory(Gtk.SignalListItemFactory):
     def __init__(self):
         super().__init__()
 
@@ -78,7 +78,7 @@ class StringItemFactory(Gtk.SignalListItemFactory):
     #     self.labels.remove(listitem.label)
 
 
-class TandaItem(item.Item):
+class TandaItem(item.ItemBase):
     songs = GObject.Property()
     modified = GObject.Property()
 
@@ -88,6 +88,41 @@ class TandaItem(item.Item):
 
     def get_key(self):
         return '6666666'
+
+
+class MyEditableLabel(Gtk.Box):
+    def __init__(self, editable=False):
+        super().__init__()
+        self.editable = editable
+        self.label = Gtk.Label()
+        self.append(self.label)
+
+    def set_label(self, label):
+        self.label.set_label(label)
+
+
+class MyEditableListItemFactory(ListItemFactoryBase):
+    __gsignals__ = {
+        'item-edited': (GObject.SIGNAL_RUN_FIRST, None, (int, str, str)),
+    }
+
+    def __init__(self, name, always_editable=False):
+        super().__init__(name)
+        self.always_editable = always_editable
+
+    def make_widget(self):
+        return MyEditableLabel()
+
+    # def bind(self, widget, item_):
+    #     super().bind(widget, item_)
+    #     widget.connect('edited', self.label_edited_cb, self.name)
+
+    # def unbind(self, widget, item_):
+    #     super().unbind(widget, item_)
+    #     widget.disconnect_by_func(self.label_edited_cb)
+
+    # def label_edited_cb(self, widget, name):
+    #     self.emit('item-edited', widget.pos, name, widget.get_text())
 
 
 class TandaWidget(compound.WidgetWithPaned):
@@ -133,7 +168,7 @@ class TandaWidget(compound.WidgetWithPaned):
         self.right_box.append(self.button_box)
         self.right_box.append(self.stack)
 
-        super().__init__(self.right_box, config, self.artist_selection, StringItemFactory())
+        super().__init__(self.right_box, config, self.artist_selection, StringListItemFactory())
 
         self.edit = TandaEdit(self.tanda_artist_filter_model, tanda_fields, song_fields, separator_file=separator_file, cache=cache)
         self.view = TandaView(self.tanda_artist_filter_model, song_fields, separator_file=separator_file, cache=cache)
@@ -285,7 +320,7 @@ class TandaWidget(compound.WidgetWithPaned):
 
 #     @staticmethod
 #     def get_left_factory():
-#         return StringItemFactory()
+#         return StringListItemFactory()
 
 #     def change_subcomponent_actions(self, add):
 #         for group_name in self.subcomponent_actions_names:
@@ -339,15 +374,16 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
         self.tanda_fields = tanda_fields
 
-        self.tanda_view = ViewWithContextMenu(tanda_fields, model=tandas, sortable=False, factory_factory=self.factory_factory)
+        self.tanda_view = ViewWithContextMenu(tanda_fields, model=tandas, sortable=True, factory_factory=self.factory_factory)
         self.song_view = ViewCacheWithEditStack(song_fields, cache=cache)
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
         self.append(self.song_view)
 
     def factory_factory(self, name):
-        return EditableItemFactoryBase(name)
-        return LabelItemFactory(name)
+        return MyEditableListItemFactory(name)
+        return LabelListItemFactory(name)
+        return EditableListItemFactoryBase(name)
 
     #     self.current_tanda = None
     #     self.current_tanda_pos = None

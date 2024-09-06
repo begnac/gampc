@@ -28,7 +28,7 @@ from ..util import unit
 
 from ..ui import dialog
 
-from ..view.base import EditableItemFactory
+from ..view.base import EditableListItemFactory
 from ..view.editstack import ViewWithEditStack
 from ..view.cache import ItemFilenameTransfer
 
@@ -51,7 +51,7 @@ class StreamWidget(ViewWithEditStack):
 
     def __init__(self, separator_file, db, *args, **kwargs):
         self.db = db
-        super().__init__(*args, **kwargs, factory_factory=EditableItemFactory)
+        super().__init__(*args, **kwargs, factory_factory=EditableListItemFactory)
         for column in self.item_view.get_columns():
             self.connect_clean(column.get_factory(), 'item-edited', self.item_edited_cb)
         self.add_to_context_menu(self.generate_save_actions(), 'stream', _("Save"))

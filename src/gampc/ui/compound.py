@@ -42,7 +42,7 @@ class WidgetWithEntry(cleanup.CleanupSignalMixin, Gtk.Box):
         self.entry.grab_focus()
 
 
-class TreeItemFactory(Gtk.SignalListItemFactory):
+class TreeListItemFactory(Gtk.SignalListItemFactory):
     def __init__(self):
         super().__init__()
 
@@ -125,7 +125,7 @@ class WidgetWithPanedTreeList(WidgetWithPaned):
         model = Gtk.MultiSelection(model=self.left_store)
         model.select_item(0, True)
 
-        super().__init__(main, config, model, TreeItemFactory(), **kwargs)
+        super().__init__(main, config, model, TreeListItemFactory(), **kwargs)
 
         self.left.view.connect('activate', self.left_view_activate_cb)
 

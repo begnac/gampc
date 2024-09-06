@@ -30,7 +30,7 @@ from ..util import unit
 
 from ..ui import ssde
 
-from ..view.base import LabelItemFactory
+from ..view.base import LabelListItemFactory
 from ..view.cache import ViewWithCopyPasteSong
 
 from . import mixins
@@ -51,7 +51,7 @@ class QueueItem(item.Item):
         super().load(value)
 
 
-class QueueItemFactory(LabelItemFactory):
+class QueueListItemFactory(LabelListItemFactory):
     def __init__(self, name):
         super().__init__(name)
 
@@ -75,7 +75,7 @@ class QueueWidget(ViewWithCopyPasteSong):
     def __init__(self, add_items, remove_ids, **kwargs):
         self.add_items = add_items
         self.remove_ids = remove_ids
-        super().__init__(item_factory=QueueItem, factory_factory=QueueItemFactory, **kwargs)
+        super().__init__(item_factory=QueueItem, factory_factory=QueueListItemFactory, **kwargs)
         self.item_view.add_css_class('queue')
         item.setup_find_duplicate_items(self.item_model, ['Title'], [self.separator_file])
         self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))

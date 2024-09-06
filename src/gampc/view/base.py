@@ -33,7 +33,7 @@ from ..ui import editable
 from ..ui import listviewsearch
 
 
-class ItemFactoryBase(Gtk.SignalListItemFactory):
+class ListItemFactoryBase(Gtk.SignalListItemFactory):
     def __init__(self, name):
         super().__init__()
 
@@ -82,7 +82,7 @@ class ItemFactoryBase(Gtk.SignalListItemFactory):
         widget.set_label(item_.get_field(name))
 
 
-class ItemFactory(ItemFactoryBase):
+class ListItemFactory(ListItemFactoryBase):
     def __init__(self, name):
         super().__init__(name)
 
@@ -90,7 +90,7 @@ class ItemFactory(ItemFactoryBase):
 
     @staticmethod
     def value_binder(widget, item_, name):
-        ItemFactoryBase.value_binder(widget, item_, name)
+        ListItemFactoryBase.value_binder(widget, item_, name)
         misc.add_unique_css_class(widget.get_parent(), 'playing', misc.encode_url(item_.get_key()))
 
     @staticmethod
@@ -102,13 +102,13 @@ class ItemFactory(ItemFactoryBase):
         misc.add_unique_css_class(widget.get_parent(), 'duplicate', suffix)
 
 
-class LabelItemFactory(ItemFactory):
+class LabelListItemFactory(ListItemFactory):
     @staticmethod
     def make_widget():
         return Gtk.Label(halign=Gtk.Align.START)
 
 
-class EditableItemFactoryBase(ItemFactoryBase):
+class EditableListItemFactoryBase(ListItemFactoryBase):
     __gsignals__ = {
         'item-edited': (GObject.SIGNAL_RUN_FIRST, None, (int, str, str)),
     }
@@ -132,7 +132,7 @@ class EditableItemFactoryBase(ItemFactoryBase):
         self.emit('item-edited', widget.pos, name, widget.get_text())
 
 
-class EditableItemFactory(EditableItemFactoryBase, ItemFactory):
+class EditableListItemFactory(EditableListItemFactoryBase, ListItemFactory):
     pass
 
 
@@ -230,7 +230,7 @@ class ItemView(Gtk.ColumnView):
 class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, *, model=None, item_factory=item.Item, factory_factory=LabelItemFactory, sortable, selection_model=Gtk.MultiSelection, **kwargs):
+    def __init__(self, fields, *, model=None, item_factory=item.Item, factory_factory=LabelListItemFactory, sortable, selection_model=Gtk.MultiSelection, **kwargs):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, **kwargs)
         self.item_factory = item_factory
 
@@ -284,7 +284,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
 
     @staticmethod
     def filter_factory_factory(name):
-        return EditableItemFactoryBase(name, always_editable=True)
+        return EditableListItemFactoryBase(name, always_editable=True)
 
     def filter_edited_cb(self, factory, pos, name, value):
         self.filter_item.value[name] = value

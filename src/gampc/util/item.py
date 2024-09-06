@@ -22,9 +22,8 @@ from gi.repository import GObject
 from gi.repository import Gdk
 
 
-class Item(GObject.Object):
+class ItemBase(GObject.Object):
     value = GObject.Property()
-    duplicate = GObject.Property()
 
     def __init__(self, value=None):
         super().__init__()
@@ -33,10 +32,17 @@ class Item(GObject.Object):
 
     def load(self, value):
         self.value = value
-        self.duplicate = None
 
     def get_field(self, name, default=''):
         return self.value.get(name, default)
+
+
+class Item(ItemBase):
+    duplicate = GObject.Property()
+
+    def load(self, value):
+        super().load(value)
+        self.duplicate = None
 
     def get_key(self):
         return self.value['file']
