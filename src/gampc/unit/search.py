@@ -69,6 +69,7 @@ class __unit__(mixins.UnitComponentQueueActionMixin, unit.Unit):
     def new_widget(self):
         search = SearchWidget(self.unit_fields.fields, self.unit_database.cache, self.unit_database.SEPARATOR_FILE, self.entry_activate_cb)
         search.connect_clean(self.unit_server.ampd_client, 'client-connected', self.search_client_connected_cb, search)
+        search.connect_clean(search.main.item_view, 'activate', self.view_activate_cb)
         return search
 
     @ampd.task
