@@ -43,6 +43,7 @@ from ..util import unit
 from ..ui import compound
 from ..ui import contextmenu
 
+from ..view.base import remove_control_move_shortcuts_below
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy, ViewCacheWithEditStack
 from ..view.listitem import EditableListItemFactoryBase
@@ -51,9 +52,32 @@ from . import mixins
 from . import search
 
 
+class TandaItem(item.ItemBase):
+    tandaid = GObject.Property()
+    songs = GObject.Property()
+    modified = GObject.Property(type=bool, default=False)
+
+    def load(self, value):
+        self.tandaid = value.pop('tandaid')
+        self.songs = value.pop('songs')
+        super().load(value)
+
+
+class TandaSongItem(item.Item):
+    tandaid = GObject.Property()
+
+    def load(self, value):
+        self.tandaid = value.pop('tandaid')
+        super().load(value)
+
+
 class TandaListItemFactory(EditableListItemFactoryBase):
+    def __init__(self, name):
+        super().__init__(name)
+        self.binders.append(('value', self.tanda_binder, name))
+
     @staticmethod
-    def value_binder(widget, item_, name):
+    def tanda_binder(widget, item_, name):
         EditableListItemFactoryBase.value_binder(widget, item_, name)
         cell = widget.get_parent()
         if 'Last_Played' in name:
@@ -93,18 +117,6 @@ class StringListItemFactory(Gtk.SignalListItemFactory):
     # @staticmethod
     # def teardown_cb(self, listitem):
     #     self.labels.remove(listitem.label)
-
-
-class TandaItem(item.ItemBase):
-    songs = GObject.Property()
-    modified = GObject.Property()
-
-    def load(self, value):
-        self.songs = value.pop('songs')
-        super().load(value)
-
-    def get_key(self):
-        return '6666666'
 
 
 class TandaWidget(compound.WidgetWithPaned):
@@ -156,16 +168,10 @@ class TandaWidget(compound.WidgetWithPaned):
         self.view = TandaView(self.tanda_artist_filter_model, song_fields, separator_file=separator_file, cache=cache)
         self.stack.add_titled(self.edit, 'edit', _("Edit tandas"))
         self.stack.add_titled(self.view, 'view', _("View tandas"))
-        self.subcomponents = [self.edit, self.view]
-        # for c in self.subcomponents:
-        #     self.bind_property('current-tandaid', c, 'current-tandaid', GObject.BindingFlags.BIDIRECTIONAL)
-        # self.subcomponent_index = 0
-
-        # self.actions_dict['tanda-edit'] = self.edit.actions
-        # self.subcomponent_actions_names = 'itemlist', 'fields'
-        # for name in self.subcomponent_actions_names:
-        #     self.actions_dict[name] = Gio.SimpleActionGroup()
-        # self.change_subcomponent_actions(True)
+        self.subwidgets = [self.edit, self.view]
+        for widget in self.subwidgets:
+            self.bind_property('current-tandaid', widget, 'current-tandaid', GObject.BindingFlags.BIDIRECTIONAL)
+        self.subwidget_index = 0
 
         self.connect_clean(self.tanda_genre_filter_model, 'items-changed', self.tanda_genre_filtered_changed)
         self.connect_clean(self.artist_selected_model, 'items-changed', self.artist_selected_changed)
@@ -179,11 +185,18 @@ class TandaWidget(compound.WidgetWithPaned):
 
         self.tanda_genre_filter_model.set_model(tandas)
 
+        remove_control_move_shortcuts_below(self)
         self.add_to_context_menu(self.generate_actions(), 'tanda', _("Tanda Editor"))
+
+    def cleanup(self):
+        self.tanda_genre_filter.set_filter_func(None)
+        self.tanda_sorter.set_sort_func(None)
+        self.tanda_artist_filter.set_filter_func(None)
+        super().cleanup()
 
     def generate_actions(self):
         yield action.PropertyActionInfo('genre-filter', self, arg_format='i')
-        # yield action.ActionInfo('switch-subcomponent', self.action_subcomponent_next_cb, _("Switch tanda view mode"), ['<Control>Tab'])
+        yield action.ActionInfo('switch-subwidget', self.action_subwidget_next_cb, _("Switch tanda view mode"), ['<Control>Tab'])
         # yield action.ActionInfo('verify', self.unit.db.action_tanda_verify_cb, _("Verify tanda database"), ['<Control><Shift>d'])
         # yield action.ActionInfo('cleanup-db', self.unit.db.action_cleanup_db_cb, _("Cleanup database"))
 
@@ -231,12 +244,15 @@ class TandaWidget(compound.WidgetWithPaned):
         self.tanda_artist_filter.changed(Gtk.FilterChange.DIFFERENT)
 
     def tanda_artist_filter_func(self, tanda):
-        return len(self.selected_artists) == 0 or tanda.get_field('Artist') in self.selected_artists
+        return tanda.get_field('Artist') in self.selected_artists
 
 
 
 
 
+    def action_subwidget_next_cb(self, action, param):
+        self.subwidget_index = (self.subwidget_index + 1) % len(self.subwidgets)
+        self.stack.set_visible_child(self.subwidgets[self.subwidget_index])
 
 
 
@@ -295,7 +311,7 @@ class TandaWidget(compound.WidgetWithPaned):
 #         self.widget = TandaWidget(self.config.pane_separator, unit.db, unit.unit_fields.fields, unit.unit_database.SEPARATOR_FILE, cache=unit.unit_database.cache)
 
 #     def cleanup(self):
-#         self.change_subcomponent_actions(False)
+#         self.change_subwidget_actions(False)
 #         self.edit.cleanup()
 #         self.view.cleanup()
 #         super().cleanup()
@@ -304,51 +320,44 @@ class TandaWidget(compound.WidgetWithPaned):
 #     def get_left_factory():
 #         return StringListItemFactory()
 
-#     def change_subcomponent_actions(self, add):
-#         for group_name in self.subcomponent_actions_names:
-#             subcomponent_actions = self.subcomponents[self.subcomponent_index].actions_dict[group_name]
+#     def change_subwidget_actions(self, add):
+#         for group_name in self.subwidget_actions_names:
+#             subwidget_actions = self.subwidgets[self.subwidget_index].actions_dict[group_name]
 #             actions = self.actions_dict[group_name]
-#             for name in subcomponent_actions.list_actions():
+#             for name in subwidget_actions.list_actions():
 #                 if add:
-#                     actions.add_action(subcomponent_actions.lookup_action(name))
+#                     actions.add_action(subwidget_actions.lookup_action(name))
 #                 else:
 #                     actions.remove_action(name)
 
-#     def action_subcomponent_next_cb(self, action, param):
-#         self.change_subcomponent_actions(False)
-#         self.subcomponent_index = (self.subcomponent_index + 1) % len(self.subcomponents)
-#         self.stack.set_visible_child(self.subcomponents[self.subcomponent_index].widget)
-#         self.change_subcomponent_actions(True)
 
 
-class TandaSubWidgetMixin:
+class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
     def __init__(self, *args, separator_file, **kwargs):
         self.separator_file = separator_file
         super().__init__(*args, **kwargs)
-        # self.connect('map', self.map_cb)
 
-    # @staticmethod
-    # def map_cb(self):
-    #     self.set_cursor_tandaid(self.current_tandaid)
+    def init_tandaid_view(self, view):
+        self.connect('map', self.map_cb, view)
+        self.connect_clean(view.item_selection_filter_model, 'items-changed', self.tandaid_selection_changed_cb)
 
-    # def init_tandaid_view(self, view):
-    #     self.tandaid_view = view
-    #     self.connect_clean(self.tandaid_view.record_selection, 'selection-changed', self.tandaid_selection_changed_cb)
+    @staticmethod
+    def map_cb(self, view):
+        if self.current_tandaid is None:
+            return
+        for i, item_ in enumerate(view.item_selection_model):
+            if item_.tandaid == self.current_tandaid:
+                view.grab_focus()
+                GLib.idle_add(lambda: view.scroll_to(i))
+                return
 
-    # def set_cursor_tandaid(self, tandaid):
-    #     if tandaid is None:
-    #         return
-    #     for i, item in enumerate(self.tandaid_view.record_selection):
-    #         if item._tandaid == tandaid:
-    #             self.tandaid_view.record_view.scroll_to(i, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
-    #             return
-
-    # def tandaid_selection_changed_cb(self, model, *args):
-    #     selection = list(misc.get_selection(model))
-    #     self.current_tandaid = model[selection[0]]._tandaid if selection else None
+    def tandaid_selection_changed_cb(self, model, p, r, a):
+        self.current_tandaid = model[0].tandaid if model else None
 
 
 class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
+    current_tandaid = GObject.Property()
+
     duplicate_test_columns = ['Title']
 
     def __init__(self, tandas, tanda_fields, song_fields, *args, cache, **kwargs):
@@ -356,12 +365,13 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
         self.tanda_fields = tanda_fields
 
-        self.tanda_view = ViewWithContextMenu(tanda_fields, model=tandas, sortable=True, factory_factory=TandaListItemFactory)
+        self.tanda_view = ViewWithContextMenu(tanda_fields, model=tandas, sortable=True, factory_factory=TandaListItemFactory, selection_model=Gtk.SingleSelection)
         self.song_view = ViewCacheWithEditStack(song_fields, cache=cache)
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
         self.append(self.song_view)
 
+        self.init_tandaid_view(self.tanda_view)
         self.tanda_view.item_view.add_css_class('tanda-edit')
 
     #     self.current_tanda = None
@@ -378,7 +388,6 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
     #     # self.tanda_view.connect('button-press-event', self.tanda_view_button_press_event_cb)
     #     self.setup_context_menu(f'{self.name}.left-context', self.tanda_view)
-    #     self.init_tandaid_view(self.tanda_view)
 
     #     # for name in self.unit.db.fields.basic_names:
     #     #     col = self.tanda_view.cols[name]
@@ -614,20 +623,27 @@ class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
 
     def __init__(self, tandas, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs, item_factory=TandaSongItem)
         self.connect_clean(tandas, 'items-changed', self.tandas_changed)
-        # self.init_tandaid_view(self.view)
+        self.init_tandaid_view(self)
 
     def tandas_changed(self, tandas, p, r, a):
-        filenames = [self.separator_file]
+        filenames = [(self.separator_file, None)]
         for tanda in tandas:
-            # tandaid = tanda['tandaid']
+            tandaid = tanda.tandaid
             for song in tanda.songs.items:
-                filenames.append(song['file'])
+                filenames.append((song['file'], tandaid))
                 if song['file'] not in self.cache:
                     self.cache[song['file']] = song
-            filenames.append(self.separator_file)
+            filenames.append((self.separator_file, tandaid))
         self.set_keys(filenames)
+
+    async def _splice_keys(self, task, pos, remove, keys):
+        real_keys, tandaids = zip(*keys)
+        await self.cache.ensure_keys(real_keys)
+        if task is not None:
+            await task
+        self.splice_values(pos, remove, (dict(self.cache[key], tandaid=tandaid) for key, tandaid in keys))
 
 
 class TandaDatabase(GObject.Object, db.Database):
@@ -978,7 +994,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
     def read_db(self):
         if self.unit_database.SEPARATOR_FILE not in self.unit_database.cache:
             self.unit_database.cache[self.unit_database.SEPARATOR_FILE] = self.db.get_song(self.unit_database.SEPARATOR_FILE)
-        self.tandas[:] = (TandaItem(value=tanda) for tanda in self.db.get_tandas())
+        self.tandas.splice(0, len(self.tandas), [TandaItem(value=tanda) for tanda in self.db.get_tandas()])
 
     @ampd.task
     async def client_connected_cb(self, client):

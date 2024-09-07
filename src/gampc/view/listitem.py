@@ -32,8 +32,8 @@ class ListItemFactoryBase(Gtk.SignalListItemFactory):
 
         self.name = name
 
-        self.binders = {}
-        self.binders['value'] = (self.value_binder, name)
+        self.binders = []
+        self.binders.append(('value', self.value_binder, name))
 
         self.connect('setup', self.setup_cb)
         self.connect('bind', self.bind_cb)
@@ -59,7 +59,7 @@ class ListItemFactoryBase(Gtk.SignalListItemFactory):
     #     pass
 
     def bind(self, widget, item_):
-        for binder, *args in self.binders.values():
+        for name, binder, *args in self.binders:
             binder(widget, item_, *args)
         item_.connect('notify', self.notify_item_cb, widget)
 
@@ -67,8 +67,9 @@ class ListItemFactoryBase(Gtk.SignalListItemFactory):
         item_.disconnect_by_func(self.notify_item_cb)
 
     def notify_item_cb(self, item_, param, widget):
-        binder, *args = self.binders[param.name]
-        binder(widget, item_, *args)
+        for name, binder, *args in self.binders:
+            if name == param.name:
+                binder(widget, item_, *args)
 
     @staticmethod
     def value_binder(widget, item_, name):
@@ -80,11 +81,11 @@ class ListItemFactory(ListItemFactoryBase):
     def __init__(self, name):
         super().__init__(name)
 
-        self.binders['duplicate'] = (self.duplicate_binder,)
+        self.binders.append(('value', self.key_binder))
+        self.binders.append(('duplicate', self.duplicate_binder))
 
     @staticmethod
-    def value_binder(widget, item_, name):
-        ListItemFactoryBase.value_binder(widget, item_, name)
+    def key_binder(widget, item_):
         misc.add_unique_css_class(widget.get_parent(), 'key', item_.get_key().encode().hex())
 
     @staticmethod

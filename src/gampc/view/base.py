@@ -34,6 +34,7 @@ from ..ui import listviewsearch
 from .listitem import EditableListItemFactoryBase
 from .listitem import LabelListItemFactory
 
+
 class FieldItemColumn(Gtk.ColumnViewColumn):
     def __init__(self, field, *, sortable, **kwargs):
         self.name = field.name
@@ -57,7 +58,7 @@ class FieldItemColumn(Gtk.ColumnViewColumn):
         return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
 
-def remove_shortcuts(widget):
+def remove_control_move_shortcuts(widget):
     if widget is None:   # Very odd but can happen.  Gtk bug?
         return
     for controller in list(widget.observe_controllers()):
@@ -68,7 +69,7 @@ def remove_shortcuts(widget):
                 trigger = shortcut.get_trigger()
                 if isinstance(trigger, Gtk.KeyvalTrigger) and \
                    trigger.get_modifiers() & Gdk.ModifierType.CONTROL_MASK and \
-                   trigger.get_keyval() in (Gdk.KEY_Up, Gdk.KEY_Down, Gdk.KEY_Left, Gdk.KEY_Right, ):
+                   trigger.get_keyval() in (Gdk.KEY_Up, Gdk.KEY_Down, Gdk.KEY_Left, Gdk.KEY_Right, Gdk.KEY_Tab):
                     changed = True
                 else:
                     new_controller.add_shortcut(shortcut)
@@ -77,10 +78,10 @@ def remove_shortcuts(widget):
                 widget.add_controller(new_controller)
 
 
-def remove_shortcuts_below(widget):
-    remove_shortcuts(widget)
+def remove_control_move_shortcuts_below(widget):
+    remove_control_move_shortcuts(widget)
     for child in widget:
-        remove_shortcuts_below(child)
+        remove_control_move_shortcuts_below(child)
 
 
 class ItemView(Gtk.ColumnView):
@@ -94,7 +95,7 @@ class ItemView(Gtk.ColumnView):
 
         self.rows = self.get_last_child()
         self.rows_model = self.rows.observe_children()
-        self.rows_model.connect('items-changed', lambda model, p, r, a: [remove_shortcuts(row_widget) for row_widget in model[p:p + a]])
+        self.rows_model.connect('items-changed', lambda model, p, r, a: [remove_control_move_shortcuts(row_widget) for row_widget in model[p:p + a]])
 
         self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name)) for field in fields.fields.values()}
         for name in fields.order:
@@ -160,7 +161,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         else:
             self.item_selection_model.set_model(self.item_filter_model)
 
-        remove_shortcuts_below(self)
+        remove_control_move_shortcuts_below(self)
 
         self.bind_property('filtering', self.filter_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE)
         self.bind_property('filtering', self.item_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)

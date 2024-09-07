@@ -54,9 +54,8 @@ class QueueItem(item.Item):
 class QueueListItemFactory(LabelListItemFactory):
     def __init__(self, name):
         super().__init__(name)
-
-        self.binders['Id'] = (self.id_binder,)
-        self.binders['Prio'] = (self.prio_binder, name)
+        self.binders.append(('Id', self.id_binder))
+        self.binders.append(('Prio', self.prio_binder, name))
 
     @staticmethod
     def id_binder(widget, item):
