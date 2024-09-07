@@ -41,6 +41,7 @@ class ViewCacheMixin(ViewFilenameMixin):
         super().__init__(*args, **kwargs)
         self.aioqueue = aioqueue.AIOQueue()
         self.cache = cache
+        self.item_view.add_css_class('song-by-key')
 
     def set_keys(self, keys):
         self.splice_keys(0, None, keys)

@@ -52,6 +52,7 @@ class StreamWidget(ViewWithEditStack):
     def __init__(self, separator_file, db, *args, **kwargs):
         self.db = db
         super().__init__(*args, **kwargs, factory_factory=EditableListItemFactory)
+        self.item_view.add_css_class('song-by-key')
         for column in self.item_view.get_columns():
             self.connect_clean(column.get_factory(), 'item-edited', self.item_edited_cb)
         self.add_to_context_menu(self.generate_save_actions(), 'stream', _("Save"))

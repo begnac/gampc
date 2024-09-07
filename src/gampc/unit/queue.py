@@ -60,8 +60,7 @@ class QueueListItemFactory(LabelListItemFactory):
 
     @staticmethod
     def id_binder(widget, item):
-        misc.add_unique_css_class(widget.get_parent(), QUEUE_ID_CSS_PREFIX, item.Id)
-        misc.add_unique_css_class(widget.get_parent(), 'playing', None)
+        misc.add_unique_css_class(widget.get_parent(), 'Id', item.Id)
 
     @staticmethod
     def prio_binder(widget, item, name):
@@ -77,6 +76,8 @@ class QueueWidget(ViewWithCopyPasteSong):
         self.remove_ids = remove_ids
         super().__init__(item_factory=QueueItem, factory_factory=QueueListItemFactory, **kwargs)
         self.item_view.add_css_class('queue')
+        self.item_view.remove_css_class('song-by-key')
+        self.item_view.add_css_class('song-by-Id')
         item.setup_find_duplicate_items(self.item_model, ['Title'], [self.separator_file])
         self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
 

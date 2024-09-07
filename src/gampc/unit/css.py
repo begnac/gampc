@@ -21,77 +21,110 @@
 from gi.repository import Gdk
 from gi.repository import Gtk
 
-from ..util import cleanup
+from ..util import misc
 from ..util import unit
 
 from ..ui import dnd
 
 
-class __unit__(cleanup.CleanupCssMixin, unit.Unit):
+def load_theme_css(dark, theme_css_provider, app_css_provider):
+    theme_css_provider.load_named('Adwaita', 'dark' if dark else None)
+
+    edit_background = 'green' if dark else 'yellow'
+    filter_background = 'blue' if dark else 'pink'
+
+    css = ''
+
+    css += f'''
+    columnview.filter > listview > row {{
+      background: {filter_background};
+    }}
+    '''
+
+    css += f'''
+    columnview > listview > row > cell:focus-visible {{
+      background: {edit_background};
+    }}
+    '''
+
+    css += '''
+    editablelabel.editing {
+      background-color: rgb(45,45,45);
+      border-bottom-color: rgb(27,27,27);
+      border-left-color: rgb(27,27,27);
+      border-right-color: rgb(27,27,27);
+      border-top-color: rgb(27,27,27);
+      color: rgb(255,255,255);
+    }
+    ''' if dark else '''
+    editablelabel.editing > label > text {
+      background-color: rgb(255,255,255);
+      border-bottom-color: rgb(205,199,194);
+      border-left-color: rgb(205,199,194);
+      border-right-color: rgb(205,199,194);
+      border-top-color: rgb(205,199,194);
+      color: rgb(0,0,0);
+    }
+    '''
+
+    css += dnd.get_css(dark)
+
+    N = 4
+    for d in range(N ** 3):
+        colors = [((d // (N ** k)) % N) * 255 / (N - 1) for k in range(3)]
+        css += f'''
+          columnview > listview > row > cell.duplicate-{d} {{
+          background: rgba({colors[0]},{colors[1]},{colors[2]},0.5);
+        }}
+        '''
+
+    app_css_provider.load_from_string(css)
+
+
+PLAYING_CSS = '''
+columnview.song-by-{name} > listview > row > cell.{name}-{value} {{
+  background: rgba(128,128,128,0.1);
+  font-style: italic;
+  font-weight: bold;
+}}
+'''
+
+
+def load_playing_css(song, playing_css_provider):
+    css = ''
+    if 'file' in song:
+        css += PLAYING_CSS.format(name='key', value=misc.encode_url(song['file']))
+    if 'Id' in song:
+        css += PLAYING_CSS.format(name='Id', value=song['Id'])
+
+    playing_css_provider.load_from_string(css)
+
+
+class __unit__(unit.Unit):
     def __init__(self, manager):
         super().__init__(manager)
         self.require('persistent')
+        self.require('server')
 
         self.theme_css_provider = Gtk.CssProvider()
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.theme_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_SETTINGS)
 
-        self.connect_clean(self.unit_persistent, 'notify::dark', self.notify_dark_cb)
-        self.load_css()
+        self.app_theme_css_provider = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.app_theme_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-    def notify_dark_cb(self, persistent, pspec):
-        self.load_css()
+        self.unit_persistent.connect('notify::dark', self.notify_dark_cb, self.theme_css_provider, self.app_theme_css_provider)
+        load_theme_css(self.unit_persistent.dark, self.theme_css_provider, self.app_theme_css_provider)
 
-    def load_css(self):
-        dark = self.unit_persistent.dark
+        self.playing_css_provider = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.playing_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-        self.theme_css_provider.load_named('Adwaita', 'dark' if dark else None)
+        self.unit_server.ampd_server_properties.connect('notify::current-song', self.notify_current_song_cb, self.playing_css_provider)
+        load_playing_css(self.unit_server.ampd_server_properties.current_song, self.playing_css_provider)
 
-        edit_background = 'green' if dark else 'yellow'
-        filter_background = 'blue' if dark else 'pink'
+    @staticmethod
+    def notify_dark_cb(persistent, pspec, theme_css_provider, app_css_provider):
+        load_theme_css(persistent.dark, theme_css_provider, app_css_provider)
 
-        css = ''
-
-        css += f'''
-        columnview.filter > listview > row {{
-          background: {filter_background};
-        }}
-        '''
-
-        css += f'''
-        columnview > listview > row > cell:focus-visible {{
-          background: {edit_background};
-        }}
-        '''
-
-        css += '''
-        editablelabel.editing {
-          background-color: rgb(45,45,45);
-          border-bottom-color: rgb(27,27,27);
-          border-left-color: rgb(27,27,27);
-          border-right-color: rgb(27,27,27);
-          border-top-color: rgb(27,27,27);
-          color: rgb(255,255,255);
-        }
-        ''' if dark else '''
-        editablelabel.editing > label > text {
-          background-color: rgb(255,255,255);
-          border-bottom-color: rgb(205,199,194);
-          border-left-color: rgb(205,199,194);
-          border-right-color: rgb(205,199,194);
-          border-top-color: rgb(205,199,194);
-          color: rgb(0,0,0);
-        }
-        '''
-
-        css += dnd.get_css(dark)
-
-        N = 4
-        for d in range(N ** 3):
-            colors = [((d // (N ** k)) % N) * 255 / (N - 1) for k in range(3)]
-            css += f'''
-              columnview > listview > row > cell.duplicate-{d} {{
-              background: rgba({colors[0]},{colors[1]},{colors[2]},0.5);
-            }}
-            '''
-
-        self.css_provider.load_from_string(css)
+    @staticmethod
+    def notify_current_song_cb(server_properties, pspec, playing_css_provider):
+        load_playing_css(server_properties.current_song, playing_css_provider)

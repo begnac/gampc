@@ -73,7 +73,10 @@ class ListItemFactoryBase(Gtk.SignalListItemFactory):
 
     @staticmethod
     def value_binder(widget, item_, name):
-        widget.set_label(item_.get_field(name))
+        value = item_.get_field(name)
+        widget.set_label(value)
+        misc.add_unique_css_class(widget.get_parent(), 'value', misc.encode_url(value))
+        misc.add_unique_css_class(widget.get_parent(), 'name', misc.encode_url(name))
 
 
 class ListItemFactory(ListItemFactoryBase):
@@ -85,7 +88,7 @@ class ListItemFactory(ListItemFactoryBase):
     @staticmethod
     def value_binder(widget, item_, name):
         ListItemFactoryBase.value_binder(widget, item_, name)
-        misc.add_unique_css_class(widget.get_parent(), 'playing', misc.encode_url(item_.get_key()))
+        misc.add_unique_css_class(widget.get_parent(), 'key', misc.encode_url(item_.get_key()))
 
     @staticmethod
     def duplicate_binder(widget, item_):
