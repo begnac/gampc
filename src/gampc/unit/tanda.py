@@ -51,6 +51,23 @@ from . import mixins
 from . import search
 
 
+class TandaListItemFactory(EditableListItemFactoryBase):
+    @staticmethod
+    def value_binder(widget, item_, name):
+        EditableListItemFactoryBase.value_binder(widget, item_, name)
+        cell = widget.get_parent()
+        if 'Last_Played' in name:
+            value = item_.get_field('Last_Played_Weeks')
+            if value:
+                cell.add_css_class(f'last-played-{min(10, int(value))}')
+        elif name in ('Rhythm', 'Energy', 'Speed', 'Level'):
+            cell.add_css_class(f'property-{item_.get_field(name)}')
+        elif name == 'Emotion':
+            cell.add_css_class(f'emotion-{item_.get_field(name)}')
+        elif name in ('Genre',):
+            cell.add_css_class(f'genre-{item_.get_field(name).lower()}')
+
+
 class StringListItemFactory(Gtk.SignalListItemFactory):
     def __init__(self):
         super().__init__()
@@ -339,14 +356,13 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
         self.tanda_fields = tanda_fields
 
-        self.tanda_view = ViewWithContextMenu(tanda_fields, model=tandas, sortable=True, factory_factory=self.factory_factory)
+        self.tanda_view = ViewWithContextMenu(tanda_fields, model=tandas, sortable=True, factory_factory=TandaListItemFactory)
         self.song_view = ViewCacheWithEditStack(song_fields, cache=cache)
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
         self.append(self.song_view)
 
-    def factory_factory(self, name):
-        return listitem.EditableListItemFactoryBase(name)
+        self.tanda_view.item_view.add_css_class('tanda-edit')
 
     #     self.current_tanda = None
     #     self.current_tanda_pos = None
@@ -881,6 +897,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
     def __init__(self, manager):
         super().__init__(manager)
         self.config.pane_separator._get(default=100)
+
+        self.css_provider.load_from_string(CSS)
         self.require('fields')
         self.require('database')
         self.require('persistent')
@@ -974,7 +992,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
     def get_last_played_weeks(tanda):
         if 'Last_Played' in tanda and tanda['Last_Played']:
             try:
-                return str((datetime.date.today() - datetime.date(*map(int, tanda['Last_Played'].split('-')))).days // 7)
+                return (datetime.date.today() - datetime.date(*map(int, tanda['Last_Played'].split('-')))).days // 7
             except Exception:
                 pass
         return ''

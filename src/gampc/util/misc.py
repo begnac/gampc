@@ -73,10 +73,6 @@ def get_selection(selection):
         found, pos = i.next()
 
 
-def encode_url(url):
-    return url.encode().hex()
-
-
 def add_unique_css_class(widget, prefix, suffix):
     for css_class in widget.get_css_classes():
         if css_class.startswith(prefix):

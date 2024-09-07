@@ -19,7 +19,6 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gdk
 from gi.repository import Gtk
 
 from ..util import misc
@@ -75,8 +74,6 @@ class ListItemFactoryBase(Gtk.SignalListItemFactory):
     def value_binder(widget, item_, name):
         value = item_.get_field(name)
         widget.set_label(value)
-        misc.add_unique_css_class(widget.get_parent(), 'value', misc.encode_url(value))
-        misc.add_unique_css_class(widget.get_parent(), 'name', misc.encode_url(name))
 
 
 class ListItemFactory(ListItemFactoryBase):
@@ -88,7 +85,7 @@ class ListItemFactory(ListItemFactoryBase):
     @staticmethod
     def value_binder(widget, item_, name):
         ListItemFactoryBase.value_binder(widget, item_, name)
-        misc.add_unique_css_class(widget.get_parent(), 'key', misc.encode_url(item_.get_key()))
+        misc.add_unique_css_class(widget.get_parent(), 'key', item_.get_key().encode().hex())
 
     @staticmethod
     def duplicate_binder(widget, item_):

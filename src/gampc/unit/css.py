@@ -30,8 +30,8 @@ from ..ui import dnd
 def load_theme_css(dark, theme_css_provider, app_css_provider):
     theme_css_provider.load_named('Adwaita', 'dark' if dark else None)
 
-    edit_background = 'green' if dark else 'yellow'
     filter_background = 'blue' if dark else 'pink'
+    focus_background = 'green' if dark else 'yellow'
 
     css = ''
 
@@ -43,7 +43,7 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
 
     css += f'''
     columnview > listview > row > cell:focus-visible {{
-      background: {edit_background};
+      background: {focus_background};
     }}
     '''
 
@@ -93,7 +93,7 @@ columnview.song-by-{name} > listview > row > cell.{name}-{value} {{
 def load_playing_css(song, playing_css_provider):
     css = ''
     if 'file' in song:
-        css += PLAYING_CSS.format(name='key', value=misc.encode_url(song['file']))
+        css += PLAYING_CSS.format(name='key', value=song['file'].encode().hex())
     if 'Id' in song:
         css += PLAYING_CSS.format(name='Id', value=song['Id'])
 
