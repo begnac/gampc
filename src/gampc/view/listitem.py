@@ -107,31 +107,19 @@ class EditableListItemFactoryBase(ListItemFactoryBase):
         'item-edited': (GObject.SIGNAL_RUN_FIRST, None, (int, str, str)),
     }
 
-    def __init__(self, name, always_editable=False):
-        super().__init__(name)
-        self.always_editable = always_editable
-
     def make_widget(self):
-        return editable.EditableLabel(always_editable=self.always_editable)
+        return editable.EditableLabel()
 
     def bind(self, widget, item_):
         super().bind(widget, item_)
-        widget.connect('edited', self.label_edited_cb, self.name)
-        # parent = widget.get_parent()
-        # parent.set_focusable(True)
-        # widget.shortcut = Gtk.ShortcutController()
-        # widget.shortcut.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Return, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK), action=Gtk.CallbackAction.new(self.start_editing_cb)))
-        # parent.add_controller(widget.shortcut)
+        widget.connect('notify::label', self.notify_label_cb, self.name)
 
     def unbind(self, widget, item_):
-        # parent = widget.get_parent()
-        # parent.remove_controller(widget.shortcut)
-        # del widget.shortcut
-        widget.disconnect_by_func(self.label_edited_cb)
+        widget.disconnect_by_func(self.notify_label_cb)
         super().unbind(widget, item_)
 
-    def label_edited_cb(self, widget, text, name):
-        self.emit('item-edited', widget.pos, name, text)
+    def notify_label_cb(self, widget, pspec, name):
+        self.emit('item-edited', widget.pos, name, widget.label)
 
     @staticmethod
     def start_editing_cb(cell, arg):

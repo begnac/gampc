@@ -29,9 +29,10 @@ from ..util import cleanup
 from ..util import item
 from ..util import misc
 
-from ..ui import listitem
 from ..ui import listviewsearch
 
+from .listitem import EditableListItemFactoryBase
+from .listitem import LabelListItemFactory
 
 class FieldItemColumn(Gtk.ColumnViewColumn):
     def __init__(self, field, *, sortable, **kwargs):
@@ -127,16 +128,16 @@ class ItemView(Gtk.ColumnView):
 class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, *, model=None, item_factory=item.Item, factory_factory=listitem.LabelListItemFactory, sortable, selection_model=Gtk.MultiSelection, **kwargs):
+    def __init__(self, fields, *, model=None, item_factory=item.Item, factory_factory=LabelListItemFactory, sortable, selection_model=Gtk.MultiSelection, **kwargs):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, **kwargs)
         self.item_factory = item_factory
 
         self.filter_filter = Gtk.CustomFilter.new(self.filter_func)
 
-        self.filter_item = item.Item(value={})
+        self.filter_item = item.ItemBase(value={})
         self.filter_store = Gio.ListStore()
         self.filter_store_selection = Gtk.NoSelection(model=self.filter_store)
-        self.filter_view = ItemView(fields, self.filter_factory_factory, sortable=False, model=self.filter_store_selection)
+        self.filter_view = ItemView(fields, EditableListItemFactoryBase, sortable=False, model=self.filter_store_selection)
         self.filter_view.add_css_class('filter')
         self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, vscrollbar_policy=Gtk.PolicyType.NEVER)
         self.scrolled_filter_view.get_hscrollbar().set_visible(False)
@@ -179,11 +180,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     def grab_focus(self):
         return self.item_view.grab_focus()
 
-    @staticmethod
-    def filter_factory_factory(name):
-        return listitem.EditableListItemFactoryBase(name, always_editable=True)
-
-    def filter_edited_cb(self, factory, pos, value, name):
+    def filter_edited_cb(self, factory, pos, name, value):
         self.filter_item.value[name] = value
         self.filter_filter.changed(Gtk.FilterChange.DIFFERENT)
 

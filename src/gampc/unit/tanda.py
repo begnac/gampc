@@ -42,10 +42,10 @@ from ..util import unit
 
 from ..ui import compound
 from ..ui import contextmenu
-from ..ui import listitem
 
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy, ViewCacheWithEditStack
+from ..view.listitem import EditableListItemFactoryBase
 
 from . import mixins
 from . import search
