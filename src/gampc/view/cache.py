@@ -53,7 +53,7 @@ class ViewCacheMixin(ViewFilenameMixin):
         await self.cache.ensure_keys(keys)
         if task is not None:
             await task
-        self.splice_values(pos, remove, (self.cache[key] for key in keys))
+        self.item_model.splice_values(pos, remove, (self.cache[key] for key in keys))
 
 
 class ViewCacheWithCopy(ViewCacheMixin, ViewWithCopySortable):

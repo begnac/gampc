@@ -92,7 +92,7 @@ class __unit__(mixins.UnitComponentQueueActionMixin, unit.Unit):
         if condition:
             songs = await (self.ampd.find if find else self.ampd.search)(*condition)
             self.unit_database.update(songs)
-            view.set_values(songs)
+            view.item_model.set_values(songs)
 
     @staticmethod
     def parse(s):

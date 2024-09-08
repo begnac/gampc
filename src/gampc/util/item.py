@@ -19,6 +19,7 @@
 
 
 from gi.repository import GObject
+from gi.repository import Gio
 from gi.repository import Gdk
 
 
@@ -46,6 +47,28 @@ class Item(ItemBase):
 
     def get_key(self):
         return self.value['file']
+
+
+class ItemListStore(Gio.ListStore):
+    def __init__(self, item_type=Item, values=None):
+        super().__init__(item_type=item_type)
+        self.item_type = item_type
+        if values is not None:
+            self.set_values(values)
+
+    def set_values(self, values):
+        self.splice_values(0, None, values)
+
+    def splice_values(self, pos, remove, values):
+        if remove is None:
+            remove = self.get_n_items()
+        values = list(values)
+        n = len(values)
+        new_items = [] if remove >= n else [self.item_type() for i in range(n - remove)]
+        items = self[pos:pos + remove] + new_items
+        for i in range(n):
+            items[i].load(values[i])
+        self[pos:pos + remove] = items[:n]
 
 
 class ItemTransfer(GObject.Object):

@@ -43,8 +43,6 @@ class StreamWidget(ViewWithEditStack):
     transfer_type = ItemStreamTransfer
     extra_transfer_types = (ItemFilenameTransfer, item.ItemStringTransfer)
 
-    edit_stack_splicer = ViewWithEditStack.splice_values
-
     @staticmethod
     def edit_stack_getter(item):
         return item.value
@@ -66,7 +64,6 @@ class StreamWidget(ViewWithEditStack):
         yield from self.generate_url_actions()
 
     def item_edited_cb(self, factory, pos, name, value):
-        print(pos, name, value)
         old = self.item_selection_model[pos].value
         new = dict(old)
         new[name] = value
@@ -92,6 +89,9 @@ class StreamWidget(ViewWithEditStack):
                 if stream[key] is None:
                     stream[key] = ''
         self.set_edit_stack(editstack.EditStack(streams))
+
+    def edit_stack_splicer(self, pos, remove, values):
+        self.item_model.splice_values(pos, remove, values)
 
 
 class StreamDatabase(db.Database):

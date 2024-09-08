@@ -18,6 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
+from gi.repository import Gio
 from gi.repository import GObject
 
 import ampd
@@ -73,11 +75,10 @@ class QueueWidget(ViewWithCopyPasteSong):
     def __init__(self, add_items, remove_ids, **kwargs):
         self.add_items = add_items
         self.remove_ids = remove_ids
-        super().__init__(item_factory=QueueItem, factory_factory=QueueListItemFactory, **kwargs)
+        super().__init__(item_type=QueueItem, factory_factory=QueueListItemFactory, **kwargs)
         self.item_view.add_css_class('queue')
         self.item_view.remove_css_class('song-by-key')
         self.item_view.add_css_class('song-by-Id')
-        item.setup_find_duplicate_items(self.item_model, ['Title'], [self.separator_file])
         self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
 
     def generate_queue_actions(self):
@@ -94,14 +95,13 @@ class QueueWidget(ViewWithCopyPasteSong):
     async def remove_positions(self, positions):
         await self.remove_ids(self.item_selection_model[pos].Id for pos in positions)
 
-    def set_songs(self, songs, position):
-        self.set_values(songs)
+    def set_position(self, position):
         if position is not None:
-            self.scroll_to(position)
+            GLib.idle_add(lambda: self.scroll_to(position))
 
 
 class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentTotalsMixin, mixins.UnitServerMixin, unit.Unit):
-    queue_songs = GObject.Property()
+    queue_position = GObject.Property()
     current_Id = GObject.Property()
 
     TITLE = _("Play Queue")
@@ -115,7 +115,6 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentTotalsMixin, mixins.
 
     def __init__(self, manager):
         super().__init__(manager)
-        self.queue_songs = [], None
         self.cursor_by_profile = {}
         self.set_cursor = False
         self.require('database')
@@ -127,16 +126,19 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentTotalsMixin, mixins.
 
         self.css_provider.load_from_string(self.CSS)
 
+        self.queue_model = item.ItemListStore(QueueItem)
+        item.setup_find_duplicate_items(self.queue_model, ['Title'], [self.unit_database.SEPARATOR_FILE])
+
     def new_widget(self):
-        queue = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, add_items=self.add_items, remove_ids=self.remove_ids)
+        queue = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, add_items=self.add_items, remove_ids=self.remove_ids, model=self.queue_model)
 
         queue.add_to_context_menu(self.generate_priority_actions(queue), 'priority', _("Priority for random mode"), submenu=True)
         queue.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
-        queue.connect_clean(self, 'notify::queue-songs', self.notify_queue_songs_cb, queue)
+        queue.connect_clean(self, 'notify::queue-position', self.notify_queue_position_cb, queue)
         queue.connect_clean(queue.item_selection_model, 'selection-changed', self.selection_changed_cb)
         queue.connect_clean(queue.item_view, 'activate', self.view_activate_cb)
         self.bind_property('current-Id', queue, 'current-Id')
-        queue.set_songs(*self.queue_songs)
+        queue.set_position(self.queue_position)
         queue.totals_store = queue.item_model
 
         return queue
@@ -178,19 +180,20 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentTotalsMixin, mixins.
             while True:
                 songs = await self.ampd.playlistinfo()
                 self.unit_database.update(songs)
+                self.queue_model.set_values(songs)
                 if self.set_cursor:
-                    position = self.cursor_by_profile.get(self.unit_server.server_profile)
+                    self.queue_position = self.cursor_by_profile.get(self.unit_server.server_profile)
+                    self.set_cursor = False
                 else:
-                    position = None
-                self.queue_songs = songs, position
-                self.set_cursor = False
+                    self.queue_position = None
                 await self.ampd.idle(ampd.PLAYLIST)
         finally:
-            self.queue_songs = [], None
+            self.queue_model.remove_all()
+            self.queue_position = None
 
     @staticmethod
-    def notify_queue_songs_cb(self, pspec, queue):
-        queue.set_songs(*self.queue_songs)
+    def notify_queue_position_cb(self, pspec, queue):
+        queue.set_position(self.queue_position)
 
     def selection_changed_cb(self, selection, *args):
         selection = list(misc.get_selection(selection))

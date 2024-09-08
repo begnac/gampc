@@ -39,6 +39,7 @@ from ..util import field
 from ..util import item
 from ..util import misc
 from ..util import unit
+from ..util.logger import logger
 
 from ..ui import compound
 from ..ui import contextmenu
@@ -127,7 +128,7 @@ class TandaWidget(compound.WidgetWithPaned):
     genre_filter = GObject.Property(type=int, default=0)
     current_tandaid = GObject.Property()
 
-    def __init__(self, tandas, config, db, tanda_fields, song_fields, separator_file, cache):
+    def __init__(self, tandas, queue_model, config, db, tanda_fields, song_fields, separator_file, cache):
         self.db = db
         self.separator_file = separator_file
         self.cache = cache
@@ -161,7 +162,7 @@ class TandaWidget(compound.WidgetWithPaned):
 
         super().__init__(self.right_box, config, self.artist_selection, StringListItemFactory())
 
-        self.edit = TandaEdit(self.tanda_artist_filter_model, tanda_fields, song_fields, separator_file=separator_file, cache=cache)
+        self.edit = TandaEdit(self.tanda_artist_filter_model, queue_model, tanda_fields, song_fields, separator_file=separator_file, cache=cache)
         self.view = TandaView(self.tanda_artist_filter_model, song_fields, separator_file=separator_file, cache=cache)
         self.stack.add_titled(self.edit, 'edit', _("Edit tandas"))
         self.stack.add_titled(self.view, 'view', _("View tandas"))
@@ -340,7 +341,7 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
     duplicate_test_columns = ['Title']
 
-    def __init__(self, tandas, tanda_fields, song_fields, *args, cache, **kwargs):
+    def __init__(self, tandas, queue_model, tanda_fields, song_fields, *args, cache, **kwargs):
         super().__init__(*args, **kwargs, orientation=Gtk.Orientation.VERTICAL)
 
         self.tanda_fields = tanda_fields
@@ -351,6 +352,12 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
         self.append(self.song_view)
+
+        self.model_to_flatten = Gio.ListStore()
+        self.model_to_flatten.append(self.song_view.item_model)
+        self.model_to_flatten.append(queue_model)
+        self.queue_and_tanda_model = Gtk.FlattenListModel(model=self.model_to_flatten)
+        item.setup_find_duplicate_items(self.queue_and_tanda_model, ['Title'], [self.separator_file])
 
         self.init_tandaid_view(self.tanda_view)
         self.tanda_view.item_view.add_css_class('tanda-edit')
@@ -583,7 +590,7 @@ class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
     duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
 
     def __init__(self, tandas, *args, **kwargs):
-        super().__init__(*args, **kwargs, item_factory=TandaSongItem)
+        super().__init__(*args, **kwargs, item_type=TandaSongItem)
         self.connect_clean(tandas, 'items-changed', self.tandas_changed)
         self.init_tandaid_view(self)
 
@@ -601,7 +608,7 @@ class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
         await self.cache.ensure_keys(real_keys)
         if task is not None:
             await task
-        self.splice_values(pos, remove, (dict(self.cache[key], tandaid=tandaid) for key, tandaid in keys))
+        self.item_model.splice_values(pos, remove, (dict(self.cache[key], tandaid=tandaid) for key, tandaid in keys))
 
 
 class TandaDatabase(GObject.Object, db.Database):
@@ -863,8 +870,8 @@ for t in range(11):
 
 for p in range(5):
     CSS += f'''
-    columnview.tanda-edit > listview > row > cell.property-{p+1} {{
-      background: rgba({p * 255 // 4},{255/2},{255 - p * 255 // 4},1);
+    columnview.tanda-edit > listview > row > cell.property-{p + 1} {{
+      background: rgba({p * 255 // 4},{255 // 2},{255 - p * 255 // 4},1);
     }}
     '''
 
@@ -912,45 +919,45 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
         self.db = TandaDatabase(self.fields, self.unit_fields.fields, self.name, self.unit_database.cache)
 
-        self.tanda_model = Gio.ListStore()
+        self.tanda_model = item.ItemListStore(TandaItem)
         self.tanda_sorter = Gtk.CustomSorter.new(self.tanda_sort_func)
         self.tanda_sort_model = Gtk.SortListModel(model=self.tanda_model, sorter=self.tanda_sorter)
+        self.queue_model = item.ItemListStore()
 
         self.read_db()
 
-        return
-        self.add_resources(
-            'app.action',
-            resource.ActionModel('tanda-verify', self.db.action_tanda_verify_cb),
-            resource.ActionModel('tanda-cleanup-db', self.db.action_cleanup_db_cb),
-        )
+        # self.add_resources(
+        #     'app.action',
+        #     resource.ActionModel('tanda-verify', self.db.action_tanda_verify_cb),
+        #     resource.ActionModel('tanda-cleanup-db', self.db.action_cleanup_db_cb),
+        # )
 
-        self.add_resources(
-            'app.menu',
-            # resource.MenuAction('edit/component', 'tanda-edit.fill-field', _("Fill tanda field"), ['<Control>z']),
-            # resource.MenuAction('edit/component', 'tanda-edit.reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
-            resource.MenuAction('edit/component', 'tanda-edit.reset', _("Reset tanda"), ['<Control><Shift>r']),
-            resource.MenuAction('edit/component', 'tanda-edit.delete', _("Delete tanda"), ['<Control>Delete']),
-        )
+        # self.add_resources(
+        #     'app.menu',
+        #     # resource.MenuAction('edit/component', 'tanda-edit.fill-field', _("Fill tanda field"), ['<Control>z']),
+        #     # resource.MenuAction('edit/component', 'tanda-edit.reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
+        #     resource.MenuAction('edit/component', 'tanda-edit.reset', _("Reset tanda"), ['<Control><Shift>r']),
+        #     resource.MenuAction('edit/component', 'tanda-edit.delete', _("Delete tanda"), ['<Control>Delete']),
+        # )
 
-        self.add_resources(
-            'songlist.action',
-            resource.ActionModel('tanda-define', self.db.action_tanda_define_cb),
-        )
+        # self.add_resources(
+        #     'songlist.action',
+        #     resource.ActionModel('tanda-define', self.db.action_tanda_define_cb),
+        # )
 
-        self.add_resources(
-            'songlist.context.menu',
-            resource.MenuAction('other', 'songlist.tanda-define', _("Define tanda")),
-        )
+        # self.add_resources(
+        #     'songlist.context.menu',
+        #     resource.MenuAction('other', 'songlist.tanda-define', _("Define tanda")),
+        # )
 
-        self.add_resources(
-            'tanda-edit.left-context.menu',
-            resource.MenuAction('edit', 'tanda-edit.delete', _("Delete tanda")),
-        )
+        # self.add_resources(
+        #     'tanda-edit.left-context.menu',
+        #     resource.MenuAction('edit', 'tanda-edit.delete', _("Delete tanda")),
+        # )
 
-        self.setup_menu('tanda-edit', 'context', ['itemlist', 'fields'])
-        self.setup_menu('tanda-edit', 'left-context', ['itemlist', 'fields'])
-        self.setup_menu('tanda-view', 'context', ['itemlist', 'fields'])
+        # self.setup_menu('tanda-edit', 'context', ['itemlist', 'fields'])
+        # self.setup_menu('tanda-edit', 'left-context', ['itemlist', 'fields'])
+        # self.setup_menu('tanda-view', 'context', ['itemlist', 'fields'])
 
     def cleanup(self):
         del self.db
@@ -958,13 +965,27 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         super().cleanup()
 
     def new_widget(self):
-        tanda = TandaWidget(self.tanda_sort_model, self.config.pane_separator, self.db, self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
+        tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config.pane_separator, self.db, self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
         return tanda
+
+    @ampd.task
+    async def client_connected_cb(self, client):
+        if self.db.song_missing(self.unit_database.SEPARATOR_FILE):
+            songs = await self.ampd.find('file', self.unit_database.SEPARATOR_FILE)
+            if len(songs) == 1:
+                self.unit_database.cache[self.unit_database.SEPARATOR_FILE] = songs[0]
+                self.db.add_song(songs[0])
+        try:
+            while True:
+                self.queue_model.set_values(await self.ampd.playlistinfo())
+                await self.ampd.idle(ampd.PLAYLIST)
+        finally:
+            self.queue_model.remove_all()
 
     def read_db(self):
         if self.unit_database.SEPARATOR_FILE not in self.unit_database.cache:
             self.unit_database.cache[self.unit_database.SEPARATOR_FILE] = self.db.get_song(self.unit_database.SEPARATOR_FILE)
-        self.tanda_model.splice(0, len(self.tanda_model), [TandaItem(value=tanda) for tanda in self.db.get_tandas()])
+        self.tanda_model.set_values(self.db.get_tandas())
 
     @staticmethod
     def tanda_key_func(tanda):
@@ -980,14 +1001,6 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         s1 = self.tanda_key_func(tanda1)
         s2 = self.tanda_key_func(tanda2)
         return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
-
-    @ampd.task
-    async def client_connected_cb(self, client):
-        if self.db.song_missing(self.unit_database.SEPARATOR_FILE):
-            songs = await self.ampd.find('file', self.unit_database.SEPARATOR_FILE)
-            if len(songs) == 1:
-                self.unit_database.cache[self.unit_database.SEPARATOR_FILE] = songs[0]
-                self.db.add_song(songs[0])
 
     @staticmethod
     def get_last_played_weeks(tanda):
