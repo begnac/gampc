@@ -30,20 +30,20 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
     theme_css_provider.load_named('Adwaita', 'dark' if dark else None)
 
     filter_background = 'blue' if dark else 'pink'
-    focus_background = 'green' if dark else 'yellow'
 
     css = ''
 
     css += f'''
     columnview.filter > listview > row {{
-      background: {filter_background};
+      background: blue;
+      color: white;
     }}
     '''
 
-    css += f'''
-    columnview > listview > row > cell:focus-visible {{
-      background: {focus_background};
-    }}
+    css += '''
+    columnview > listview > row > cell:focus-visible {
+      background: green;
+    }
     '''
 
     css += '''
