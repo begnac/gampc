@@ -24,6 +24,7 @@ import ampd
 
 from ..util import action
 from ..util import cache
+from ..util import cleanup
 from ..util import editstack
 from ..util import item
 from ..util import misc
@@ -142,7 +143,7 @@ class ChoosePathDialog(dialog.TextDialogAsync):
         return True
 
 
-class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, unit.Unit):
+class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, unit.Unit):
     TITLE = _("Playlist")
     KEY = '5'
 
@@ -162,6 +163,8 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
         self.require('database')
         self.require('fields')
         self.require('persistent')
+
+        self.css_provider.load_from_string(self.CSS)
 
         self.playlist_cache = cache.AsyncCache(self.playlist_retrieve)
         self.playlists = {}

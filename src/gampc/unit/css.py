@@ -21,7 +21,6 @@
 from gi.repository import Gdk
 from gi.repository import Gtk
 
-from ..util import misc
 from ..util import unit
 
 from ..ui import dnd
@@ -83,7 +82,7 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
 
 PLAYING_CSS = '''
 columnview.song-by-{name} > listview > row > cell.{name}-{value} {{
-  background: rgba(128,128,128,0.1);
+  background: rgba(128,128,128,0.2);
   font-style: italic;
   font-weight: bold;
 }}

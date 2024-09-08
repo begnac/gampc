@@ -140,11 +140,8 @@ class TandaWidget(compound.WidgetWithPaned):
         self.tanda_genre_filter = Gtk.CustomFilter.new(self.tanda_genre_filter_func)
         self.tanda_genre_filter_model = Gtk.FilterListModel(filter=self.tanda_genre_filter)
 
-        self.tanda_sorter = Gtk.CustomSorter.new(self.tanda_sort_func)
-        self.tanda_sort_model = Gtk.SortListModel(model=self.tanda_genre_filter_model, sorter=self.tanda_sorter)
-
         self.tanda_artist_filter = Gtk.CustomFilter.new(self.tanda_artist_filter_func)
-        self.tanda_artist_filter_model = Gtk.FilterListModel(model=self.tanda_sort_model, filter=self.tanda_artist_filter)
+        self.tanda_artist_filter_model = Gtk.FilterListModel(model=self.tanda_genre_filter_model, filter=self.tanda_artist_filter)
 
         self.button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         for i, genre in enumerate(self.GENRES):
@@ -181,7 +178,7 @@ class TandaWidget(compound.WidgetWithPaned):
         # self.connect_clean(self.db, 'changed', self.db_changed_cb)
         # self.connect_clean(self.db, 'verify-progress', self.db_verify_progress_cb)
         # self.connect_clean(self.db, 'missing-song', self.db_missing_song_cb)
-        # self.connect_clean(self.problem_button, 'toggled', lambda *args: self.filter_tandas(False))
+        self.connect_clean(self.problem_button, 'toggled', lambda *args: self.tanda_genre_filter.changed(Gtk.FilterChange.DIFFERENT))
 
         self.tanda_genre_filter_model.set_model(tandas)
 
@@ -190,7 +187,6 @@ class TandaWidget(compound.WidgetWithPaned):
 
     def cleanup(self):
         self.tanda_genre_filter.set_filter_func(None)
-        self.tanda_sorter.set_sort_func(None)
         self.tanda_artist_filter.set_filter_func(None)
         super().cleanup()
 
@@ -212,22 +208,6 @@ class TandaWidget(compound.WidgetWithPaned):
             return self.GENRES[i] in genre
 
         return test(self.genre_filter) if self.genre_filter < self.GENRE_OTHER else not any(test(i) for i in range(self.GENRE_OTHER))
-
-    @staticmethod
-    def tanda_key_func(tanda):
-        return (
-            tanda.get_field('Artist'),
-            99 if tanda.get_field('Genre') is None else 1 if 'Tango' in tanda.get_field('Genre') else 2 if 'Vals' in tanda.get_field('Genre') else 3 if 'Milonga' in tanda.get_field('Genre') else 4,
-            tanda.get_field('Years', ''),
-            tanda.get_field('Performer', ''),
-            tanda.get_field('First_Song', ''),
-        )
-
-    @staticmethod
-    def tanda_sort_func(tanda1, tanda2, data):
-        s1 = TandaWidget.tanda_key_func(tanda1)
-        s2 = TandaWidget.tanda_key_func(tanda2)
-        return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
     def tanda_genre_filtered_changed(self, m, p, r, a):
         artists = sorted(set(tanda.get_field('Artist', '') for tanda in self.tanda_genre_filter_model))
@@ -339,7 +319,7 @@ class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
 
     def init_tandaid_view(self, view):
         self.connect('map', self.map_cb, view)
-        self.connect_clean(view.item_selection_filter_model, 'items-changed', self.tandaid_selection_changed_cb)
+        view.item_selection_filter_model.connect('items-changed', self.tandaid_selection_changed_cb)
 
     @staticmethod
     def map_cb(self, view):
@@ -367,12 +347,15 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
         self.tanda_view = ViewWithContextMenu(tanda_fields, model=tandas, sortable=True, factory_factory=TandaListItemFactory, selection_model=Gtk.SingleSelection)
         self.song_view = ViewCacheWithEditStack(song_fields, cache=cache)
+        self.song_view.scrolled_item_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
         self.append(self.song_view)
 
         self.init_tandaid_view(self.tanda_view)
         self.tanda_view.item_view.add_css_class('tanda-edit')
+
+        self.tanda_view.item_selection_filter_model.connect('items-changed', self.tanda_selection_changed_cb)
 
     #     self.current_tanda = None
     #     self.current_tanda_pos = None
@@ -394,7 +377,6 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
     #     #     col.renderer.set_property('editable', True)
     #     #     col.renderer.connect('editing-started', self.renderer_editing_started_cb, name)
     #     self.tanda_store = self.tanda_view.record_store
-    #     self.signal_handler_connect(self.tanda_view.record_selection, 'selection-changed', self.tanda_selection_changed_cb)
 
     #     # Ugly hack but works
     #     self.itemlist_actions.remove('filter')
@@ -402,23 +384,6 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
     #     self.view.set_vexpand(False)
     #     self.view.scrolled_record_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
-
-    #     self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    #     self.box.append(self.tanda_view)
-    #     self.box.append(self.widget)
-
-    #     self.widget = self.box
-
-    # def cleanup(self):
-    #     self.tanda_view.cleanup()
-    #     super().cleanup()
-
-    # @ampd.task
-    # async def client_connected_cb(self, client):
-    #     while True:
-    #         self.duplicate_extra_records = list(map(record.Record, await self.ampd.playlistinfo()))
-    #         self.mark_duplicates()
-    #         await self.ampd.idle(ampd.PLAYLIST)
 
     # def set_tandas(self, tandas):
     #     self.tanda_store[:] = tandas
@@ -430,19 +395,14 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
     #     for record_ in self.tanda_view.record_store:
     #         record_.emit('changed')
 
-    # def tanda_selection_changed_cb(self, *args):
-    #     selection = self.tanda_view.get_selection()
-    #     self.current_tanda_pos = selection[0] if len(selection) == 1 else None
-    #     self.set_current_tanda()
-
-    # def set_current_tanda(self):
-    #     if self.current_tanda_pos is None:
-    #         self.current_tanda = None
-    #         self.set_edit_stack(None)
-    #     else:
-    #         self.current_tanda = self.tanda_store[self.current_tanda_pos]
-    #         self.set_edit_stack(self.current_tanda._edit_stack)
-    #     self.edit_stack_changed()
+    def tanda_selection_changed_cb(self, model, p, r, a):
+        if model:
+            self.current_tanda = model[0]
+            self.song_view.set_edit_stack(self.current_tanda.songs)
+        else:
+            self.current_tanda = None
+            self.song_view.set_edit_stack(None)
+        self.song_view.edit_stack_changed()
 
     # def get_filenames(self, selection):
     #     if selection:
@@ -632,9 +592,7 @@ class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
         for tanda in tandas:
             tandaid = tanda.tandaid
             for song in tanda.songs.items:
-                filenames.append((song['file'], tandaid))
-                if song['file'] not in self.cache:
-                    self.cache[song['file']] = song
+                filenames.append((song, tandaid))
             filenames.append((self.separator_file, tandaid))
         self.set_keys(filenames)
 
@@ -655,15 +613,17 @@ class TandaDatabase(GObject.Object, db.Database):
 
     MISSING_SONG_FIELDS = 'Artist', 'Title', 'Date', 'Performer'
 
-    def __init__(self, tanda_fields, song_fields, name):
+    def __init__(self, tanda_fields, song_fields, name, cache):
         self.tanda_fields = tanda_fields
-        self.tanda_field_names = ','.join(self.tanda_fields.basic_names)
+        self.tanda_field_names = ','.join(map(lambda name: f'tandas.{name}', self.tanda_fields.basic_names))
         self.song_fields = song_fields
-        self.song_field_names = ','.join(self.song_fields.basic_names)
+        self.song_field_names = ','.join(map(lambda name: f'songs.{name}', self.song_fields.basic_names))
 
         db.Database.__init__(self, name)
         super().__init__()
         # self.ampd = unit.ampd.sub_executor()
+
+        self.cache = cache
 
     def setup_database(self, suffix=''):
         self.setup_table(f'tandas{suffix}', 'tandaid INTEGER PRIMARY KEY', self.tanda_fields.basic_names)
@@ -750,12 +710,17 @@ class TandaDatabase(GObject.Object, db.Database):
 
     def _get_tanda_from_tuple(self, t):
         tanda = self._tuple_to_dict(t, ['tandaid'] + self.tanda_fields.basic_names)
-        query = self.connection.cursor().execute('SELECT {} FROM tanda_songs,songs USING(file) WHERE tanda_songs.tandaid=?'.format(', songs.'.join(['tanda_songs.position'] + self.song_fields.basic_names)), (tanda['tandaid'],))
-        tanda['_songs'] = songs = []
+        query = self.connection.cursor().execute(f'SELECT {self.song_field_names} FROM tanda_songs,songs USING(file) WHERE tanda_songs.tandaid=? ORDER BY tanda_songs.position', (tanda['tandaid'],))
+        tanda['_songs'] = []
+        songs = []
         for s in query:
-            song = self._tuple_to_dict(s, ['_position'] + self.song_fields.basic_names)
+            song = self._tuple_to_dict(s, self.song_fields.basic_names)
+            filename = song['file']
+            songs.append(filename)
             self.song_fields.set_derived_fields(song)
-            songs.append(song)
+            tanda['_songs'].append(song)
+            if filename not in self.cache:
+                self.cache[song['file']] = song
         self.tanda_fields.set_derived_fields(tanda)
         tanda['songs'] = editstack.EditStack(songs)
         return tanda
@@ -945,8 +910,12 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         self.fields.register_field(field.Field('n_songs', _("Number of songs"), min_width=30, get_value=self.get_n_songs))
         self.fields.register_field(field.Field('Duration', _("Duration"), get_value=lambda tanda: misc.format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
 
-        self.db = TandaDatabase(self.fields, self.unit_fields.fields, self.name)
-        self.tandas = Gio.ListStore()
+        self.db = TandaDatabase(self.fields, self.unit_fields.fields, self.name, self.unit_database.cache)
+
+        self.tanda_model = Gio.ListStore()
+        self.tanda_sorter = Gtk.CustomSorter.new(self.tanda_sort_func)
+        self.tanda_sort_model = Gtk.SortListModel(model=self.tanda_model, sorter=self.tanda_sorter)
+
         self.read_db()
 
         return
@@ -985,16 +954,32 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
     def cleanup(self):
         del self.db
+        self.tanda_sorter.set_sort_func(None)
         super().cleanup()
 
     def new_widget(self):
-        tanda = TandaWidget(self.tandas, self.config.pane_separator, self.db, self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
+        tanda = TandaWidget(self.tanda_sort_model, self.config.pane_separator, self.db, self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
         return tanda
 
     def read_db(self):
         if self.unit_database.SEPARATOR_FILE not in self.unit_database.cache:
             self.unit_database.cache[self.unit_database.SEPARATOR_FILE] = self.db.get_song(self.unit_database.SEPARATOR_FILE)
-        self.tandas.splice(0, len(self.tandas), [TandaItem(value=tanda) for tanda in self.db.get_tandas()])
+        self.tanda_model.splice(0, len(self.tanda_model), [TandaItem(value=tanda) for tanda in self.db.get_tandas()])
+
+    @staticmethod
+    def tanda_key_func(tanda):
+        return (
+            tanda.get_field('Artist'),
+            99 if tanda.get_field('Genre') is None else 1 if 'Tango' in tanda.get_field('Genre') else 2 if 'Vals' in tanda.get_field('Genre') else 3 if 'Milonga' in tanda.get_field('Genre') else 4,
+            tanda.get_field('Years', ''),
+            tanda.get_field('Performer', ''),
+            tanda.get_field('First_Song', ''),
+        )
+
+    def tanda_sort_func(self, tanda1, tanda2, data):
+        s1 = self.tanda_key_func(tanda1)
+        s2 = self.tanda_key_func(tanda2)
+        return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
     @ampd.task
     async def client_connected_cb(self, client):
