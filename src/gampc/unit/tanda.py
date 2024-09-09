@@ -233,90 +233,9 @@ class TandaWidget(compound.WidgetWithPaned):
     def tanda_artist_filter_func(self, tanda):
         return tanda.get_field('Artist') in self.selected_artists
 
-
-
-
-
     def action_subwidget_next_cb(self, action, param):
         self.subwidget_index = (self.subwidget_index + 1) % len(self.subwidgets)
         self.stack.set_visible_child(self.subwidgets[self.subwidget_index])
-
-
-
-    # def db_changed_cb(self, db, tandaid):
-    #     if tandaid == -1:
-    #         return self.read_db()
-
-    #     for tanda in self.tandas:
-    #         if tanda.get_field('tandaid') == tandaid:
-    #             if not self.unit.db.reread_tanda(tanda):
-    #                 self.tandas.remove(tanda)
-    #             break
-    #     else:
-    #         tanda = self.unit.db.get_tanda(tandaid)
-    #         if tanda:
-    #             self.tandas.append(tanda)
-    #     self.filter_tandas()
-
-    # def db_verify_progress_cb(self, db, progress):
-    #     if progress < 1:
-    #         self.status = _("verifying tandas: {progress}%").format(progress=int(progress * 100))
-    #     else:
-    #         self.status = None
-
-    # def db_missing_song_cb(self, db, song_file, *fields):
-    #     search_window = Gtk.Window(destroy_with_parent=True, transient_for=self.widget.get_root(), window_position=Gtk.WindowPosition.CENTER_ON_PARENT,
-    #                                default_width=500, default_height=500,
-    #                                title=_("Replace {}").format(' / '.join(fields)))
-    #     search_window.update_title = lambda *args: None
-    #     search_component = search.Search(self.unit)
-    #     search_component.entry.set_text(' '.join('{}="{}"'.format(field, fields[i]) for i, field in enumerate(db.MISSING_SONG_FIELDS)))
-    #     button_box = Gtk.ButtonBox(layout_style=Gtk.ButtonBoxStyle.CENTER)
-    #     cancel_button = Gtk.Button(label=_("_Cancel"), use_underline=True)
-    #     cancel_button.connect('clicked', lambda button: button.get_root().destroy())
-    #     button_box.add(cancel_button)
-    #     ok_button = Gtk.Button(label=_("_OK"), use_underline=True)
-    #     ok_button.connect('clicked', self.db_missing_song_ok_cb, db, search_component, song_file)
-    #     button_box.add(ok_button)
-    #     search_component.widget.add(button_box)
-    #     search_window.add(search_component.widget)
-    #     search_window.present()
-
-    # @staticmethod
-    # def db_missing_song_ok_cb(button, db, search_component, song_file):
-    #     path, focus = search_component.view.get_cursor()
-    #     if path:
-    #         i = search_component.store.get_iter(path)
-    #         song = search_component.store.get_record(i).get_data()
-    #         db.replace_song(song_file, song)
-    #         db.emit('changed', -1)
-    #         search_component.widget.get_root().destroy()
-
-# class Tanda(component.Component):
-#     def __init__(self, unit):
-#         super().__init__(unit)
-#         self.widget = TandaWidget(self.config.pane_separator, unit.db, unit.unit_fields.fields, unit.unit_database.SEPARATOR_FILE, cache=unit.unit_database.cache)
-
-#     def cleanup(self):
-#         self.change_subwidget_actions(False)
-#         self.edit.cleanup()
-#         self.view.cleanup()
-#         super().cleanup()
-
-#     @staticmethod
-#     def get_left_factory():
-#         return StringListItemFactory()
-
-#     def change_subwidget_actions(self, add):
-#         for group_name in self.subwidget_actions_names:
-#             subwidget_actions = self.subwidgets[self.subwidget_index].actions_dict[group_name]
-#             actions = self.actions_dict[group_name]
-#             for name in subwidget_actions.list_actions():
-#                 if add:
-#                     actions.add_action(subwidget_actions.lookup_action(name))
-#                 else:
-#                     actions.remove_action(name)
-
 
 
 class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
@@ -369,43 +288,10 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
         self.connect_clean(self.tanda_view.item_selection_filter_model, 'items-changed', self.tanda_selection_changed_cb)
 
-    #     self.current_tanda = None
-    #     self.current_tanda_pos = None
-
     #     self.actions.add_action(resource.Action('delete', self.action_tanda_delete_cb))
     #     self.actions.add_action(resource.Action('reset', self.action_tanda_reset_cb))
     #     self.actions.add_action(resource.Action('reset-field', self.action_tanda_field_cb))
     #     self.actions.add_action(resource.Action('fill-field', self.action_tanda_field_cb))
-
-    #     self.tanda_view = view.View(self.unit.db.fields, True, unit.unit_misc)
-    #     self.tanda_view.record_view.add_css_class('tanda-edit')
-    #     self.tanda_view.bind_hooks.append(self.tanda_bind_hook)
-
-    #     # self.tanda_view.connect('button-press-event', self.tanda_view_button_press_event_cb)
-    #     self.setup_context_menu(f'{self.name}.left-context', self.tanda_view)
-
-    #     # for name in self.unit.db.fields.basic_names:
-    #     #     col = self.tanda_view.cols[name]
-    #     #     col.renderer.set_property('editable', True)
-    #     #     col.renderer.connect('editing-started', self.renderer_editing_started_cb, name)
-    #     self.tanda_store = self.tanda_view.record_store
-
-    #     # Ugly hack but works
-    #     self.itemlist_actions.remove('filter')
-    #     self.itemlist_actions.add_action(Gio.PropertyAction(name='filter', object=self.tanda_view, property_name='filtering'))
-
-    #     self.view.set_vexpand(False)
-    #     self.view.scrolled_record_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
-
-    # def set_tandas(self, tandas):
-    #     self.tanda_store[:] = tandas
-    #     for tanda in self.tanda_store:
-    #         tanda._tandaid = tanda.tandaid
-    #     self.current_tanda = None
-    #     self.tanda_selection_changed_cb()
-    #     # XXXXXXXXXXXXXXXXXXXX CHECK
-    #     for record_ in self.tanda_view.record_store:
-    #         record_.emit('changed')
 
     def tanda_selection_changed_cb(self, model, p, r, a):
         if model:
@@ -415,23 +301,6 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
             self.current_tanda = None
             self.song_view.set_edit_stack(None)
         self.song_view.edit_stack_changed()
-
-    # def tanda_bind_hook(self, label, tanda):
-    #     if tanda[name] is None:
-    #         return
-    #     cell = label.get_parent()
-    #     if 'Last_Played' in name:
-    #         t = min(tanda.Last_Played_Weeks, 10)
-    #         cell.add_css_class(f'last-played-{t}')
-    #     elif name in ('Rhythm', 'Energy', 'Speed', 'Level'):
-    #         cell.add_css_class(f'property-{tanda[name]}')
-    #     elif name == 'Emotion':
-    #         cell.add_css_class(f'emotion-{tanda[name]}')
-    #     elif name in ('Genre',):
-    #         cell.add_css_class(f'genre-{tanda[name].lower()}')
-
-    # def edit_stack_changed(self):
-    #     super().edit_stack_changed()
 
     # def set_modified(self, modified=True):
     #     self.current_tanda._modified = modified
@@ -495,7 +364,7 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
     #     reply = dialog.run()
     #     dialog.destroy()
     #     if reply == Gtk.ResponseType.OK:
-    #         self.unit.db.delete_tanda(tanda.tandaid)
+    #         self.unit.db.delete_tanda(pos)
 
     # def action_save_cb(self, action, parameter):
     #     if self.current_tanda:
@@ -611,24 +480,25 @@ class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
 
 class TandaDatabase(GObject.Object, db.Database):
     __gsignals__ = {
-        'changed': (GObject.SIGNAL_RUN_LAST, None, (int,)),
         'verify-progress': (GObject.SIGNAL_RUN_LAST, None, (float,)),
         'missing-song': (GObject.SIGNAL_RUN_LAST, None, (str, str, str, str, str)),
     }
 
     MISSING_SONG_FIELDS = 'Artist', 'Title', 'Date', 'Performer'
 
-    def __init__(self, tanda_fields, song_fields, name, cache):
+    def __init__(self, tanda_model, tanda_fields, song_fields, name, cache):
+        self.tanda_model = tanda_model
         self.tanda_fields = tanda_fields
-        self.tanda_field_names = ','.join(map(lambda name: f'tandas.{name}', self.tanda_fields.basic_names))
         self.song_fields = song_fields
+        self.cache = cache
+
+        self.tanda_field_names = ','.join(map(lambda name: f'tandas.{name}', self.tanda_fields.basic_names))
         self.song_field_names = ','.join(map(lambda name: f'songs.{name}', self.song_fields.basic_names))
 
         db.Database.__init__(self, name)
         super().__init__()
-        # self.ampd = unit.ampd.sub_executor()
 
-        self.cache = cache
+        self.load()
 
     def setup_database(self, suffix=''):
         self.setup_table(f'tandas{suffix}', 'tandaid INTEGER PRIMARY KEY', self.tanda_fields.basic_names)
@@ -695,9 +565,9 @@ class TandaDatabase(GObject.Object, db.Database):
                     del tanda_songs[position]
             cursor.executemany('DELETE FROM tanda_songs WHERE tandaid=? AND position=?', ((tandaid, position) for position in tanda_songs.keys()))
 
-    def get_tandas(self):
+    def load(self):
         query = self.connection.cursor().execute('SELECT tandaid,{} FROM tandas'.format(','.join(self.tanda_fields.basic_names)))
-        return map(self._get_tanda_from_tuple, query)
+        self.tanda_model.set_values(map(self._get_tanda_from_tuple, query))
 
     def get_tanda(self, tandaid):
         t = self.connection.cursor().execute('SELECT tandaid, {} FROM tandas WHERE tandaid=?'.format(','.join(self.tanda_fields.basic_names)), (tandaid,)).fetchone()
@@ -732,12 +602,13 @@ class TandaDatabase(GObject.Object, db.Database):
             tandaid = tanda['tandaid']
             self.connection.cursor().execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(self._make_value_list(self.tanda_fields.basic_names, list(tanda.keys()), exclude='tandaid')), tanda)
             self.set_tanda_songs(tandaid, tanda['_songs'])
-        self.emit('changed', tandaid)
 
-    def delete_tanda(self, tandaid):
+    def delete_tanda(self, tanda):
+        found, pos = self.tanda_model.find(tanda)
+        assert found
         with self.connection:
-            self.connection.cursor().execute('DELETE FROM tanda_songs WHERE tandaid=?; DELETE FROM tandas WHERE tandaid=?', (tandaid, tandaid))
-        self.emit('changed', tandaid)
+            self.connection.cursor().execute('DELETE FROM tanda_songs WHERE tandaid=?; DELETE FROM tandas WHERE tandaid=?', (tanda.tandaid, tanda.tandaid))
+        self.tanda_model.remove(pos)
 
     @staticmethod
     def tanda_from_songs(songs):
@@ -778,7 +649,7 @@ class TandaDatabase(GObject.Object, db.Database):
             tanda['tandaid'] = tandaid = self.connection.last_insert_rowid()
             self.connection.cursor().execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(self._make_value_list(self.tanda_fields.basic_names, list(tanda.keys()), exclude='tandaid')), tanda)
             self.set_tanda_songs(tandaid, songs)
-        self.emit('changed', tandaid)
+        self.tanda_model.append(tanda)
 
     @ampd.task
     async def action_tanda_verify_cb(self, action, param):
@@ -805,7 +676,7 @@ class TandaDatabase(GObject.Object, db.Database):
             nsongs = len(used_songs)
             await asyncio.wait([self.verify_song(song, nsongs, done, updated, replaced, problem) for song in used_songs])
             logger.info(_("Tanda database checked: {unused} songs unused, {updated} updated, {replaced} replaced, {problem} problematic").format(unused=len(unused), updated=len(updated), replaced=len(replaced), problem=len(problem)))
-            self.emit('changed', -1)
+            self.load()
 
     @ampd.task
     async def verify_song(self, song, total, done, updated, replaced, problem):
@@ -912,16 +783,16 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         self.fields.register_field(field.Field('n_songs', _("Number of songs"), min_width=30, get_value=self.get_n_songs))
         self.fields.register_field(field.Field('Duration', _("Duration"), get_value=lambda tanda: misc.format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
 
-        self.db = TandaDatabase(self.fields, self.unit_fields.fields, self.name, self.unit_database.cache)
-
         self.tanda_model = item.ItemListStore(TandaItem)
         self.tanda_sorter = Gtk.CustomSorter.new(self.tanda_sort_func)
         self.tanda_sort_model = Gtk.SortListModel(model=self.tanda_model, sorter=self.tanda_sorter)
         self.queue_model = item.ItemListStore()
 
-        self.read_db()
+        self.db = TandaDatabase(self.tanda_model, self.fields, self.unit_fields.fields, self.name, self.unit_database.cache)
+        self.update_cache_full(None)
 
-        self.connect_clean(self.unit_database, 'cleared', self.cache_cleared_cb)
+        self.connect_clean(self.unit_database, 'cleared', self.update_cache_full)
+        self.connect_clean(self.tanda_model, 'items-changed', self.update_cache_partial)
 
         # self.add_resources(
         #     'app.action',
@@ -973,11 +844,44 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         tanda.view.add_to_context_menu(self.generate_queue_actions(tanda.view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         tanda.connect_clean(tanda.view.item_view, 'activate', self.view_activate_cb)
 
-        # self.connect_clean(self.db, 'changed', self.db_changed_cb)
         # self.connect_clean(self.db, 'verify-progress', self.db_verify_progress_cb)
         # self.connect_clean(self.db, 'missing-song', self.db_missing_song_cb)
 
         return tanda
+
+    # def db_verify_progress_cb(self, db, progress):
+    #     if progress < 1:
+    #         self.status = _("verifying tandas: {progress}%").format(progress=int(progress * 100))
+    #     else:
+    #         self.status = None
+
+    # def db_missing_song_cb(self, db, song_file, *fields):
+    #     search_window = Gtk.Window(destroy_with_parent=True, transient_for=self.widget.get_root(), window_position=Gtk.WindowPosition.CENTER_ON_PARENT,
+    #                                default_width=500, default_height=500,
+    #                                title=_("Replace {}").format(' / '.join(fields)))
+    #     search_window.update_title = lambda *args: None
+    #     search_component = search.Search(self.unit)
+    #     search_component.entry.set_text(' '.join('{}="{}"'.format(field, fields[i]) for i, field in enumerate(db.MISSING_SONG_FIELDS)))
+    #     button_box = Gtk.ButtonBox(layout_style=Gtk.ButtonBoxStyle.CENTER)
+    #     cancel_button = Gtk.Button(label=_("_Cancel"), use_underline=True)
+    #     cancel_button.connect('clicked', lambda button: button.get_root().destroy())
+    #     button_box.add(cancel_button)
+    #     ok_button = Gtk.Button(label=_("_OK"), use_underline=True)
+    #     ok_button.connect('clicked', self.db_missing_song_ok_cb, db, search_component, song_file)
+    #     button_box.add(ok_button)
+    #     search_component.widget.add(button_box)
+    #     search_window.add(search_component.widget)
+    #     search_window.present()
+
+    # @staticmethod
+    # def db_missing_song_ok_cb(button, db, search_component, song_file):
+    #     path, focus = search_component.view.get_cursor()
+    #     if path:
+    #         i = search_component.store.get_iter(path)
+    #         song = search_component.store.get_record(i).get_data()
+    #         db.replace_song(song_file, song)
+    #         db.emit('changed', -1)
+    #         search_component.widget.get_root().destroy()
 
     @ampd.task
     async def client_connected_cb(self, client):
@@ -997,13 +901,13 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         self.tanda_model.set_values(self.db.get_tandas())
         self.update_cache()
 
-    def cache_cleared_cb(self, unit):
-        self.update_cache()
-
-    def update_cache(self):
+    def update_cache_full(self, unit):
         if self.unit_database.SEPARATOR_FILE not in self.unit_database.cache:
             self.unit_database.cache[self.unit_database.SEPARATOR_FILE] = self.db.get_song(self.unit_database.SEPARATOR_FILE)
         self.unit_database.update(song for tanda in self.tanda_model for song in tanda.get_field('_songs'))
+
+    def update_cache_partial(self, model, p, r, a):
+        self.unit_database.update(song for tanda in self.tanda_model[p:p + a] for song in tanda.get_field('_songs'))
 
     @staticmethod
     def tanda_key_func(tanda):
