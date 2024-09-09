@@ -81,16 +81,6 @@ def add_unique_css_class(widget, prefix, suffix):
         widget.add_css_class(f'{prefix}-{suffix}')
 
 
-def generator_set_attribute(name, value):
-    def decorator(gen):
-        def generator(*args, **kwargs):
-            for obj in gen(*args, **kwargs):
-                setattr(obj, name, value)
-                yield obj
-        return generator
-    return decorator
-
-
 @decorator.decorator
 def create_task(coro, *args, **kwargs):
     return asyncio.create_task(coro(*args, **kwargs), name=coro.__name__)
@@ -100,3 +90,29 @@ def prepend_mixin(mixin, extra={}):
     def prepender(cls):
         return type(cls.__name__, (mixin, cls,), extra)
     return prepender
+
+
+def remove_control_move_shortcuts(widget):
+    if widget is None:   # Very odd but can happen.  Gtk bug?
+        return
+    for controller in list(widget.observe_controllers()):
+        if isinstance(controller, Gtk.ShortcutController):
+            new_controller = Gtk.ShortcutController()
+            changed = False
+            for shortcut in controller:
+                trigger = shortcut.get_trigger()
+                if isinstance(trigger, Gtk.KeyvalTrigger) and \
+                   trigger.get_modifiers() & Gdk.ModifierType.CONTROL_MASK and \
+                   trigger.get_keyval() in (Gdk.KEY_Up, Gdk.KEY_Down, Gdk.KEY_Left, Gdk.KEY_Right, Gdk.KEY_Tab):
+                    changed = True
+                else:
+                    new_controller.add_shortcut(shortcut)
+            if changed:
+                widget.remove_controller(controller)
+                widget.add_controller(new_controller)
+
+
+def remove_control_move_shortcuts_below(widget):
+    remove_control_move_shortcuts(widget)
+    for child in widget:
+        remove_control_move_shortcuts_below(child)

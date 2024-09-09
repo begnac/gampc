@@ -89,6 +89,7 @@ class ScrolledListView(Gtk.ScrolledWindow):
         self.view = Gtk.ListView(**kwargs)
         self.view_search = listviewsearch.ListViewSearch(self.view, lambda text, row: text.lower() in row.get_item().name.lower())
         super().__init__(child=self.view)
+        misc.remove_control_move_shortcuts_below(self)
 
 
 class WidgetWithPaned(contextmenu.ContextMenuMixin, cleanup.CleanupSignalMixin, Gtk.Paned):

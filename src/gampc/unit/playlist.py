@@ -208,8 +208,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         playlist.add_to_context_menu(self.generate_left_actions(playlist), 'playlist-global', self.TITLE)
         view.add_to_context_menu(self.generate_actions(playlist), 'playlist-local', self.TITLE, below='edit-stack')
 
-        playlist.add_to_context_menu(self.generate_global_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
-        view.add_to_context_menu(self.generate_local_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
+        view.add_to_context_menu(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        playlist.add_to_context_menu(self.generate_queue_actions(view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
 
         playlist.connect_clean(view.item_view, 'activate', self.view_activate_cb)
 

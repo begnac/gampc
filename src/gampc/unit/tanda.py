@@ -44,7 +44,6 @@ from ..util.logger import logger
 from ..ui import compound
 from ..ui import contextmenu
 
-from ..view.base import remove_control_move_shortcuts_below
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy, ViewCacheWithEditStack
 from ..view.listitem import EditableListItemFactoryBase
@@ -183,7 +182,7 @@ class TandaWidget(compound.WidgetWithPaned):
 
         self.tanda_genre_filter_model.set_model(tandas)
 
-        remove_control_move_shortcuts_below(self)
+        misc.remove_control_move_shortcuts_below(self)
         self.add_to_context_menu(self.generate_actions(), 'tanda', _("Tanda Editor"))
 
     def cleanup(self):
@@ -966,6 +965,9 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
     def new_widget(self):
         tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config.pane_separator, self.db, self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
+
+        tanda.edit.song_view.add_to_context_menu(self.generate_queue_actions(tanda.edit.song_view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        tanda.connect_clean(tanda.edit.song_view.item_view, 'activate', self.view_activate_cb)
         return tanda
 
     @ampd.task

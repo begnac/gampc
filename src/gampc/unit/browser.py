@@ -74,8 +74,8 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
         browser = BrowserWidget(self.unit_fields.fields, self.unit_database.cache, self.config.pane_separator, self.root.model)
         view = browser.main
 
-        browser.add_to_context_menu(self.generate_global_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
-        view.add_to_context_menu(self.generate_local_queue_actions(view), 'global-queue', self.TITLE, protect=self.unit_persistent.protect)
+        view.add_to_context_menu(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        browser.add_to_context_menu(self.generate_queue_actions(view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         browser.connect_clean(view.item_view, 'activate', self.view_activate_cb)
 
         return browser

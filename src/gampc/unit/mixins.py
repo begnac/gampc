@@ -123,14 +123,10 @@ class UnitComponentQueueActionMixin(UnitComponentMixin, UnitServerMixin):
             item_id = await self.ampd.addid(filename)
         await self.ampd.playid(item_id)
 
-    def generate_global_queue_actions(self, view):
-        yield action.ActionInfo('queue-add-high-priority', self.action_queue_add_cb, _("Add to play queue with high priority"), arg=False, arg_format='b', activate_args=(view,))
-        yield action.ActionInfo('queue-add', self.action_queue_add_cb, _("Add to play queue"), arg=False, arg_format='b', activate_args=(view,))
-        yield action.ActionInfo('queue-replace', self.action_queue_add_cb, _("Replace play queue"), arg=False, arg_format='b', dangerous=True, activate_args=(view,))
-
-    def generate_local_queue_actions(self, view):
-        for action_ in self.generate_global_queue_actions(view):
-            yield action_.derive(action_.label, arg=True)
+    def generate_queue_actions(self, view, selection=True):
+        yield action.ActionInfo('queue-add-high-priority', self.action_queue_add_cb, _("Add to play queue with high priority"), arg=selection, arg_format='b', activate_args=(view,))
+        yield action.ActionInfo('queue-add', self.action_queue_add_cb, _("Add to play queue"), arg=selection, arg_format='b', activate_args=(view,))
+        yield action.ActionInfo('queue-replace', self.action_queue_add_cb, _("Replace play queue"), arg=selection, arg_format='b', dangerous=True, activate_args=(view,))
 
     @ampd.task
     async def action_queue_add_cb(self, action, parameter, view):
