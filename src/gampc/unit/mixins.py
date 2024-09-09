@@ -19,7 +19,6 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gdk
 from gi.repository import Gtk
 
 import ampd
@@ -108,9 +107,6 @@ class UnitComponentTotalsMixin(UnitComponentMixin):
 
 
 class UnitComponentQueueActionMixin(UnitComponentMixin, UnitServerMixin):
-    def __init__(self, manager):
-        super().__init__(manager)
-
     @ampd.task
     async def view_activate_cb(self, item_view, position):
         if self.unit_persistent.protect_active:
@@ -123,9 +119,12 @@ class UnitComponentQueueActionMixin(UnitComponentMixin, UnitServerMixin):
             item_id = await self.ampd.addid(filename)
         await self.ampd.playid(item_id)
 
+    def generate_queue_add_action(self, view, selection=True):
+        yield action.ActionInfo('queue-add', self.action_queue_add_cb, _("Add to play queue"), arg=selection, arg_format='b', activate_args=(view,))
+
     def generate_queue_actions(self, view, selection=True):
         yield action.ActionInfo('queue-add-high-priority', self.action_queue_add_cb, _("Add to play queue with high priority"), arg=selection, arg_format='b', activate_args=(view,))
-        yield action.ActionInfo('queue-add', self.action_queue_add_cb, _("Add to play queue"), arg=selection, arg_format='b', activate_args=(view,))
+        yield from self.generate_queue_add_action(view, selection)
         yield action.ActionInfo('queue-replace', self.action_queue_add_cb, _("Replace play queue"), arg=selection, arg_format='b', dangerous=True, activate_args=(view,))
 
     @ampd.task
@@ -139,3 +138,8 @@ class UnitComponentQueueActionMixin(UnitComponentMixin, UnitServerMixin):
             await self.ampd.play()
         if '-high-priority' in action.get_name():
             await self.ampd.prioid(255, *Ids)
+
+
+class UnitComponentPlaylistActionMixin(UnitComponentMixin):
+    def generate_playlist_actions(self, view, selection=True):
+        yield action.ActionInfo('playlist-saveas', self.manager.get_unit('playlist').action_playlist_saveas_cb, _("Save as playlist"), arg=selection, arg_format='b', activate_args=(view,))

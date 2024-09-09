@@ -170,32 +170,6 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         self.playlists = {}
         self.root = treelist.TreeNode(kind=NODE_FOLDER, parent_model=None, fill_sub_nodes_cb=lambda node: self.fill_sub_nodes_cb(node), fill_contents_cb=self.fill_contents_cb)
 
-        # self.add_resources(
-        #     'app.menu',
-        #     util.resource.MenuAction('edit/component', 'songlist.playlist-saveas(false)', _("Save as playlist")),
-        # )
-
-        # self.add_resources(
-        #     'songlist.action',
-        #     util.resource.ActionModel('playlist-add', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b')),
-        #     util.resource.ActionModel('playlist-saveas', self.action_playlist_add_saveas_cb, parameter_type=GLib.VariantType.new('b'))
-        # )
-
-        # self.add_resources(
-        #     'songlist.context.menu',
-        #     util.resource.MenuAction('other', 'songlist.playlist-add(true)', _("Add to playlist")),
-        # )
-
-        # self.add_resources(
-        #     'songlist.left-context.menu',
-        #     util.resource.MenuAction('other', 'songlist.playlist-add(false)', _("Add to playlist")),
-        # )
-
-        # self.add_resources(
-        #     self.name + '.left-context.menu',
-        #     util.resource.MenuAction('action', 'playlist.update-from-queue', _("Update from play queue"))
-        # )
-
     def cleanup(self):
         super().cleanup()
         del self.root
@@ -205,9 +179,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         playlist = PlaylistWidget(self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config.pane_separator, self.root.model)
         view = playlist.main
 
-        playlist.add_to_context_menu(self.generate_left_actions(playlist), 'playlist-global', self.TITLE)
         view.add_to_context_menu(self.generate_actions(playlist), 'playlist-local', self.TITLE, below='edit-stack')
-
+        playlist.add_to_context_menu(self.generate_left_actions(playlist), 'playlist-global', self.TITLE)
         view.add_to_context_menu(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         playlist.add_to_context_menu(self.generate_queue_actions(view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
 
@@ -360,18 +333,13 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         await self.ampd.rm(path.replace('/', self.PSEUDO_SEPARATOR))
 
     @ampd.task
-    async def action_playlist_add_saveas_cb(self, songlist_, action, parameter):
-        filenames = list(songlist_.get_filenames(parameter.get_boolean()))
+    async def action_playlist_saveas_cb(self, action, parameter, view):
+        filenames = view.get_filenames(parameter.unpack())
         if not filenames:
-            await dialog.MessageDialogAsync(message=_("Nothing to save!"), transient_for=songlist_.widget.get_root(), title="", cancel_button=False).run()
+            await dialog.MessageDialogAsync(message=_("Nothing to save!"), transient_for=view.widget.get_root(), title="", cancel_button=False).run()
             return
 
-        saveas = '-saveas' in action.get_name()
-        title = _("Save as playlist") if saveas else _("Add to playlist")
-        playlist_path = await ChoosePathDialog(transient_for=songlist_.widget.get_root(), title=title, paths=self.playlist_paths()).run()
+        playlist_path = await ChoosePathDialog(transient_for=view.get_root(), title=_("Save as playlist"), paths=self.playlist_paths()).run()
         if playlist_path is None:
             return
-        playlist_name = playlist_path.replace('/', self.PSEUDO_SEPARATOR)
-        if not saveas and playlist_name in self.playlists:
-            filenames = await self.ampd.listplaylist(playlist_name) + filenames
-        await self.save_playlist(playlist_path, filenames, songlist_.widget.get_root())
+        await self.save_playlist(view.get_root(), playlist_path, filenames)

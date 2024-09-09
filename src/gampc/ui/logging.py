@@ -53,16 +53,14 @@ class Handler(logging.Handler):
     def emit(self, record):
         self.cull_messages(self.MAX_MESSAGES - 1)
 
-        # message_type = Gtk.MessageType.ERROR if record.levelno >= 40 else Gtk.MessageType.WARNING if record.levelno >= 30 else Gtk.MessageType.INFO
         message_icon = 'error' if record.levelno >= 40 else 'warning' if record.levelno >= 30 else 'information'
-        message = Gtk.Box()
+        message = Gtk.Box(spacing=5)
 
-        message.button = Gtk.Button(icon_name='edit-delete')
+        message.button = Gtk.Button(icon_name='process-stop')
         message.button.connect('clicked', self.button_clicked_cb, message)
 
         message.append(Gtk.Image(icon_name='dialog-' + message_icon, icon_size=Gtk.IconSize.LARGE))
-        message.append(Gtk.Label(wrap=True, label=record.msg))
-        message.append(Gtk.Label(hexpand=True))
+        message.append(Gtk.Label(wrap=True, label=record.msg, hexpand=True, halign=Gtk.Align.START))
         message.append(message.button)
 
         message.timeout = GLib.timeout_add(self.timeout, self.remove_message_timeout, message)

@@ -92,6 +92,18 @@ class TandaListItemFactory(EditableListItemFactoryBase):
             cell.add_css_class(f'genre-{item_.get_field(name).lower()}')
 
 
+class TandaEditTandaView(ViewWithContextMenu):
+    def __init__(self, *args, separator_file, **kwargs):
+        self.separator_file = separator_file
+        super().__init__(*args, factory_factory=TandaListItemFactory, selection_model=Gtk.SingleSelection, **kwargs)
+
+    def get_filenames(self, selection):
+        if self.item_selection_filter_model:
+            return [self.separator_file] + self.item_selection_filter_model[0].songs.items + [self.separator_file]
+        else:
+            return []
+
+
 class StringListItemFactory(Gtk.SignalListItemFactory):
     def __init__(self):
         super().__init__()
@@ -330,22 +342,6 @@ class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
         self.current_tandaid = model[0].tandaid if model else None
 
 
-class TandaEditView(ViewCacheWithEditStack):
-    def __init__(self, separator_file, *args, **kwargs):
-        self.separator_file = separator_file
-        super().__init__(*args, **kwargs)
-
-    def get_filenames(self, selection):
-        if selection:
-            return super().get_filenames(True)
-        else:
-            filenames = super().get_filenames(False)
-            if filenames:
-                return [self.separator_file] + filenames + [self.separator_file]
-            else:
-                return []
-
-
 class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
     current_tandaid = GObject.Property()
 
@@ -354,8 +350,8 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
         self.tanda_fields = tanda_fields
 
-        self.tanda_view = ViewWithContextMenu(tanda_fields, model=tandas, sortable=True, factory_factory=TandaListItemFactory, selection_model=Gtk.SingleSelection)
-        self.song_view = TandaEditView(self.separator_file, song_fields, cache=cache)
+        self.tanda_view = TandaEditTandaView(tanda_fields, model=tandas, sortable=True, separator_file=self.separator_file)
+        self.song_view = ViewCacheWithEditStack(song_fields, cache=cache)
         self.song_view.scrolled_item_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
@@ -970,10 +966,12 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config.pane_separator, self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
 
         tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
-        tanda.edit.song_view.add_to_context_menu(self.generate_queue_actions(tanda.edit.song_view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
-        tanda.edit.tanda_view.add_to_context_menu(self.generate_queue_actions(tanda.edit.song_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
-        tanda.view.add_to_context_menu(self.generate_queue_actions(tanda.edit.song_view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+
+        tanda.edit.tanda_view.add_to_context_menu(self.generate_queue_add_action(tanda.edit.tanda_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         tanda.connect_clean(tanda.edit.song_view.item_view, 'activate', self.view_activate_cb)
+
+        tanda.view.add_to_context_menu(self.generate_queue_actions(tanda.view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        tanda.connect_clean(tanda.view.item_view, 'activate', self.view_activate_cb)
 
         # self.connect_clean(self.db, 'changed', self.db_changed_cb)
         # self.connect_clean(self.db, 'verify-progress', self.db_verify_progress_cb)
