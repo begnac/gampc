@@ -76,16 +76,16 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::state', self.set_time_scale_sensitive)
         self.connect_clean(self.unit.unit_persistent, 'notify::protect-active', self.set_time_scale_sensitive)
 
-        # self.logging_handler = logging.Handler(self.unit.config.message_timeout._get() * 1000)
-        # logger.addHandler(self.logging_handler)
-        # self.main.append(self.logging_handler.box)
+        self.logging_handler = logging.Handler(self.unit.config.message_timeout._get() * 1000)
+        logger.addHandler(self.logging_handler)
+        self.main.append(self.logging_handler.box)
 
         self.update_title()
 
     def cleanup(self):
         self.change_component(None)
-        # logger.removeHandler(self.logging_handler)
-        # self.logging_handler.cleanup()
+        logger.removeHandler(self.logging_handler)
+        self.logging_handler.cleanup()
         super().cleanup()
 
     def change_component(self, component):

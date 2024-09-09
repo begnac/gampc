@@ -33,7 +33,7 @@ class Handler(logging.Handler):
         self.timeout = timeout
         self.messages = []
 
-    def remove_message(self, message, response=None):
+    def remove_message(self, message):
         self._remove_message(message)
         GLib.source_remove(message.timeout)
 
@@ -42,6 +42,7 @@ class Handler(logging.Handler):
         return GLib.SOURCE_REMOVE
 
     def _remove_message(self, message):
+        message.button.disconnect_by_func(self.button_clicked_cb)
         self.messages.remove(message)
         self.box.remove(message)
 
@@ -52,15 +53,25 @@ class Handler(logging.Handler):
     def emit(self, record):
         self.cull_messages(self.MAX_MESSAGES - 1)
 
-        message_type = Gtk.MessageType.ERROR if record.levelno >= 40 else Gtk.MessageType.WARNING if record.levelno >= 30 else Gtk.MessageType.INFO
+        # message_type = Gtk.MessageType.ERROR if record.levelno >= 40 else Gtk.MessageType.WARNING if record.levelno >= 30 else Gtk.MessageType.INFO
         message_icon = 'error' if record.levelno >= 40 else 'warning' if record.levelno >= 30 else 'information'
-        message = Gtk.InfoBar(message_type=message_type, show_close_button=True)
-        message.add_child(Gtk.Image(icon_name='dialog-' + message_icon, icon_size=Gtk.IconSize.LARGE))
-        message.add_child(Gtk.Label(wrap=True, label=record.msg))
-        message.connect('response', self.remove_message)
+        message = Gtk.Box()
+
+        message.button = Gtk.Button(icon_name='edit-delete')
+        message.button.connect('clicked', self.button_clicked_cb, message)
+
+        message.append(Gtk.Image(icon_name='dialog-' + message_icon, icon_size=Gtk.IconSize.LARGE))
+        message.append(Gtk.Label(wrap=True, label=record.msg))
+        message.append(Gtk.Label(hexpand=True))
+        message.append(message.button)
+
         message.timeout = GLib.timeout_add(self.timeout, self.remove_message_timeout, message)
+
         self.box.append(message)
         self.messages.append(message)
+
+    def button_clicked_cb(self, button, message):
+        self.remove_message(message)
 
     def cleanup(self):
         self.cull_messages()
