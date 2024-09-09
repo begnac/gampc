@@ -32,8 +32,9 @@ class CleanupBaseMixin:
     def __del__(self):
         logger.debug(f"Deleting {self}")
 
-    def add_cleanup_below(self, below):
-        self._cleanup_below.append(below)
+    def add_cleanup_below(self, *belows):
+        for below in belows:
+            self._cleanup_below.append(below)
 
     def cleanup(self):
         for below in self._cleanup_below:

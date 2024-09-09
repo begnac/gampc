@@ -163,6 +163,7 @@ class TandaWidget(compound.WidgetWithPaned):
 
         self.edit = TandaEdit(self.tanda_artist_filter_model, queue_model, tanda_fields, song_fields, separator_file=separator_file, cache=cache)
         self.view = TandaView(self.tanda_artist_filter_model, song_fields, separator_file=separator_file, cache=cache)
+        self.add_cleanup_below(self.edit, self.view)
         self.stack.add_titled(self.edit, 'edit', _("Edit tandas"))
         self.stack.add_titled(self.view, 'view', _("View tandas"))
         self.subwidgets = [self.edit, self.view]
@@ -174,7 +175,6 @@ class TandaWidget(compound.WidgetWithPaned):
         self.connect_clean(self.artist_selected_model, 'items-changed', self.artist_selected_changed)
         self.connect_clean(self, 'notify::genre-filter', lambda *args: self.tanda_genre_filter.changed(Gtk.FilterChange.DIFFERENT))
 
-        # self.connect_clean(self.unit.unit_persistent, 'notify::protect-requested', lambda unit_persistent, param_spec: unit_persistent.protect_requested and self.problem_button.set_active(True))
         # self.connect_clean(self.db, 'changed', self.db_changed_cb)
         # self.connect_clean(self.db, 'verify-progress', self.db_verify_progress_cb)
         # self.connect_clean(self.db, 'missing-song', self.db_missing_song_cb)
@@ -966,6 +966,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
     def new_widget(self):
         tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config.pane_separator, self.db, self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
 
+        tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
         tanda.edit.song_view.add_to_context_menu(self.generate_queue_actions(tanda.edit.song_view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         tanda.connect_clean(tanda.edit.song_view.item_view, 'activate', self.view_activate_cb)
         return tanda
