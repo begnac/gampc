@@ -127,8 +127,7 @@ class TandaWidget(compound.WidgetWithPaned):
     genre_filter = GObject.Property(type=int, default=0)
     current_tandaid = GObject.Property()
 
-    def __init__(self, tandas, queue_model, config, db, tanda_fields, song_fields, separator_file, cache):
-        self.db = db
+    def __init__(self, tandas, queue_model, config, tanda_fields, song_fields, separator_file, cache):
         self.separator_file = separator_file
         self.cache = cache
 
@@ -174,10 +173,6 @@ class TandaWidget(compound.WidgetWithPaned):
         self.connect_clean(self.tanda_genre_filter_model, 'items-changed', self.tanda_genre_filtered_changed)
         self.connect_clean(self.artist_selected_model, 'items-changed', self.artist_selected_changed)
         self.connect_clean(self, 'notify::genre-filter', lambda *args: self.tanda_genre_filter.changed(Gtk.FilterChange.DIFFERENT))
-
-        # self.connect_clean(self.db, 'changed', self.db_changed_cb)
-        # self.connect_clean(self.db, 'verify-progress', self.db_verify_progress_cb)
-        # self.connect_clean(self.db, 'missing-song', self.db_missing_song_cb)
         self.connect_clean(self.problem_button, 'toggled', lambda *args: self.tanda_genre_filter.changed(Gtk.FilterChange.DIFFERENT))
 
         self.tanda_genre_filter_model.set_model(tandas)
@@ -335,6 +330,22 @@ class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
         self.current_tandaid = model[0].tandaid if model else None
 
 
+class TandaEditView(ViewCacheWithEditStack):
+    def __init__(self, separator_file, *args, **kwargs):
+        self.separator_file = separator_file
+        super().__init__(*args, **kwargs)
+
+    def get_filenames(self, selection):
+        if selection:
+            return super().get_filenames(True)
+        else:
+            filenames = super().get_filenames(False)
+            if filenames:
+                return [self.separator_file] + filenames + [self.separator_file]
+            else:
+                return []
+
+
 class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
     current_tandaid = GObject.Property()
 
@@ -344,7 +355,7 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
         self.tanda_fields = tanda_fields
 
         self.tanda_view = ViewWithContextMenu(tanda_fields, model=tandas, sortable=True, factory_factory=TandaListItemFactory, selection_model=Gtk.SingleSelection)
-        self.song_view = ViewCacheWithEditStack(song_fields, cache=cache)
+        self.song_view = TandaEditView(self.separator_file, song_fields, cache=cache)
         self.song_view.scrolled_item_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
@@ -408,13 +419,6 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
             self.current_tanda = None
             self.song_view.set_edit_stack(None)
         self.song_view.edit_stack_changed()
-
-    # def get_filenames(self, selection):
-    #     if selection:
-    #         return self.view.get_filenames(True)
-    #     else:
-    #         tanda_selection = self.tanda_view.get_selection()
-    #         return sum(([record_.file for record_ in self.tanda_view.record_selection[i]._records] + [self.unit.unit_server.SEPARATOR_FILE] for i in tanda_selection), [self.unit.unit_server.SEPARATOR_FILE])
 
     # def tanda_bind_hook(self, label, tanda):
     #     if tanda[name] is None:
@@ -963,11 +967,18 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         super().cleanup()
 
     def new_widget(self):
-        tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config.pane_separator, self.db, self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
+        tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config.pane_separator, self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
 
         tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
         tanda.edit.song_view.add_to_context_menu(self.generate_queue_actions(tanda.edit.song_view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        tanda.edit.tanda_view.add_to_context_menu(self.generate_queue_actions(tanda.edit.song_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        tanda.view.add_to_context_menu(self.generate_queue_actions(tanda.edit.song_view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         tanda.connect_clean(tanda.edit.song_view.item_view, 'activate', self.view_activate_cb)
+
+        # self.connect_clean(self.db, 'changed', self.db_changed_cb)
+        # self.connect_clean(self.db, 'verify-progress', self.db_verify_progress_cb)
+        # self.connect_clean(self.db, 'missing-song', self.db_missing_song_cb)
+
         return tanda
 
     @ampd.task
