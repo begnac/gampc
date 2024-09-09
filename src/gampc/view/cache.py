@@ -44,7 +44,10 @@ class ViewCacheMixin(ViewFilenameMixin):
         self.item_view.add_css_class('song-by-key')
 
     def set_keys(self, keys):
-        self.splice_keys(0, None, keys)
+        if keys:
+            self.splice_keys(0, None, keys)
+        else:
+            self.item_model.remove_all()
 
     def splice_keys(self, pos, remove, keys):
         self.aioqueue.queue_task(self._splice_keys, pos, remove, list(keys))

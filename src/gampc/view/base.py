@@ -143,12 +143,12 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
 
         self.connect('notify::filtering', self.notify_filtering_cb)
 
+        self.add_cleanup_below(self.filter_view, self.item_view, self.view_search)
+
     def cleanup(self):
+        del self.item_model
+        self.item_filter_model.set_model(None)
         self.filter_filter.set_filter_func(None)
-        self.filter_view.cleanup()
-        self.item_model.remove_all()
-        self.item_view.cleanup()
-        self.view_search.cleanup()
         super().cleanup()
 
     def grab_focus(self):

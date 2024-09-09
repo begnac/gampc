@@ -18,6 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GObject
+
 import ampd
 
 from ..util import unit
@@ -30,6 +32,10 @@ from . import mixins
 
 
 class __unit__(mixins.UnitServerMixin, unit.Unit):
+    __gsignals__ = {
+        'cleared': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
+
     SEPARATOR_FILE = 'separator.mp3'
 
     def __init__(self, manager):
@@ -44,10 +50,11 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
     @ampd.task
     async def client_connected_cb(self, client):
         while True:
+            self.cache.clear()
+            self.emit('cleared')
             if '_missing' in await self.cache.get_async(self.SEPARATOR_FILE):
                 await self.separator_missing()
             await self.ampd.idle(ampd.DATABASE)
-            self.cache.clear()
             logger.info(_("Database changed"))
 
     def update(self, songs):
