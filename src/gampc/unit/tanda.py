@@ -288,6 +288,7 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
         self.tanda_view.item_view.add_css_class('tanda-edit')
 
         self.connect_clean(self.tanda_view.item_selection_filter_model, 'items-changed', self.tanda_selection_changed_cb)
+        self.current_tanda = None
 
     def tanda_selection_changed_cb(self, model, p, r, a):
         if model:
@@ -296,7 +297,6 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
         else:
             self.current_tanda = None
             self.song_view.set_edit_stack(None)
-        self.song_view.edit_stack_changed()
 
     # def set_modified(self, modified=True):
     #     self.current_tanda._modified = modified
@@ -532,8 +532,8 @@ class TandaDatabase(GObject.Object, db.Database):
             cursor.execute('INSERT INTO tandas DEFAULT VALUES')
             tanda['tandaid'] = self.connection.last_insert_rowid()
             tanda['_songs'] = songs
-            self.update_tanda(tanda)
             self._fill_tanda(tanda)
+            self.update_tanda(tanda)
             self.tanda_model.splice_values(0, 0, [tanda])
 
     def update_tanda(self, tanda):
@@ -772,10 +772,6 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         #     resource.MenuAction('edit/component', 'tanda-edit.reset', _("Reset tanda"), ['<Control><Shift>r']),
         # )
 
-        # self.add_resources(
-        #     'tanda-edit.left-context.menu',
-        #     resource.MenuAction('edit', 'tanda-edit.delete', _("Delete tanda")),
-        # )
 
         # self.setup_menu('tanda-edit', 'context', ['itemlist', 'fields'])
         # self.setup_menu('tanda-edit', 'left-context', ['itemlist', 'fields'])
@@ -792,7 +788,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
         tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
 
-        tanda.edit.tanda_view.add_to_context_menu(self.generate_edit_actions(tanda.edit.tanda_view), 'edit', self.TITLE)
+        tanda.edit.tanda_view.add_to_context_menu(self.generate_edit_actions(tanda.edit), 'edit', self.TITLE)
         tanda.edit.tanda_view.add_to_context_menu(self.generate_queue_add_action(tanda.edit.tanda_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         tanda.connect_clean(tanda.edit.song_view.item_view, 'activate', self.view_activate_cb)
 
@@ -804,27 +800,30 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
         return tanda
 
-    def generate_edit_actions(self, tanda_view):
-        yield action.ActionInfo('delete', self.action_tanda_delete_cb, _("Delete tanda"), ['<Control>Delete'], activate_args=(tanda_view,))
+    def generate_edit_actions(self, edit):
+        yield action.ActionInfo('delete', self.action_tanda_delete_cb, _("Delete tanda"), ['<Control>Delete'], activate_args=(edit,))
+        yield action.ActionInfo('save', self.action_tanda_save_cb, _("Save tanda"), ['<Control>s'], activate_args=(edit,))
 
     @misc.create_task
-    async def action_tanda_delete_cb(self, action, parameter, tanda_view):
-        if not tanda_view.item_selection_filter_model:
+    async def action_tanda_delete_cb(self, action, parameter, edit):
+        if edit.current_tanda is None:
             return
-        tanda = tanda_view.item_selection_filter_model[0]
+        tanda = edit.current_tanda
         name = ' / '.join(filter(lambda x: x, map(tanda.get_field, ('Artist', 'Years', 'Performer'))))
-        if await dialog.MessageDialogAsync(transient_for=tanda_view.get_root(), title=_("Delete tanda"), message=_("Delete {tanda}?").format(tanda=name)).run():
+        if await dialog.MessageDialogAsync(transient_for=edit.get_root(), title=_("Delete tanda"), message=_("Delete {tanda}?").format(tanda=name)).run():
             self.db.delete_tanda(tanda)
-        tanda_view.grab_focus()
+        # edit.tanda_view.grab_focus()
 
-    # def action_save_cb(self, action, parameter):
-    #     if self.current_tanda:
-    #         self.current_tanda._songs = [song.get_data() for i, p, song in self.store]
-    #     store, paths = self.tanda_view.get_selection().get_selected_rows()
-    #     for path in paths:
-    #         tanda = store.get_record(store.get_iter(path))
-    #         tanda._songs = [song for song in tanda._songs if song.get('_status') != self.RECORD_DELETED]
-    #         self.unit.db.update_tanda(tanda.get_data())
+    def action_tanda_save_cb(self, action, parameter, edit):
+        if edit.current_tanda is None:
+            return
+        tanda = edit.current_tanda
+        new_value = dict(tanda.value, _songs=[self.unit_database.cache[filename] for filename in tanda.songs.items])
+        self.fields.set_derived_fields(new_value)
+        self.db.update_tanda(dict(new_value, tandaid=tanda.tandaid))
+        tanda.value = new_value
+        tanda.songs.reset()
+        edit.song_view.edit_stack_changed()
 
     # def action_tanda_reset_cb(self, action, parameter):
     #     self.unit.db.reread_tanda(self.current_tanda.get_data())

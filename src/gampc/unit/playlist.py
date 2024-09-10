@@ -59,7 +59,7 @@ class PlaylistWidget(compound.WidgetWithPanedTreeList):
 
     @staticmethod
     def edit_stack_changed_cb(view):
-        if not view.get_editable():
+        if view.edit_stack is None:
             return
         widget = view.get_parent()
         if view.edit_stack.index and not widget.left_selected_item.modified:
@@ -74,16 +74,15 @@ class PlaylistWidget(compound.WidgetWithPanedTreeList):
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
         if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
-            self.main.set_edit_stack(self.left_selected_item.edit_stack)
             self.main.set_editable(True)
+            self.main.set_edit_stack(self.left_selected_item.edit_stack)
         else:
-            self.main.set_edit_stack(None)
             self.main.set_editable(False)
+            self.main.set_edit_stack(None)
             self.main.set_keys(sum(map(lambda node: list(node.edit_stack.items),
                                        filter(lambda node: node.kind == NODE_PLAYLIST,
                                               map(lambda pos: selection[pos].get_item(),
                                                   self.left_selection_pos))), []))
-        self.main.edit_stack_changed()
 
     @staticmethod
     def left_view_activate_cb(left_view, position):

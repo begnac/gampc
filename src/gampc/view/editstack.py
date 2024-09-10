@@ -43,7 +43,7 @@ class ViewWithEditStack(ViewWithCopyPaste):
         self.edit_stack_changed()
 
     def cleanup(self):
-        self.set_edit_stack(None)
+        del self.edit_stack
         super().cleanup()
 
     def generate_edit_stack_actions(self):
@@ -72,6 +72,7 @@ class ViewWithEditStack(ViewWithCopyPaste):
             self.edit_stack.set_splicer(self.edit_stack_splicer, self.step_cb)
         else:
             self.item_model.remove_all()
+        self.edit_stack_changed()
 
     def step_cb(self, focus, selection):
         self.refocus(focus, selection)
@@ -108,7 +109,6 @@ class ViewWithEditStack(ViewWithCopyPaste):
 
     def edit_stack_changed(self):
         self.emit('edit-stack-changed')
-        # self.actions['edit-stack'].lookup_action('save').set_enabled(True)
         self.actions['edit-stack'].lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.index > 0)
         self.actions['edit-stack'].lookup_action('redo').set_enabled(self.edit_stack and self.edit_stack.index < len(self.edit_stack.transactions))
 

@@ -103,7 +103,6 @@ class WidgetWithPaned(contextmenu.ContextMenuMixin, cleanup.CleanupSignalMixin, 
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config._get(), start_child=self.left, end_child=main, **kwargs)
 
         self.left_selection_pos = []
-        self.left_selected_item = None
         self.connect_clean(self.left_selection, 'selection-changed', self.left_selection_changed_cb)
         self.connect('notify::position', self.paned_notify_position_cb, config)
 
@@ -125,6 +124,7 @@ class WidgetWithPanedTreeList(WidgetWithPaned):
         self.left_store = Gtk.TreeListModel.new(root_model, False, False, lambda node: node.expose())
         model = Gtk.MultiSelection(model=self.left_store)
         model.select_item(0, True)
+        self.left_selected_item = None
 
         super().__init__(main, config, model, TreeListItemFactory(), **kwargs)
 
