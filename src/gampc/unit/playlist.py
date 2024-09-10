@@ -178,12 +178,12 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         playlist = PlaylistWidget(self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config.pane_separator, self.root.model)
         view = playlist.main
 
-        view.add_to_context_menu(self.generate_actions(playlist), 'playlist-local', self.TITLE, below='edit-stack')
-        view.add_to_context_menu(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
-        view.add_to_context_menu(self.generate_tanda_actions(view), 'tanda', self.TITLE)
+        view.add_context_menu_actions(self.generate_actions(playlist), 'playlist-local', self.TITLE, below='edit-stack')
+        view.add_context_menu_actions(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        view.add_context_menu_actions(self.generate_tanda_actions(view), 'tanda', self.TITLE)
 
-        playlist.add_to_context_menu(self.generate_left_actions(playlist), 'playlist-global', self.TITLE)
-        playlist.add_to_context_menu(self.generate_queue_actions(view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        playlist.add_context_menu_actions(self.generate_left_actions(playlist), 'playlist-global', self.TITLE)
+        playlist.add_context_menu_actions(self.generate_queue_actions(view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
 
         playlist.connect_clean(view.item_view, 'activate', self.view_activate_cb)
 

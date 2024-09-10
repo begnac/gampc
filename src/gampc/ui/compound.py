@@ -92,7 +92,7 @@ class ScrolledListView(Gtk.ScrolledWindow):
         misc.remove_control_move_shortcuts_below(self)
 
 
-class WidgetWithPaned(contextmenu.ContextMenuMixin, cleanup.CleanupSignalMixin, Gtk.Paned):
+class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalMixin, Gtk.Paned):
     def __init__(self, main, config, model, factory, **kwargs):
         self.main = main
         self.config = config

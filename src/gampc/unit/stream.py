@@ -53,7 +53,7 @@ class StreamWidget(ViewWithEditStack):
         self.item_view.add_css_class('song-by-key')
         for column in self.item_view.get_columns():
             self.connect_clean(column.get_factory(), 'item-edited', self.item_edited_cb)
-        self.add_to_context_menu(self.generate_save_actions(), 'stream', _("Save"))
+        self.add_context_menu_actions(self.generate_save_actions(), 'stream', _("Save"))
         self.item_view.add_css_class('stream')
         item.setup_find_duplicate_items(self.item_model, ['file'], [separator_file])
 

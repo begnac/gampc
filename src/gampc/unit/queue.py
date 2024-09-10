@@ -79,7 +79,7 @@ class QueueWidget(ViewWithCopyPasteSong):
         self.item_view.add_css_class('queue')
         self.item_view.remove_css_class('song-by-key')
         self.item_view.add_css_class('song-by-Id')
-        self.add_to_context_menu(self.generate_queue_actions(), 'queue', _("Queue"))
+        self.add_context_menu_actions(self.generate_queue_actions(), 'queue', _("Queue"))
 
     def generate_queue_actions(self):
         yield action.ActionInfo('go-to-current', self.action_go_to_current_cb, _("Go to current song"), ['<Control>z'])
@@ -132,8 +132,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
     def new_widget(self):
         queue = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, add_items=self.add_items, remove_ids=self.remove_ids, model=self.queue_model)
 
-        queue.add_to_context_menu(self.generate_priority_actions(queue), 'priority', _("Priority for random mode"), submenu=True)
-        queue.add_to_context_menu(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
+        queue.add_context_menu_actions(self.generate_priority_actions(queue), 'priority', _("Priority for random mode"), submenu=True)
+        queue.add_context_menu_actions(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
         queue.connect_clean(self, 'notify::queue-position', self.notify_queue_position_cb, queue)
         queue.connect_clean(queue.item_selection_model, 'selection-changed', self.selection_changed_cb)
         queue.connect_clean(queue.item_view, 'activate', self.view_activate_cb)
@@ -141,8 +141,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         queue.set_position(self.queue_position)
         queue.totals_store = queue.item_model
 
-        queue.add_to_context_menu(self.generate_playlist_actions(queue), 'playlist', self.TITLE)
-        queue.add_to_context_menu(self.generate_tanda_actions(queue), 'tanda', self.TITLE)
+        queue.add_context_menu_actions(self.generate_playlist_actions(queue), 'playlist', self.TITLE)
+        queue.add_context_menu_actions(self.generate_tanda_actions(queue), 'tanda', self.TITLE)
 
         return queue
 

@@ -39,7 +39,7 @@ class ViewWithEditStack(ViewWithCopyPaste):
         super().__init__(*args, **kwargs)
 
         self.edit_stack = None
-        self.add_to_context_menu(self.generate_edit_stack_actions(), 'edit-stack', _("Edit stack"))
+        self.add_context_menu_actions(self.generate_edit_stack_actions(), 'edit-stack', _("Edit stack"))
         self.edit_stack_changed()
 
     def cleanup(self):

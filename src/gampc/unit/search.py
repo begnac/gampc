@@ -35,7 +35,7 @@ class SearchWidget(compound.WidgetWithEntry):
     def __init__(self, fields, cache, separator_file, activate_cb, **kwargs):
         view = ViewCacheWithCopy(fields=fields, cache=cache, sortable=True)
         super().__init__(view, activate_cb, **kwargs)
-        view.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
+        view.add_context_menu_actions(self.generate_actions(), 'search', _("Search"))
         item.setup_find_duplicate_items(view.item_model, ['Title', 'Artist', 'Performer', 'Date'], [separator_file])
         self.add_cleanup_below(view)
 
@@ -70,7 +70,7 @@ class __unit__(mixins.UnitComponentQueueActionMixin, unit.Unit):
         search = SearchWidget(self.unit_fields.fields, self.unit_database.cache, self.unit_database.SEPARATOR_FILE, self.entry_activate_cb)
         search.connect_clean(self.unit_server.ampd_client, 'client-connected', self.search_client_connected_cb, search)
 
-        search.main.add_to_context_menu(self.generate_queue_actions(search.main), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        search.main.add_context_menu_actions(self.generate_queue_actions(search.main), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         search.connect_clean(search.main.item_view, 'activate', self.view_activate_cb)
         return search
 

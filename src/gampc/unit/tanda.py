@@ -191,7 +191,7 @@ class TandaWidget(compound.WidgetWithPaned):
         self.tanda_genre_filter_model.set_model(tandas)
 
         misc.remove_control_move_shortcuts_below(self)
-        self.add_to_context_menu(self.generate_actions(), 'tanda', _("Tanda Editor"))
+        self.add_context_menu_actions(self.generate_actions(), 'tanda', _("Tanda Editor"))
 
     def cleanup(self):
         super().cleanup()
@@ -788,11 +788,11 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
         tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
 
-        tanda.edit.tanda_view.add_to_context_menu(self.generate_edit_actions(tanda.edit), 'edit', self.TITLE)
-        tanda.edit.tanda_view.add_to_context_menu(self.generate_queue_add_action(tanda.edit.tanda_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        tanda.edit.tanda_view.add_context_menu_actions(self.generate_edit_actions(tanda.edit), 'edit', self.TITLE)
+        tanda.edit.tanda_view.add_context_menu_actions(self.generate_queue_add_action(tanda.edit.tanda_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         tanda.connect_clean(tanda.edit.song_view.item_view, 'activate', self.view_activate_cb)
 
-        tanda.view.add_to_context_menu(self.generate_queue_actions(tanda.view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        tanda.view.add_context_menu_actions(self.generate_queue_actions(tanda.view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         tanda.connect_clean(tanda.view.item_view, 'activate', self.view_activate_cb)
 
         # self.connect_clean(self.db, 'verify-progress', self.db_verify_progress_cb)

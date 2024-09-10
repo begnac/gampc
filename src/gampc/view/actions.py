@@ -32,10 +32,10 @@ from ..ui import dnd
 from .base import ViewBase
 
 
-class ViewWithContextMenu(contextmenu.ContextMenuMixin, ViewBase):
+class ViewWithContextMenu(contextmenu.ContextMenuActionMixin, ViewBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_to_context_menu(self.generate_filter_actions(), 'filter', _("Filter actions"))
+        self.add_context_menu_actions(self.generate_filter_actions(), 'filter', _("Filter actions"))
 
     def generate_filter_actions(self):
         if self.filterable:
@@ -54,7 +54,7 @@ class ViewWithCopy(ViewWithContextMenu):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.add_to_context_menu(self.generate_editing_actions(), 'view-edit', _("Edit"))
+        self.add_context_menu_actions(self.generate_editing_actions(), 'view-edit', _("Edit"))
 
         self.drag_source = dnd.ListDragSource(self.content_from_items, self.remove_positions, self.lock, self.unlock)
         self.item_view.rows.add_controller(self.drag_source)

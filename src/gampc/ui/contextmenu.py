@@ -22,14 +22,16 @@ from gi.repository import Gio
 from gi.repository import Gtk
 
 from ..util import action
+from ..util import cleanup
 from ..util import misc
 
 
-class ContextMenuMixin:
+class ContextMenuActionMixin(cleanup.CleanupBaseMixin):
     def __init__(self, *args, **kwargs):
         self.context_menu = Gio.Menu()
         self.menus = {}
         self.actions = {}
+        self.climbs = {}
 
         super().__init__(*args, **kwargs)
 
@@ -38,17 +40,20 @@ class ContextMenuMixin:
         self.add_controller(controller)
 
     def cleanup(self):
-        for prefix in list(self.actions):
-            self.insert_action_group(prefix, None)
+        for prefix, climb in self.climbs.items():
+            self._climb(climb).insert_action_group(prefix, None)
         del self.actions
         super().cleanup()
 
-    def add_to_context_menu(self, generator, prefix, label, *, submenu=False, protect=None, below=None):
+    def add_context_menu_actions(self, generator, prefix, label, *, submenu=False, protect=None, below=None, climb=0):
         if prefix in self.actions:
             raise RuntimeError
         family = action.ActionInfoFamily(generator, prefix, label)
-        self.actions[prefix] = family.insert_action_group(self, protect=protect)
-        self.add_controller(family.get_shortcut_controller())
+
+        self.climbs[prefix] = climb
+        widget = self._climb(climb)
+        self.actions[prefix] = family.insert_action_group(widget, protect=protect)
+        widget.add_controller(family.get_shortcut_controller())
 
         old_menu = self.context_menu if below is None else self.menus[below]
         new_menu = self.menus[prefix] = family.get_menu()
@@ -56,6 +61,12 @@ class ContextMenuMixin:
             old_menu.append_submenu(label, new_menu)
         else:
             old_menu.append_section(None, new_menu)
+
+    def _climb(self, climb):
+        widget = self
+        for i in range(climb):
+            widget = widget.get_parent()
+        return widget
 
     @staticmethod
     def context_menu_pressed_cb(controller, n_press, x, y):
