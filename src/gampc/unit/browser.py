@@ -37,7 +37,7 @@ DIRECTORY = 'directory'
 
 class BrowserWidget(compound.WidgetWithPanedTreeList):
     def __init__(self, fields, cache, config, root_model):
-        main = ViewCacheWithCopy(fields=fields, cache=cache)
+        main = ViewCacheWithCopy(fields=fields, cache=cache, sortable=True)
         super().__init__(main, config, root_model)
         self.connect_clean(root_model, 'items-changed', self.root_items_changed_cb)
         if len(self.left_selection) > 0:

@@ -35,10 +35,19 @@ from .base import ViewBase
 class ViewWithContextMenu(contextmenu.ContextMenuMixin, ViewBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_to_context_menu(self.generate_view_actions(), 'view', _("View actions"))
+        self.add_to_context_menu(self.generate_filter_actions(), 'filter', _("Filter actions"))
 
-    def generate_view_actions(self):
-        yield action.PropertyActionInfo('filtering', self, _("Filter view"), ['<Control><Shift>f'])
+    def generate_filter_actions(self):
+        if self.filterable:
+            yield action.PropertyActionInfo('filtering', self, _("Filter view"), ['<Control><Shift>f'])
+            yield action.ActionInfo('filter-reset', self.action_filtering_reset_cb, _("Reset filter and order") if self.sortable else _("Reset filter"), ['<Control><Shift>r'])
+
+    def action_filtering_reset_cb(self, action, parameter):
+        if self.filtering:
+            self.filtering = False
+        self.filter_item.load({})
+        if self.sortable:
+            self.item_view.sort_by_column(None, Gtk.SortType.ASCENDING)
 
 
 class ViewWithCopy(ViewWithContextMenu):
@@ -80,21 +89,6 @@ class ViewWithCopy(ViewWithContextMenu):
     @classmethod
     def content_from_items(cls, items):
         return item.transfer_union(items, cls.transfer_type, *cls.extra_transfer_types)
-
-
-class ViewWithCopySortable(ViewWithCopy):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, sortable=True)
-
-    def generate_view_actions(self):
-        yield from super().generate_view_actions()
-        yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
-
-    def action_reset_cb(self, action, parameter):
-        self.view.filter_item.set_data({})
-        self.view.filtering = False
-        if self.sortable:
-            self.view.item_view.sort_by_column(None, Gtk.SortType.ASCENDING)
 
 
 class ViewWithCopyPaste(ViewWithCopy):

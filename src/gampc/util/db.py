@@ -69,15 +69,14 @@ class Connection(object):
 
 
 class Database(object):
-    def __init__(self, name, *, cache=False):
+    def __init__(self, name):
         super().__init__()
         self.name = name
-        self.cache = cache
         self.get_connection()
         self.setup_database()
 
     def get_connection(self):
-        base_dir = GLib.get_user_cache_dir() if self.cache else GLib.get_user_data_dir()
+        base_dir = GLib.get_user_data_dir()
         self.connection = Connection(os.path.join(base_dir, __application__, self.name + '.sqlite'))
         self.connection.cursor().execute('PRAGMA foreign_keys=ON')
 
@@ -91,5 +90,5 @@ class Database(object):
                 pass
 
     @staticmethod
-    def _tuple_to_dict(t, names):
+    def _dict_from_record(t, names):
         return {name: t[i] for i, name in enumerate(names) if t[i] is not None}

@@ -21,13 +21,13 @@
 from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gio
-from gi.repository import Gdk
+# from gi.repository import Gdk
 from gi.repository import Gtk
 
 import re
 import datetime
-import ast
-import asyncio
+# import ast
+# import asyncio
 
 import ampd
 
@@ -39,17 +39,18 @@ from ..util import field
 from ..util import item
 from ..util import misc
 from ..util import unit
-from ..util.logger import logger
+# from ..util.logger import logger
 
 from ..ui import compound
-from ..ui import contextmenu
+# from ..ui import contextmenu
+from ..ui import dialog
 
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy, ViewCacheWithEditStack
 from ..view.listitem import EditableListItemFactoryBase
 
 from . import mixins
-from . import search
+# from . import search
 
 
 class TandaItem(item.ItemBase):
@@ -270,7 +271,7 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
         self.tanda_fields = tanda_fields
 
         self.tanda_view = TandaEditTandaView(tanda_fields, model=tandas, sortable=True, separator_file=self.separator_file)
-        self.song_view = ViewCacheWithEditStack(song_fields, cache=cache)
+        self.song_view = ViewCacheWithEditStack(song_fields, cache=cache, filterable=False)
         self.song_view.scrolled_item_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
@@ -287,11 +288,6 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
         self.tanda_view.item_view.add_css_class('tanda-edit')
 
         self.connect_clean(self.tanda_view.item_selection_filter_model, 'items-changed', self.tanda_selection_changed_cb)
-
-    #     self.actions.add_action(resource.Action('delete', self.action_tanda_delete_cb))
-    #     self.actions.add_action(resource.Action('reset', self.action_tanda_reset_cb))
-    #     self.actions.add_action(resource.Action('reset-field', self.action_tanda_field_cb))
-    #     self.actions.add_action(resource.Action('fill-field', self.action_tanda_field_cb))
 
     def tanda_selection_changed_cb(self, model, p, r, a):
         if model:
@@ -349,40 +345,6 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
     #     elif event.type == Gdk.EventType._2BUTTON_PRESS and event.button == 1:
     #         self.tanda_view.set_cursor(path, col, True)
     #         return True
-
-    # def action_tanda_delete_cb(self, action, parameter):
-    #     path, column = self.tanda_view.get_cursor()
-    #     if not path:
-    #         return
-    #     i = self.tanda_store.get_iter(path)
-    #     tanda = self.tanda_store.get_record(i)
-    #     title = ' / '.join(filter(lambda x: x, (tanda.Artist, tanda.Years, tanda.Performer)))
-    #     dialog = Gtk.Dialog(parent=self.widget.get_root(), title=_("Delete tanda"))
-    #     dialog.get_content_area().add(Gtk.Label(label=_("Delete {tanda}?").format(tanda=title)))
-    #     dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
-    #     dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
-    #     reply = dialog.run()
-    #     dialog.destroy()
-    #     if reply == Gtk.ResponseType.OK:
-    #         self.unit.db.delete_tanda(pos)
-
-    # def action_save_cb(self, action, parameter):
-    #     if self.current_tanda:
-    #         self.current_tanda._songs = [song.get_data() for i, p, song in self.store]
-    #     store, paths = self.tanda_view.get_selection().get_selected_rows()
-    #     for path in paths:
-    #         tanda = store.get_record(store.get_iter(path))
-    #         tanda._songs = [song for song in tanda._songs if song.get('_status') != self.RECORD_DELETED]
-    #         self.unit.db.update_tanda(tanda.get_data())
-
-    # def action_reset_cb(self, action, parameter):
-    #     self.tanda_genre_filter.filter_.set_data({})
-    #     self.tanda_genre_filter.active = False
-    #     self.tanda_store.set_sort_column_id(-1, Gtk.SortType.ASCENDING)
-
-    # def action_tanda_reset_cb(self, action, parameter):
-    #     self.unit.db.reread_tanda(self.current_tanda.get_data())
-    #     self.set_songs(self.current_tanda._songs)
 
     # def action_tanda_field_cb(self, action, parameter):
     #     path, column = self.tanda_view.get_cursor()
@@ -454,11 +416,10 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
     current_tandaid = GObject.Property()
 
-    duplicate_test_columns = ['Title', 'Artist', 'Performer', 'Date']
-
     def __init__(self, tandas, *args, **kwargs):
-        super().__init__(*args, **kwargs, item_type=TandaSongItem)
+        super().__init__(*args, **kwargs, item_type=TandaSongItem, sortable=False)
         self.connect_clean(tandas, 'items-changed', self.tandas_changed)
+        item.setup_find_duplicate_items(self.item_model, ['Title', 'Artist', 'Performer', 'Date'], [self.separator_file])
         self.init_tandaid_view(self)
 
     def tandas_changed(self, tandas, p, r, a):
@@ -505,7 +466,7 @@ class TandaDatabase(GObject.Object, db.Database):
         self.setup_table(f'songs{suffix}', 'file TEXT NOT NULL PRIMARY KEY', self.song_fields.basic_names)
         self.connection.cursor().execute(f'CREATE TABLE IF NOT EXISTS tanda_songs{suffix}(tandaid INTEGER NOT NULL, position INTEGER NOT NULL, file TEXT NOT NULL, PRIMARY KEY(tandaid, position), FOREIGN KEY(tandaid) REFERENCES tandas{suffix}, FOREIGN KEY(file) REFERENCES songs{suffix})')
 
-    def action_cleanup_db_cb(self, action, param):
+    def clean_database(self):  #  XXXXXXX?????
         with self.connection:
             cursor = self.connection.cursor()
             self.setup_database('_tmp')
@@ -523,10 +484,13 @@ class TandaDatabase(GObject.Object, db.Database):
             cursor.execute('ALTER TABLE tandas_tmp RENAME TO tandas')
             cursor.execute('ALTER TABLE songs_tmp RENAME TO songs')
 
-    def tuple_to_song(self, t, *extra):
-        return self._tuple_to_dict(t, self.song_fields.basic_names + list(extra))
+    def load(self):
+        query = self.connection.cursor().execute('SELECT tandaid,{} FROM tandas'.format(','.join(self.tanda_fields.basic_names)))
+        self.tanda_model.set_values(map(self._tanda_from_record, query))
 
-    def song_missing(self, key):
+    # Song stuff
+
+    def song_is_missing(self, key):
         return bool(self.connection.cursor().execute('SELECT ? NOT IN (SELECT file FROM songs)', (key,)).fetchone()[0])
 
     def get_song(self, key):
@@ -534,22 +498,56 @@ class TandaDatabase(GObject.Object, db.Database):
         if t is None:
             return {'file': key}
         else:
-            return self.tuple_to_song(t)
+            return self._song_from_record(t)
 
     def add_song(self, song):
-        if self.song_missing(song['file']):
+        if self.song_is_missing(song['file']):
             with self.connection as cursor:
                 cursor.execute('INSERT INTO songs(file) VALUES(:file)', song)
                 self.update_song(song)
 
     def update_song(self, song):
         values = self._make_value_list(self.song_fields.basic_names, list(song.keys()), exclude='file')
-        self.connection.cursor().execute(f'UPDATE songs SET {values} WHERE file=:file', song)
+        with self.connection as cursor:
+            cursor.execute(f'UPDATE songs SET {values} WHERE file=:file', song)
 
     def replace_song(self, old_file, new_song):
-        self.add_song(new_song)
-        self.connection.cursor().execute('UPDATE tanda_songs SET file=? WHERE file=?', (new_song['file'], old_file))
-        self.connection.cursor().execute('DELETE FROM songs WHERE file=?', (old_file,))
+        with self.connection as cursor:
+            self.add_song(new_song)
+            cursor.execute('UPDATE tanda_songs SET file=? WHERE file=?', (new_song['file'], old_file))
+            cursor.execute('DELETE FROM songs WHERE file=?', (old_file,))
+
+    def _song_from_record(self, t):
+        return self._dict_from_record(t, self.song_fields.basic_names)
+
+    # Tanda stuff
+
+    def get_tanda(self, tandaid):
+        t = self.connection.cursor().execute(f'SELECT tandaid, {self.tanda_field_names} FROM tandas WHERE tandaid=?', (tandaid,)).fetchone()
+        return t and self._tanda_from_record(t)
+
+    def new_tanda(self, songs):
+        tanda = self._tanda_from_songs(songs)
+        with self.connection as cursor:
+            cursor.execute('INSERT INTO tandas DEFAULT VALUES')
+            tanda['tandaid'] = self.connection.last_insert_rowid()
+            tanda['_songs'] = songs
+            self.update_tanda(tanda)
+            self._fill_tanda(tanda)
+            self.tanda_model.splice_values(0, 0, [tanda])
+
+    def update_tanda(self, tanda):
+        with self.connection as cursor:
+            tandaid = tanda['tandaid']
+            cursor.execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(self._make_value_list(self.tanda_fields.basic_names, list(tanda.keys()), exclude='tandaid')), tanda)
+            self.set_tanda_songs(tandaid, tanda['_songs'])
+
+    def delete_tanda(self, tanda):
+        found, pos = self.tanda_model.find(tanda)
+        assert found
+        with self.connection:
+            self.connection.cursor().execute('DELETE FROM tanda_songs WHERE tandaid=?; DELETE FROM tandas WHERE tandaid=?', (tanda.tandaid, tanda.tandaid))
+        self.tanda_model.remove(pos)
 
     def set_tanda_songs(self, tandaid, songs):
         with self.connection as cursor:
@@ -565,56 +563,22 @@ class TandaDatabase(GObject.Object, db.Database):
                     del tanda_songs[position]
             cursor.executemany('DELETE FROM tanda_songs WHERE tandaid=? AND position=?', ((tandaid, position) for position in tanda_songs.keys()))
 
-    def load(self):
-        query = self.connection.cursor().execute('SELECT tandaid,{} FROM tandas'.format(','.join(self.tanda_fields.basic_names)))
-        self.tanda_model.set_values(map(self._get_tanda_from_tuple, query))
-
-    def get_tanda(self, tandaid):
-        t = self.connection.cursor().execute('SELECT tandaid, {} FROM tandas WHERE tandaid=?'.format(','.join(self.tanda_fields.basic_names)), (tandaid,)).fetchone()
-        return t and self._get_tanda_from_tuple(t)
-
-    def reread_tanda(self, tanda):
-        db_tanda = self.get_tanda(tanda['tandaid'])
-        if db_tanda is None:
-            return False
-        for name in list(tanda.keys()):
-            if name not in db_tanda:
-                del tanda[name]
-        tanda.update(db_tanda)
-        return True
-
-    def _get_tanda_from_tuple(self, t):
-        tanda = self._tuple_to_dict(t, ['tandaid'] + self.tanda_fields.basic_names)
+    def _tanda_from_record(self, t):
+        tanda = self._dict_from_record(t, ['tandaid'] + self.tanda_fields.basic_names)
         query = self.connection.cursor().execute(f'SELECT {self.song_field_names} FROM tanda_songs,songs USING(file) WHERE tanda_songs.tandaid=? ORDER BY tanda_songs.position', (tanda['tandaid'],))
-        tanda['_songs'] = []
-        songs = []
-        for s in query:
-            song = self._tuple_to_dict(s, self.song_fields.basic_names)
-            filename = song['file']
-            songs.append(filename)
-            tanda['_songs'].append(song)
-        self.tanda_fields.set_derived_fields(tanda)
-        tanda['songs'] = editstack.EditStack(songs)
+        tanda['_songs'] = list(map(self._song_from_record, query))
+        self._fill_tanda(tanda)
         return tanda
 
-    def update_tanda(self, tanda):
-        with self.connection:
-            tandaid = tanda['tandaid']
-            self.connection.cursor().execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(self._make_value_list(self.tanda_fields.basic_names, list(tanda.keys()), exclude='tandaid')), tanda)
-            self.set_tanda_songs(tandaid, tanda['_songs'])
-
-    def delete_tanda(self, tanda):
-        found, pos = self.tanda_model.find(tanda)
-        assert found
-        with self.connection:
-            self.connection.cursor().execute('DELETE FROM tanda_songs WHERE tandaid=?; DELETE FROM tandas WHERE tandaid=?', (tanda.tandaid, tanda.tandaid))
-        self.tanda_model.remove(pos)
+    def _fill_tanda(self, tanda):
+        self.tanda_fields.set_derived_fields(tanda)
+        tanda['songs'] = editstack.EditStack([song['file'] for song in tanda['_songs']])
 
     @staticmethod
-    def tanda_from_songs(songs):
+    def _tanda_from_songs(songs):
         tanda_fields = (('ArtistSortName', '???'),
-                  ('Genre', '???'),
-                  ('PerformersLastNames', '???'))
+                        ('Genre', '???'),
+                        ('PerformersLastNames', '???'))
         merged = {field: [song.get(field, default) for song in songs] for field, default in tanda_fields}
         merged['Genre'] = [genre if genre.split(' ', 1)[0] not in ('Tango', 'Vals', 'Milonga') else genre.split(' ', 1)[0] for genre in merged['Genre']]
         sorted_merged = {field: sorted(set(merged[field])) for field, default in tanda_fields}
@@ -635,72 +599,74 @@ class TandaDatabase(GObject.Object, db.Database):
         tanda['Last_Modified'] = str(datetime.date.today())
         return tanda
 
+    # Internal
+
     @staticmethod
     def _make_value_list(names, available_names, exclude=None):
         operations = [f'{name}=:{name}' for name in names if name in available_names and name != exclude] \
             + [f'{name}=NULL' for name in names if name not in available_names and name != exclude]
         return ', '.join(operations)
 
-    def action_tanda_define_cb(self, songlist, action, parameter):
-        songs, rows = songlist.view.get_selection_rows()
-        tanda = self.tanda_from_songs(songs)
-        with self.connection:
-            self.connection.cursor().execute('INSERT INTO tandas DEFAULT VALUES')
-            tanda['tandaid'] = tandaid = self.connection.last_insert_rowid()
-            self.connection.cursor().execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(self._make_value_list(self.tanda_fields.basic_names, list(tanda.keys()), exclude='tandaid')), tanda)
-            self.set_tanda_songs(tandaid, songs)
-        self.tanda_model.append(tanda)
+    # def reread_tanda(self, tanda):
+    #     db_tanda = self.get_tanda(tanda['tandaid'])
+    #     if db_tanda is None:
+    #         return False
+    #     for name in list(tanda.keys()):
+    #         if name not in db_tanda:
+    #             del tanda[name]
+    #     tanda.update(db_tanda)
+    #     return True
 
-    @ampd.task
-    async def action_tanda_verify_cb(self, action, param):
-        await self.ampd.update()
-        await self.ampd.idle(ampd.UPDATE)
-        await self.ampd.idle(ampd.UPDATE)
-        await self.ampd.idle(ampd.IDLE)
-        unused = []
-        updated = []
-        replaced = []
-        problem = []
-        done = [0]
-        with self.connection:
-            query = self.connection.cursor().execute('SELECT {},file in (SELECT file from tanda_songs) FROM songs'.format(', '.join(self.song_fields.basic_names))).fetchall()
-            songs = [self._tuple_to_dict(t, self.song_fields.basic_names + ['used']) for t in query]
-            used_songs = list(filter(lambda song: song['used'], songs))
-            unused_songs = list(filter(lambda song: not song['used'], songs))
+    # @ampd.task
+    # async def action_tanda_verify_cb(self, action, param):
+    #     await self.ampd.update()
+    #     await self.ampd.idle(ampd.UPDATE)
+    #     await self.ampd.idle(ampd.UPDATE)
+    #     await self.ampd.idle(ampd.IDLE)
+    #     unused = []
+    #     updated = []
+    #     replaced = []
+    #     problem = []
+    #     done = [0]
+    #     with self.connection:
+    #         query = self.connection.cursor().execute('SELECT {},file in (SELECT file from tanda_songs) FROM songs'.format(', '.join(self.song_fields.basic_names))).fetchall()
+    #         songs = [self._tuple_to_dict(t, self.song_fields.basic_names + ['used']) for t in query]
+    #         used_songs = list(filter(lambda song: song['used'], songs))
+    #         unused_songs = list(filter(lambda song: not song['used'], songs))
 
-            for song in unused_songs:
-                logger.info(_("Deleting '{file}'").format_map(song))
-                self.connection.cursor().execute('DELETE FROM songs WHERE file=:file', song)
-                unused.append(song['file'])
+    #         for song in unused_songs:
+    #             logger.info(_("Deleting '{file}'").format_map(song))
+    #             self.connection.cursor().execute('DELETE FROM songs WHERE file=:file', song)
+    #             unused.append(song['file'])
 
-            nsongs = len(used_songs)
-            await asyncio.wait([self.verify_song(song, nsongs, done, updated, replaced, problem) for song in used_songs])
-            logger.info(_("Tanda database checked: {unused} songs unused, {updated} updated, {replaced} replaced, {problem} problematic").format(unused=len(unused), updated=len(updated), replaced=len(replaced), problem=len(problem)))
-            self.load()
+    #         nsongs = len(used_songs)
+    #         await asyncio.wait([self.verify_song(song, nsongs, done, updated, replaced, problem) for song in used_songs])
+    #         logger.info(_("Tanda database checked: {unused} songs unused, {updated} updated, {replaced} replaced, {problem} problematic").format(unused=len(unused), updated=len(updated), replaced=len(replaced), problem=len(problem)))
+    #         self.load()
 
-    @ampd.task
-    async def verify_song(self, song, total, done, updated, replaced, problem):
-        real_song = await self.ampd.find('file', song['file'])
-        if real_song:
-            changed = [(name, song.get(name), real_song[0].get(name)) for name in self.song_fields.basic_names if song.get(name) != real_song[0].get(name)]
-            if changed:
-                self.update_song(real_song[0])
-                logger.info(_("Updating metadata for '{file}': ").format_map(song) + ", ".join("{0} {1} => {2}".format(*t) for t in changed))
-                updated.append(song['file'])
-        else:
-            maybe_song = await self.ampd.find(*sum(([field, song.get(field, '')] for field in self.MISSING_SONG_TANDA_FIELDS), []))
-            if len(maybe_song) == 1:
-                logger.info(_("Replacing song:"))
-                logger.info("- " + song['file'])
-                logger.info("+ " + maybe_song[0]['file'])
-                self.replace_song(song['file'], maybe_song[0])
-                replaced.append((song['file'], maybe_song[0]))
-            else:
-                logger.info(_("Not sure about '{file}'").format_map(song))
-                self.emit('missing-song', song['file'], *(song.get(field, '') for field in self.MISSING_SONG_TANDA_FIELDS))
-                problem.append(song)
-        done[0] += 1
-        self.emit('verify-progress', done[0] / total)
+    # @ampd.task
+    # async def verify_song(self, song, total, done, updated, replaced, problem):
+    #     real_song = await self.ampd.find('file', song['file'])
+    #     if real_song:
+    #         changed = [(name, song.get(name), real_song[0].get(name)) for name in self.song_fields.basic_names if song.get(name) != real_song[0].get(name)]
+    #         if changed:
+    #             self.update_song(real_song[0])
+    #             logger.info(_("Updating metadata for '{file}': ").format_map(song) + ", ".join("{0} {1} => {2}".format(*t) for t in changed))
+    #             updated.append(song['file'])
+    #     else:
+    #         maybe_song = await self.ampd.find(*sum(([field, song.get(field, '')] for field in self.MISSING_SONG_TANDA_FIELDS), []))
+    #         if len(maybe_song) == 1:
+    #             logger.info(_("Replacing song:"))
+    #             logger.info("- " + song['file'])
+    #             logger.info("+ " + maybe_song[0]['file'])
+    #             self.replace_song(song['file'], maybe_song[0])
+    #             replaced.append((song['file'], maybe_song[0]))
+    #         else:
+    #             logger.info(_("Not sure about '{file}'").format_map(song))
+    #             self.emit('missing-song', song['file'], *(song.get(field, '') for field in self.MISSING_SONG_TANDA_FIELDS))
+    #             problem.append(song)
+    #     done[0] += 1
+    #     self.emit('verify-progress', done[0] / total)
 
 
 CSS = 'tanda-view.view { outline-width: 4px; outline-style: solid; }'
@@ -794,28 +760,16 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         self.connect_clean(self.unit_database, 'cleared', self.update_cache_full)
         self.connect_clean(self.tanda_model, 'items-changed', self.update_cache_partial)
 
-        # self.add_resources(
-        #     'app.action',
-        #     resource.ActionModel('tanda-verify', self.db.action_tanda_verify_cb),
-        #     resource.ActionModel('tanda-cleanup-db', self.db.action_cleanup_db_cb),
-        # )
+
+    #     self.actions.add_action(resource.Action('reset', self.action_tanda_reset_cb))
+    #     self.actions.add_action(resource.Action('reset-field', self.action_tanda_field_cb))
+    #     self.actions.add_action(resource.Action('fill-field', self.action_tanda_field_cb))
 
         # self.add_resources(
         #     'app.menu',
         #     # resource.MenuAction('edit/component', 'tanda-edit.fill-field', _("Fill tanda field"), ['<Control>z']),
         #     # resource.MenuAction('edit/component', 'tanda-edit.reset-field', _("Reset tanda field"), ['<Control><Shift>z']),
         #     resource.MenuAction('edit/component', 'tanda-edit.reset', _("Reset tanda"), ['<Control><Shift>r']),
-        #     resource.MenuAction('edit/component', 'tanda-edit.delete', _("Delete tanda"), ['<Control>Delete']),
-        # )
-
-        # self.add_resources(
-        #     'songlist.action',
-        #     resource.ActionModel('tanda-define', self.db.action_tanda_define_cb),
-        # )
-
-        # self.add_resources(
-        #     'songlist.context.menu',
-        #     resource.MenuAction('other', 'songlist.tanda-define', _("Define tanda")),
         # )
 
         # self.add_resources(
@@ -838,6 +792,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
         tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
 
+        tanda.edit.tanda_view.add_to_context_menu(self.generate_edit_actions(tanda.edit.tanda_view), 'edit', self.TITLE)
         tanda.edit.tanda_view.add_to_context_menu(self.generate_queue_add_action(tanda.edit.tanda_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         tanda.connect_clean(tanda.edit.song_view.item_view, 'activate', self.view_activate_cb)
 
@@ -848,6 +803,37 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         # self.connect_clean(self.db, 'missing-song', self.db_missing_song_cb)
 
         return tanda
+
+    def generate_edit_actions(self, tanda_view):
+        yield action.ActionInfo('delete', self.action_tanda_delete_cb, _("Delete tanda"), ['<Control>Delete'], activate_args=(tanda_view,))
+
+    @misc.create_task
+    async def action_tanda_delete_cb(self, action, parameter, tanda_view):
+        if not tanda_view.item_selection_filter_model:
+            return
+        tanda = tanda_view.item_selection_filter_model[0]
+        name = ' / '.join(filter(lambda x: x, map(tanda.get_field, ('Artist', 'Years', 'Performer'))))
+        if await dialog.MessageDialogAsync(transient_for=tanda_view.get_root(), title=_("Delete tanda"), message=_("Delete {tanda}?").format(tanda=name)).run():
+            self.db.delete_tanda(tanda)
+        tanda_view.grab_focus()
+
+    # def action_save_cb(self, action, parameter):
+    #     if self.current_tanda:
+    #         self.current_tanda._songs = [song.get_data() for i, p, song in self.store]
+    #     store, paths = self.tanda_view.get_selection().get_selected_rows()
+    #     for path in paths:
+    #         tanda = store.get_record(store.get_iter(path))
+    #         tanda._songs = [song for song in tanda._songs if song.get('_status') != self.RECORD_DELETED]
+    #         self.unit.db.update_tanda(tanda.get_data())
+
+    # def action_tanda_reset_cb(self, action, parameter):
+    #     self.unit.db.reread_tanda(self.current_tanda.get_data())
+    #     self.set_songs(self.current_tanda._songs)
+
+    def action_tanda_define_cb(self, action, parameter, view):
+        filenames = view.get_filenames(True)
+        songs = [self.unit_database.cache[name] for name in filenames]
+        self.db.new_tanda(songs)
 
     # def db_verify_progress_cb(self, db, progress):
     #     if progress < 1:
@@ -885,7 +871,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
     @ampd.task
     async def client_connected_cb(self, client):
-        if self.db.song_missing(self.unit_database.SEPARATOR_FILE):
+        if self.db.song_is_missing(self.unit_database.SEPARATOR_FILE):
             songs = await self.ampd.find('file', self.unit_database.SEPARATOR_FILE)
             if len(songs) == 1:
                 self.unit_database.cache[self.unit_database.SEPARATOR_FILE] = songs[0]
@@ -896,10 +882,6 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
                 await self.ampd.idle(ampd.PLAYLIST)
         finally:
             self.queue_model.remove_all()
-
-    def read_db(self):
-        self.tanda_model.set_values(self.db.get_tandas())
-        self.update_cache()
 
     def update_cache_full(self, unit):
         if self.unit_database.SEPARATOR_FILE not in self.unit_database.cache:

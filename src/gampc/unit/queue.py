@@ -100,7 +100,7 @@ class QueueWidget(ViewWithCopyPasteSong):
             GLib.idle_add(lambda: self.scroll_to(position))
 
 
-class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentTotalsMixin, mixins.UnitServerMixin, mixins.UnitComponentPlaylistActionMixin, unit.Unit):
+class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitComponentTotalsMixin, mixins.UnitComponentPlaylistActionMixin, mixins.UnitComponentTandaActionMixin, unit.Unit):
     queue_position = GObject.Property()
     current_Id = GObject.Property()
 
@@ -142,6 +142,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentTotalsMixin, mixins.
         queue.totals_store = queue.item_model
 
         queue.add_to_context_menu(self.generate_playlist_actions(queue), 'playlist', self.TITLE)
+        queue.add_to_context_menu(self.generate_tanda_actions(queue), 'tanda', self.TITLE)
 
         return queue
 

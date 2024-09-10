@@ -33,7 +33,7 @@ from . import mixins
 
 class SearchWidget(compound.WidgetWithEntry):
     def __init__(self, fields, cache, separator_file, activate_cb, **kwargs):
-        view = ViewCacheWithCopy(fields=fields, cache=cache)
+        view = ViewCacheWithCopy(fields=fields, cache=cache, sortable=True)
         super().__init__(view, activate_cb, **kwargs)
         view.add_to_context_menu(self.generate_actions(), 'search', _("Search"))
         item.setup_find_duplicate_items(view.item_model, ['Title', 'Artist', 'Performer', 'Date'], [separator_file])

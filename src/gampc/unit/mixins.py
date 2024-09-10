@@ -143,3 +143,8 @@ class UnitComponentQueueActionMixin(UnitComponentMixin, UnitServerMixin):
 class UnitComponentPlaylistActionMixin(UnitComponentMixin):
     def generate_playlist_actions(self, view, selection=True):
         yield action.ActionInfo('playlist-saveas', self.manager.get_unit('playlist').action_playlist_saveas_cb, _("Save as playlist"), arg=selection, arg_format='b', activate_args=(view,))
+
+
+class UnitComponentTandaActionMixin(UnitComponentMixin):
+    def generate_tanda_actions(self, view):
+        yield action.ActionInfo('tanda-define', self.manager.get_unit('tanda').action_tanda_define_cb, _("Define tanda"), activate_args=(view,))
