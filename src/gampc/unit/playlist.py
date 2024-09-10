@@ -50,7 +50,7 @@ ICONS = {
 
 class PlaylistWidget(compound.WidgetWithPanedTreeList):
     def __init__(self, fields, separator_file, cache, config, root_model):
-        main = ViewWithCopyPasteEditStackSong(fields=fields, separator_file=separator_file, cache=cache)
+        main = ViewWithCopyPasteEditStackSong(fields=fields, separator_file=separator_file, cache=cache, edit_stack_ancestor=1)
         super().__init__(main, config, root_model)
         self.add_cleanup_below(main)
 

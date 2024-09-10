@@ -31,7 +31,7 @@ class ContextMenuActionMixin(cleanup.CleanupBaseMixin):
         self.context_menu = Gio.Menu()
         self.menus = {}
         self.actions = {}
-        self.climbs = {}
+        self.ancestors = {}
 
         super().__init__(*args, **kwargs)
 
@@ -40,20 +40,20 @@ class ContextMenuActionMixin(cleanup.CleanupBaseMixin):
         self.add_controller(controller)
 
     def cleanup(self):
-        for prefix, climb in self.climbs.items():
-            self._climb(climb).insert_action_group(prefix, None)
+        for prefix, ancestor in self.ancestors.items():
+            misc.setup_ancestor(self, ancestor, lambda widget: widget.insert_action_group(prefix, None))
         del self.actions
         super().cleanup()
 
-    def add_context_menu_actions(self, generator, prefix, label, *, submenu=False, protect=None, below=None, climb=0):
+    def add_context_menu_actions(self, generator, prefix, label, *, submenu=False, protect=None, below=None, ancestor=0):
         if prefix in self.actions:
             raise RuntimeError
         family = action.ActionInfoFamily(generator, prefix, label)
 
-        self.climbs[prefix] = climb
-        widget = self._climb(climb)
-        self.actions[prefix] = family.insert_action_group(widget, protect=protect)
-        widget.add_controller(family.get_shortcut_controller())
+        self.ancestors[prefix] = ancestor
+        self.actions[prefix] = family.get_action_group(protect=protect)
+        controller = family.get_shortcut_controller()
+        misc.setup_ancestor(self, ancestor, lambda widget: widget.insert_action_group(prefix, self.actions[prefix]) or widget.add_controller(controller))
 
         old_menu = self.context_menu if below is None else self.menus[below]
         new_menu = self.menus[prefix] = family.get_menu()
@@ -61,12 +61,6 @@ class ContextMenuActionMixin(cleanup.CleanupBaseMixin):
             old_menu.append_submenu(label, new_menu)
         else:
             old_menu.append_section(None, new_menu)
-
-    def _climb(self, climb):
-        widget = self
-        for i in range(climb):
-            widget = widget.get_parent()
-        return widget
 
     @staticmethod
     def context_menu_pressed_cb(controller, n_press, x, y):

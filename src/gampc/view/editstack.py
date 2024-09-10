@@ -35,11 +35,11 @@ class ViewWithEditStack(ViewWithCopyPaste):
         'edit-stack-changed': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, edit_stack_ancestor=0, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.edit_stack = None
-        self.add_context_menu_actions(self.generate_edit_stack_actions(), 'edit-stack', _("Edit stack"))
+        self.add_context_menu_actions(self.generate_edit_stack_actions(), 'edit-stack', _("Edit stack"), ancestor=edit_stack_ancestor)
         self.edit_stack_changed()
 
     def cleanup(self):

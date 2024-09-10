@@ -116,3 +116,21 @@ def remove_control_move_shortcuts_below(widget):
     remove_control_move_shortcuts(widget)
     for child in widget:
         remove_control_move_shortcuts_below(child)
+
+
+def setup_ancestor(widget, levels, func):
+    if levels == 0:
+        func(widget)
+        return
+    parent = widget.get_parent()
+    if parent is not None:
+        setup_ancestor(parent, levels - 1, func)
+        return
+    data = [levels, func]
+    data.append(widget.connect('notify::parent', _setup_ancestor_notify_cb, data))
+
+
+def _setup_ancestor_notify_cb(widget, pspec, data):
+    levels, func, handler = data
+    widget.disconnect(handler)
+    setup_ancestor(widget.get_parent(), levels - 1, func)
