@@ -255,7 +255,7 @@ class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
         for i, item_ in enumerate(view.item_selection_model):
             if item_.tandaid == self.current_tandaid:
                 view.grab_focus()
-                GLib.idle_add(lambda: view.scroll_to(i))
+                GLib.idle_add(view.scroll_to, i)
                 return
 
     def tandaid_selection_changed_cb(self, model, p, r, a):

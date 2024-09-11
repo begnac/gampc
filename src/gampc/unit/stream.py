@@ -18,6 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
+
 from ..util import action
 from ..util import db
 from ..util import editstack
@@ -64,12 +66,15 @@ class StreamWidget(ViewWithEditStack):
         yield from self.generate_url_actions()
 
     def item_edited_cb(self, factory, pos, name, value):
+        GLib.idle_add(self.item_edited, pos, name, value)
+
+    def item_edited(self, pos, name, value):
         old = self.item_selection_model[pos].value
         new = dict(old)
         new[name] = value
         self.edit_stack.hold_transaction()
+        self.edit_stack.append_delta(editstack.DeltaSplicer([new], pos, True, self.edit_stack_splicer))
         self.edit_stack.append_delta(editstack.DeltaSplicer([old], pos, False, self.edit_stack_splicer))
-        self.edit_stack.append_delta(editstack.DeltaSplicer([new], pos + 1, True, self.edit_stack_splicer))
         self.edit_stack.release_transaction()
 
     def generate_save_actions(self):

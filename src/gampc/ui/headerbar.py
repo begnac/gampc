@@ -124,7 +124,7 @@ class TimeScale(Gtk.Box):
     def break_interaction(self, *args):
         if not self.elapsed_binding and self.get_sensitive():
             self.set_sensitive(False)
-            GLib.idle_add(lambda: self.set_sensitive(True) or GLib.SOURCE_REMOVE)
+            GLib.idle_add(self.set_sensitive, True)
 
     def set_elapsed_binding(self):
         if not self.elapsed_binding:

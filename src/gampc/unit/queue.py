@@ -97,7 +97,7 @@ class QueueWidget(ViewWithCopyPasteSong):
 
     def set_position(self, position):
         if position is not None:
-            GLib.idle_add(lambda: self.scroll_to(position))
+            GLib.idle_add(self.scroll_to, position)
 
 
 class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitComponentTotalsMixin, mixins.UnitComponentPlaylistActionMixin, mixins.UnitComponentTandaActionMixin, unit.Unit):

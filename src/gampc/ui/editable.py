@@ -69,7 +69,7 @@ class EditableLabel(Gtk.Stack):
     @staticmethod
     def leave_cb(focus):
         widget = focus.get_widget()
-        GLib.idle_add(lambda: widget.stop_editing(True))
+        GLib.idle_add(widget.stop_editing, True)
 
     def set_label(self, label):
         self.label = label
