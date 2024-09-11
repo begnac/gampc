@@ -284,8 +284,6 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
             await self.delete_playlist(window, path)
         elif action.get_name() == 'update-from-queue':
             await self.save_playlist(window, path, await self.ampd.playlist())
-        else:
-            raise RuntimeError
 
     async def save_playlist(self, window, playlist_path, filenames):
         playlist_name = playlist_path.replace('/', self.PSEUDO_SEPARATOR)
