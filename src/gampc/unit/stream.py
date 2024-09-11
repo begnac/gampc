@@ -68,8 +68,8 @@ class StreamWidget(ViewWithEditStack):
         new = dict(old)
         new[name] = value
         self.edit_stack.hold_transaction()
-        self.edit_stack.append_delta(editstack.Delta([old], pos, False))
-        self.edit_stack.append_delta(editstack.Delta([new], pos + 1, True))
+        self.edit_stack.append_delta(editstack.DeltaSplicer([old], pos, False, self.edit_stack_splicer))
+        self.edit_stack.append_delta(editstack.DeltaSplicer([new], pos + 1, True, self.edit_stack_splicer))
         self.edit_stack.release_transaction()
 
     def generate_save_actions(self):

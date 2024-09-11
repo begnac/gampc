@@ -66,12 +66,13 @@ class ViewWithEditStack(ViewWithCopyPaste):
 
     def set_edit_stack(self, edit_stack):
         if self.edit_stack is not None:
-            self.edit_stack.set_splicer()
+            self.edit_stack.set_step_cb()
+            self.edit_stack.items = list(map(self.edit_stack_getter, self.item_model))
+        self.item_model.remove_all()
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.edit_stack.set_splicer(self.edit_stack_splicer, self.step_cb)
-        else:
-            self.item_model.remove_all()
+            self.edit_stack.set_step_cb(self.step_cb)
+            self.edit_stack_splicer(0, 0, self.edit_stack.items)
         self.edit_stack_changed()
 
     def step_cb(self, focus, selection):
@@ -95,8 +96,8 @@ class ViewWithEditStack(ViewWithCopyPaste):
         for k in positions[1:] + [0]:
             j += 1
             if j != k:
-                values = [self.edit_stack_getter(item) for item in self.item_selection_model[i:j]]
-                self.edit_stack.append_delta(editstack.Delta(values, i, False))
+                values = [self.edit_stack_getter(item) for item in self.item_model[i:j]]
+                self.edit_stack.append_delta(editstack.DeltaSplicer(values, i, False, self.edit_stack_splicer))
                 i = j = k
         self.edit_stack.release_transaction()
 
@@ -104,7 +105,7 @@ class ViewWithEditStack(ViewWithCopyPaste):
         if not values:
             return
         self.edit_stack.hold_transaction()
-        self.edit_stack.append_delta(editstack.Delta(values, position, True))
+        self.edit_stack.append_delta(editstack.DeltaSplicer(values, position, True, self.edit_stack_splicer))
         self.edit_stack.release_transaction()
 
     def edit_stack_changed(self):

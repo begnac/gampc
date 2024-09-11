@@ -18,30 +18,31 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-class Delta:
-    def __init__(self, items, position, push):
+class DeltaSplicer:
+    def __init__(self, items, position, advance, splicer):
         self.items = items
         self.position = position
-        self.push = push
+        self.advance = advance
+        self.splicer = splicer
 
-    def apply(self, push, add_cb, remove_cb):
+    def apply(self, advance):
         "Return item: focus position (or None), selection list."
-        if not self.push:
-            push = not push
-        if push:
-            add_cb(self.position, self.items)
+        if not self.advance:
+            advance = not advance
+        if advance:
+            self.splicer(self.position, 0, self.items)
             return self.position, list(range(self.position, self.position + len(self.items)))
         else:
-            remove_cb(self.position, len(self.items))
+            self.splicer(self.position, len(self.items), [])
             return self.position, []
 
-    def transpose_position_after(self, position, push=True):
+    def transpose_position_after(self, position, advance=True):
         if position < self.position:
             return position
-        if not self.push:
-            push = not push
+        if not self.advance:
+            advance = not advance
         n = len(self.items)
-        if push:
+        if advance:
             return position + n
         else:
             assert position >= self.position + n
@@ -60,13 +61,13 @@ class Transaction:
         delta.transpose_self_after(self.deltas)
         self.deltas.append(delta)
 
-    def apply(self, push, add_cb, remove_cb):
+    def apply(self, advance):
         focus = None
         selection = []
-        for delta in self.deltas if push else reversed(self.deltas):
-            new_focus, new_selection = delta.apply(push, add_cb, remove_cb)
-            focus = delta.transpose_position_after(focus, push) if focus is not None else new_focus
-            selection = [delta.transpose_position_after(position, push) for position in selection] + new_selection
+        for delta in self.deltas if advance else reversed(self.deltas):
+            new_focus, new_selection = delta.apply(advance)
+            focus = delta.transpose_position_after(focus, advance) if focus is not None else new_focus
+            selection = [delta.transpose_position_after(position, advance) for position in selection] + new_selection
         return focus, selection
 
 
@@ -74,7 +75,6 @@ class EditStack:
     def __init__(self, items):
         self.hold_counter = 0
         self.reset()
-        self.splicer = None
         self.step_cb = None
         self.items = items
 
@@ -90,13 +90,13 @@ class EditStack:
         while self.index:
             self.step(False)
 
-    def step(self, push):
+    def step(self, advance):
         if self.hold_counter > 0:
             return RuntimeError
-        if not push:
+        if not advance:
             self.index -= 1
-        focus, selection = self.transactions[self.index].apply(push, self._add_cb, self._remove_cb)
-        if push:
+        focus, selection = self.transactions[self.index].apply(advance)
+        if advance:
             self.index += 1
         if self.step_cb:
             self.step_cb(focus, selection)
@@ -118,22 +118,9 @@ class EditStack:
             del self.transaction
 
     def append_delta(self, delta):
-        if self.hold_counter == 0:
-            raise RuntimeError
+        self.hold_transaction()
         self.transaction.append(delta)
+        self.release_transaction()
 
-    def set_splicer(self, splicer=None, step_cb=None):
-        self.splicer = splicer
+    def set_step_cb(self, step_cb=None):
         self.step_cb = step_cb
-        if splicer is not None:
-            splicer(0, None, self.items)
-
-    def _add_cb(self, pos, items):
-        self.items[pos:pos] = items
-        if self.splicer:
-            self.splicer(pos, 0, items)
-
-    def _remove_cb(self, pos, n):
-        self.items[pos:pos + n] = []
-        if self.splicer:
-            self.splicer(pos, n, [])
