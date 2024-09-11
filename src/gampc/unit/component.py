@@ -71,8 +71,7 @@ class __unit__(unit.Unit):
         yield action.ActionInfo('component-stop', self.component_stop_cb, _("Stop component"), ['<Control><Shift>w'])
 
     def register_component(self, name, title, key, factory):
-        if name in self._registered_components:
-            raise RuntimeError
+        assert name not in self._registered_components
         self._registered_components[name] = Component(name, title, key, factory)
         self.regenerate_start()
 
@@ -107,7 +106,7 @@ class __unit__(unit.Unit):
                 if not self._components[name]:
                     del self._components[name]
                 return
-        raise RuntimeError
+        assert False
 
     def component_start_cb(self, action, parameter):
         name, new_instance = parameter.unpack()
@@ -122,5 +121,5 @@ class __unit__(unit.Unit):
         window = Gtk.Application.get_default().get_active_window()
         component = window.component
         if component is not None:
-            window.change_component(window.unit.unit_component.get_free_component())
+            window.change_component(self.get_free_component())
             self.remove_component(component)
