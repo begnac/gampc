@@ -271,7 +271,7 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
         self.tanda_fields = tanda_fields
 
         self.tanda_view = TandaEditTandaView(tanda_fields, model=tandas, sortable=True, separator_file=self.separator_file)
-        self.song_view = ViewCacheWithEditStack(song_fields, cache=cache, filterable=False)
+        self.song_view = ViewCacheWithEditStack(song_fields, cache=cache, filterable=False, edit_stack_ancestor=1)
         self.song_view.scrolled_item_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
@@ -288,7 +288,17 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
         self.tanda_view.item_view.add_css_class('tanda-edit')
 
         self.connect_clean(self.tanda_view.item_selection_filter_model, 'items-changed', self.tanda_selection_changed_cb)
+        for column in self.tanda_view.item_view.get_columns():
+            self.connect_clean(column.get_factory(), 'item-edited', self.tanda_edited_cb)
+
         self.current_tanda = None
+
+    def tanda_edited_cb(self, factory, pos, name, value):
+        assert self.current_tanda == self.tanda_view.item_selection_model[pos]
+        GLib.idle_add(self.tanda_edited, name, value)
+
+    def tanda_edited(self, name, value):
+        self.current_tanda.songs.append_delta(editstack.DeltaItem(self.current_tanda, name, value or None))
 
     def tanda_selection_changed_cb(self, model, p, r, a):
         if model:
