@@ -18,6 +18,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import weakref
+
+
 class DeltaSplicer:
     def __init__(self, items, position, advance, splicer):
         self.items = items
@@ -26,7 +29,6 @@ class DeltaSplicer:
         self.splicer = splicer
 
     def apply(self, advance):
-        "Return item: focus position (or None), selection list."
         if not self.advance:
             advance = not advance
         if advance:
@@ -51,6 +53,35 @@ class DeltaSplicer:
     def transpose_self_after(self, deltas):
         for delta in deltas:
             self.position = delta.transpose_position_after(self.position)
+
+
+class DeltaItem:
+    def __init__(self, item, key, new):
+        self.item = weakref.ref(item)  # Otherwise cleanup is very difficult
+        self.key = key
+        self.old = item.get_field(key)
+        self.new = new
+
+    def apply(self, advance):
+        if advance:
+            old, new = self.old, self.new
+        else:
+            old, new = self.new, self.old
+        item = self.item()
+        assert item is not None and item.value.get(self.key) == old
+        value = dict(item.value)
+        if new is not None:
+            value[self.key] = new
+        elif old is not None:
+            del value[self.key]
+        item.value = value
+        return None, []
+
+    def transpose_position_after(self, position, advance=True):
+        return position
+
+    def transpose_self_after(self, deltas):
+        return
 
 
 class Transaction:
