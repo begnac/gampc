@@ -33,31 +33,23 @@ class Delta:
             return self.position, list(range(self.position, self.position + len(self.items)))
         else:
             remove_cb(self.position, len(self.items))
-            pos = self.position
-            if pos >= 0:
-                return pos, [pos]
-            else:
-                return None, []
+            return self.position, []
 
-    def transpose(self, deltas):
-        for delta in deltas:
-            n = len(delta.items)
-            if delta.push:
-                if self.position >= delta.position:
-                    self.position += n
-            else:
-                if self.position >= delta.position + n:
-                    self.position -= n
-                elif self.position >= delta.position:
-                    raise RuntimeError
-
-    def translate_positions(self, positions, push):
+    def transpose_position_after(self, position, push=True):
+        if position < self.position:
+            return position
         if not self.push:
             push = not push
+        n = len(self.items)
         if push:
-            return [pos + len(self.items) if pos >= self.position else pos for pos in positions]
+            return position + n
         else:
-            return [pos - len(self.items) if pos >= self.position else pos for pos in positions]
+            assert position >= self.position + n
+            return position - n
+
+    def transpose_self_after(self, deltas):
+        for delta in deltas:
+            self.position = delta.transpose_position_after(self.position)
 
 
 class Transaction:
@@ -65,22 +57,17 @@ class Transaction:
         self.deltas = []
 
     def append(self, delta):
-        delta.transpose(self.deltas)
+        delta.transpose_self_after(self.deltas)
         self.deltas.append(delta)
 
     def apply(self, push, add_cb, remove_cb):
         focus = None
-        add_selection = []
-        remove_selection = []
+        selection = []
         for delta in self.deltas if push else reversed(self.deltas):
-            focus, new_selection = delta.apply(push, add_cb, remove_cb)
-            add_selection = delta.translate_positions(add_selection, push)
-            remove_selection = delta.translate_positions(remove_selection, push)
-            if push == delta.push:
-                add_selection += new_selection
-            else:
-                remove_selection += new_selection
-        return focus, add_selection or remove_selection
+            new_focus, new_selection = delta.apply(push, add_cb, remove_cb)
+            focus = delta.transpose_position_after(focus, push) if focus is not None else new_focus
+            selection = [delta.transpose_position_after(position, push) for position in selection] + new_selection
+        return focus, selection
 
 
 class EditStack:
@@ -102,11 +89,6 @@ class EditStack:
             return RuntimeError
         while self.index:
             self.step(False)
-
-    def set_from_here(self, transactions):
-        if self.hold_counter > 0:
-            return RuntimeError
-        self.transactions[self.index:] = transactions
 
     def step(self, push):
         if self.hold_counter > 0:
