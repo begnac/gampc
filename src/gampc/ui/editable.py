@@ -27,6 +27,10 @@ from ..util import misc
 
 
 class EditableLabel(Gtk.Stack):
+    __gsignals__ = {
+        'edited': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+    }
+
     label = GObject.Property(type=str)
 
     def __init__(self, **kwargs):
@@ -97,8 +101,7 @@ class EditableLabel(Gtk.Stack):
         if self.entry is None:
             return
         if commit:
-            text = self.entry.get_text()
-            self.set_label(text)
+            self.emit('edited', self.entry.get_text())
         self.set_visible_child_name('label')
         self.remove(self.entry)
         self.entry = None

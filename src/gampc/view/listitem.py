@@ -109,18 +109,12 @@ class EditableListItemFactoryBase(ListItemFactoryBase):
     }
 
     def make_widget(self):
-        return editable.EditableLabel()
+        widget = editable.EditableLabel()
+        widget.connect('edited', self.edited_cb, self.name)
+        return widget
 
-    def bind(self, widget, item_):
-        super().bind(widget, item_)
-        widget.connect('notify::label', self.notify_label_cb, self.name)
-
-    def unbind(self, widget, item_):
-        widget.disconnect_by_func(self.notify_label_cb)
-        super().unbind(widget, item_)
-
-    def notify_label_cb(self, widget, pspec, name):
-        self.emit('item-edited', widget.pos, name, widget.label)
+    def edited_cb(self, widget, text, name):
+        self.emit('item-edited', widget.pos, name, text)
 
     @staticmethod
     def start_editing_cb(cell, arg):
