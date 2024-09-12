@@ -25,16 +25,17 @@ import ampd
 from ..util import action
 from ..util import cache
 from ..util import cleanup
-from ..util import editstack
 from ..util import item
 from ..util import misc
 from ..util import unit
 
-from ..ui import compound
 from ..ui import dialog
 from ..ui import treelist
 
-from ..view.cache import ViewWithCopyPasteEditStackSong
+from ..view.cache import ViewCacheWithCopyPasteSong
+
+from ..control import compound
+from ..control import editstack
 
 from . import mixins
 
@@ -48,27 +49,22 @@ ICONS = {
 }
 
 
-class PlaylistWidget(compound.WidgetWithPanedTreeList):
+class PlaylistWidget(editstack.WidgetCacheEditStackMixin, compound.WidgetWithPanedTreeList):
     def __init__(self, fields, separator_file, cache, config, root_model):
-        main = ViewWithCopyPasteEditStackSong(fields=fields, separator_file=separator_file, cache=cache, edit_stack_ancestor=1)
-        super().__init__(main, config, root_model)
+        main = ViewCacheWithCopyPasteSong(fields=fields, separator_file=separator_file, cache=cache)
+        super().__init__(main, config, root_model, edit_stack_view=main)
         self.add_cleanup_below(main)
 
-        main.connect('edit-stack-changed', self.edit_stack_changed_cb)
+        self.main.context_menu.append_section(None, self.edit_stack_menu)
+        self.context_menu.append_section(None, self.edit_stack_menu)
+        self.edit_stack_splicer = self.main.splice_keys
+
         item.setup_find_duplicate_items(main.item_model, ['file'], [separator_file])
 
-    @staticmethod
-    def edit_stack_changed_cb(view):
-        item = view.get_parent().left_selected_item
+    def edit_stack_changed(self):
+        super().edit_stack_changed()
+        item = self.left_selected_item
         if item is None:
-            print('???????????')
-            return
-        assert item.edit_stack == view.edit_stack
-        if item.edit_stack.index and not item.modified:
-            item.modified = True
-        elif not item.edit_stack.index and item.modified:
-            item.modified = False
-        else:
             return
         pos = item.parent_model.find(item).position
         item.parent_model.items_changed(pos, 1, 1)
@@ -77,11 +73,11 @@ class PlaylistWidget(compound.WidgetWithPanedTreeList):
         super().left_selection_changed_cb(selection, position, n_items)
         if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
             self.main.set_editable(True)
-            self.main.set_edit_stack(self.left_selected_item.edit_stack)
+            self.set_edit_stack(self.left_selected_item.edit_stack)
         else:
             self.main.set_editable(False)
-            self.main.set_edit_stack(None)
-            self.main.set_keys(sum(map(lambda node: list(node.edit_stack.items),
+            self.set_edit_stack(None)
+            self.main.set_keys(sum(map(lambda node: list(node.edit_stack.frozen),
                                        filter(lambda node: node.kind == NODE_PLAYLIST,
                                               map(lambda pos: selection[pos].get_item(),
                                                   self.left_selection_pos))), []))
@@ -180,7 +176,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         playlist = PlaylistWidget(self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config.pane_separator, self.root.model)
         view = playlist.main
 
-        view.add_context_menu_actions(self.generate_actions(playlist), 'playlist-local', self.TITLE, below='edit-stack')
+        view.add_context_menu_actions(self.generate_actions(playlist), 'playlist-local', self.TITLE, target_menu=playlist.edit_stack_menu)
         view.add_context_menu_actions(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         view.add_context_menu_actions(self.generate_tanda_actions(view), 'tanda', self.TITLE)
 
@@ -275,11 +271,11 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         path = widget.left_selected_item.joined_path
         window = widget.get_root()
         if action.get_name() == 'save':
-            if not widget.main.edit_stack.transactions:
+            if not widget.edit_stack.transactions:
                 return
             if await self.save_playlist(window, path, [item.get_key() for item in widget.main.item_model]):
-                widget.main.edit_stack.reset()
-                widget.main.edit_stack_changed()
+                widget.edit_stack.reset()
+                widget.edit_stack_changed()
         elif action.get_name() == 'rename':
             await self.rename_playlist(window, path, widget.left_selected_item.kind == NODE_FOLDER)
         elif action.get_name() == 'delete':

@@ -136,11 +136,6 @@ class ActionInfoFamily:
         self.add_to_action_map(action_group, protect)
         return action_group
 
-    def insert_action_group(self, widget, protect=None):
-        action_group = self.get_action_group(protect)
-        widget.insert_action_group(self.prefix, action_group)
-        return action_group
-
     def get_shortcut_controller(self):
         controller = ShortcutControllerWithHelp(prefix=self.prefix, label=self.label.replace('_', ''))
         for action_info in self.action_infos:

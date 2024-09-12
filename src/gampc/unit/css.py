@@ -23,21 +23,17 @@ from gi.repository import Gtk
 
 from ..util import unit
 
-from ..ui import dnd
-
 
 def load_theme_css(dark, theme_css_provider, app_css_provider):
     theme_css_provider.load_named('Adwaita', 'dark' if dark else None)
 
-    filter_background = 'blue' if dark else 'pink'
-
     css = ''
 
-    css += f'''
-    columnview.filter > listview > row {{
+    css += '''
+    columnview.filter > listview > row {
       background: blue;
       color: white;
-    }}
+    }
     '''
 
     css += '''
@@ -66,7 +62,11 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
     }
     '''
 
-    css += dnd.get_css(dark)
+    css += '''
+      columnview > listview:drop(active) > row.drop-row {
+      border-bottom-color: rgb(46,194,126);
+    }
+    '''
 
     N = 4
     for d in range(N ** 3):

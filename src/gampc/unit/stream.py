@@ -22,7 +22,6 @@ from gi.repository import GLib
 
 from ..util import action
 from ..util import db
-from ..util import editstack
 from ..util import field
 from ..util import item
 from ..util import misc
@@ -30,9 +29,11 @@ from ..util import unit
 
 from ..ui import dialog
 
-from ..view.editstack import ViewWithEditStack
+from ..view.actions import ViewWithCopyPaste
 from ..view.cache import ItemFilenameTransfer
 from ..view.listitem import EditableListItemFactory
+
+from ..control import editstack
 
 from . import mixins
 
@@ -41,7 +42,7 @@ class ItemStreamTransfer(item.ItemValueTransfer):
     pass
 
 
-class StreamWidget(ViewWithEditStack):
+class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
     transfer_type = ItemStreamTransfer
     extra_transfer_types = (ItemFilenameTransfer, item.ItemStringTransfer)
 
@@ -55,11 +56,16 @@ class StreamWidget(ViewWithEditStack):
         self.item_view.add_css_class('song-by-key')
         for column in self.item_view.get_columns():
             self.connect_clean(column.get_factory(), 'item-edited', self.item_edited_cb)
-        self.add_context_menu_actions(self.generate_save_actions(), 'stream', _("Save"))
+        self.context_menu.append_section(None, self.edit_stack_menu)
+        self.add_context_menu_actions(self.generate_save_actions(), 'stream', _("Save"), target_menu=self.edit_stack_menu)
         self.item_view.add_css_class('stream')
         item.setup_find_duplicate_items(self.item_model, ['file'], [separator_file])
 
         self.load_streams()
+
+    def cleanup(self):
+        self.set_edit_stack(None)
+        super().cleanup()
 
     def generate_editing_actions(self):
         yield from super().generate_editing_actions()
@@ -83,7 +89,7 @@ class StreamWidget(ViewWithEditStack):
     @misc.create_task
     async def action_save_cb(self, action, parameter):
         if self.edit_stack.transactions and await dialog.MessageDialogAsync(transient_for=self.get_root(), message=_("Save stream database?")).run():
-            self.db.save_streams(self.edit_stack.items)
+            self.db.save_streams(map(lambda item: item.value, self.item_model))
             self.edit_stack.reset()
             self.edit_stack_changed()
 

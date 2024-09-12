@@ -27,7 +27,6 @@ from ..util import misc
 
 from ..ui import contextmenu
 from ..ui import dialog
-from ..ui import dnd
 
 from .base import ViewBase
 
@@ -56,13 +55,14 @@ class ViewWithCopy(ViewWithContextMenu):
 
         self.add_context_menu_actions(self.generate_editing_actions(), 'view-edit', _("Edit"))
 
-        self.drag_source = dnd.ListDragSource(self.content_from_items, self.remove_positions, self.lock, self.unlock)
+        self.drag_source = Gtk.DragSource(actions=Gdk.DragAction.COPY)
+        icon = Gtk.IconTheme.get_for_display(misc.get_display()).lookup_icon('view-list-symbolic', None, 48, 1, 0, 0)
+        self.drag_source.set_icon(icon, 5, 5)
+        self.connect_clean(self.drag_source, 'prepare', self.drag_prepare_cb)
+        # self.drag_source.connect('drag-begin', self.drag_begin_cb)
+        # self.drag_source.connect('drag-cancel', self.drag_cancel_cb)
+        self.connect_clean(self.drag_source, 'drag-end', self.drag_end_cb)
         self.item_view.rows.add_controller(self.drag_source)
-
-    def cleanup(self):
-        self.item_view.rows.remove_controller(self.drag_source)
-        del self.drag_source
-        super().cleanup()
 
     def generate_editing_actions(self):
         yield action.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
@@ -90,23 +90,47 @@ class ViewWithCopy(ViewWithContextMenu):
     def content_from_items(cls, items):
         return item.transfer_union(items, cls.transfer_type, *cls.extra_transfer_types)
 
+    def drag_prepare_cb(self, drag_source, x, y):
+        row, x, y = misc.find_descendant_at_xy(self.item_view.rows, x, y, 1)
+        if row is None:
+            return
+
+        self.drag_selection = self.get_selection()
+        pos = row.get_first_child().get_first_child().pos
+        if pos not in self.drag_selection:
+            self.item_selection_model.select_item(pos, True)
+            self.drag_selection = [pos]
+        self.lock()
+        return self.content_from_items(self.item_selection_filter_model)
+
+    # def drag_begin_cb(self, source, drag):
+    #     pass
+
+    # def drag_cancel_cb(self, source, drag, reason):
+    #     return False
+
+    def drag_end_cb(self, drag_source, drag, delete):
+        if delete:
+            self.remove_positions(self.drag_selection)
+        self.unlock()
+        del self.drag_selection
+
 
 class ViewWithCopyPaste(ViewWithCopy):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, sortable=False, **kwargs)
 
-        self.connect('notify::filtering', self.check_editable)
+        self.connect_clean(self, 'notify::filtering', self.check_editable)
 
-        self.drop_target = dnd.ListDropTarget(Gdk.ContentFormats.new_for_gtype(self.transfer_type), self.add_items)
+        self.drop_target = Gtk.DropTarget(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=Gdk.ContentFormats.new_for_gtype(self.transfer_type))
+        self.connect_clean(self.drop_target, 'enter', self.drop_action_cb)
+        self.connect_clean(self.drop_target, 'motion', self.drop_action_cb)
+        # self.connect_clean(self.drop_target, 'leave', self.drop_leave_cb)
+        self.connect_clean(self.drop_target, 'drop', self.drop_cb)
         self.item_view.rows.add_controller(self.drop_target)
+        self.drop_row = None
 
         self.set_editable(True)
-
-    def cleanup(self):
-        self.disconnect_by_func(self.check_editable)
-        self.item_view.rows.remove_controller(self.drop_target)
-        del self.drop_target
-        super().cleanup()
 
     def get_editable(self):
         return self._editable
@@ -174,5 +198,30 @@ class ViewWithCopyPaste(ViewWithCopy):
             item_ = item.Item(value=dict(file=url))
             transfer = self.transfer_type([item_])
             self.add_items(transfer.values, pos)
+
+    def set_drop_row(self, drop_row=None):
+        if drop_row != self.drop_row:
+            if self.drop_row is not None:
+                self.drop_row.remove_css_class('drop-row')
+            self.drop_row = drop_row
+            if self.drop_row is not None:
+                self.drop_row.add_css_class('drop-row')
+
+    def drop_action_cb(self, drop_target, x, y):
+        row, x, y = misc.find_descendant_at_xy(self.item_view.rows, x, y, 1)
+        if row is None:
+            row = self.item_view.rows.get_last_child()
+        elif y < row.get_height() / 2:
+            row = row.get_prev_sibling()
+        self.set_drop_row(row)
+        return Gdk.DragAction.MOVE
+
+    # def drop_leave_cb(self, drop_target):
+    #     # print('leave')
+    #     self.set_row()
+
+    def drop_cb(self, drop_target, value, x, y):
+        self.add_items(value.values, self.drop_row.get_first_child().get_first_child().pos + 1 if self.drop_row is not None else 0)
+        return True
 
     add_items = remove_positions = NotImplemented

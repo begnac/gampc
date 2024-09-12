@@ -20,7 +20,6 @@
 
 from gi.repository import GObject
 from gi.repository import Gio
-from gi.repository import Gtk
 
 import asyncio
 import ampd
@@ -43,7 +42,6 @@ class TreeNode(GObject.Object):
         self.model.remove_all()
 
     def reset(self):
-        self.modified = False
         self.filled_sub_nodes = False
         self.filled_contents = False
         self.state = self.STATE_UNEXPOSED

@@ -22,10 +22,9 @@ from gi.repository import Gtk
 
 import ampd
 
-from ..util import cleanup
 from ..util import unit
 
-from ..ui import compound
+from ..control import compound
 
 from . import mixins
 

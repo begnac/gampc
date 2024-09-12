@@ -24,9 +24,9 @@ from ..util import action
 from ..util import item
 from ..util import unit
 
-from ..ui import compound
-
 from ..view.cache import ViewCacheWithCopy
+
+from ..control import compound
 
 from . import mixins
 

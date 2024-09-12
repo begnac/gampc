@@ -24,7 +24,6 @@ from ..util import item
 
 from .actions import ViewWithCopy
 from .actions import ViewWithCopyPaste
-from .editstack import ViewWithEditStack
 
 
 class ItemFilenameTransfer(item.ItemKeyTransfer):
@@ -34,33 +33,6 @@ class ItemFilenameTransfer(item.ItemKeyTransfer):
 class ViewFilenameMixin:
     transfer_type = ItemFilenameTransfer
     extra_transfer_types = (item.ItemStringTransfer,)
-
-
-class ViewCacheMixin(ViewFilenameMixin):
-    def __init__(self, *args, cache, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.aioqueue = aioqueue.AIOQueue()
-        self.cache = cache
-        self.item_view.add_css_class('song-by-key')
-
-    def set_keys(self, keys):
-        if keys:
-            self.splice_keys(0, None, keys)
-        else:
-            self.item_model.remove_all()
-
-    def splice_keys(self, pos, remove, keys):
-        self.aioqueue.queue_task(self._splice_keys, pos, remove, list(keys))
-
-    async def _splice_keys(self, task, pos, remove, keys):
-        await self.cache.ensure_keys(keys)
-        if task is not None:
-            await task
-        self.item_model.splice_values(pos, remove, (self.cache[key] for key in keys))
-
-
-class ViewCacheWithCopy(ViewCacheMixin, ViewWithCopy):
-    pass
 
 
 class ViewWithCopyPasteSong(ViewFilenameMixin, ViewWithCopyPaste):
@@ -102,16 +74,36 @@ class ViewWithCopyPasteSong(ViewFilenameMixin, ViewWithCopyPaste):
     #                 song._status = self.RECORD_MODIFIED
 
 
-class ViewCacheWithEditStack(ViewCacheMixin, ViewWithEditStack):
-    edit_stack_splicer = ViewCacheMixin.splice_keys
+class ViewCacheMixin(ViewFilenameMixin):
+    def __init__(self, *args, cache, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.aioqueue = aioqueue.AIOQueue()
+        self.cache = cache
+        self.item_view.add_css_class('song-by-key')
 
-    @staticmethod
-    def edit_stack_getter(item):
-        return item.get_key()
+    def set_keys(self, keys):
+        if keys:
+            self.splice_keys(0, None, keys)
+        else:
+            self.item_model.remove_all()
 
-    def refocus(self, *args):
-        self.aioqueue.queue_task(super().refocus, *args, sync=True)
+    def splice_keys(self, pos, remove, keys):
+        self.aioqueue.queue_task(self._splice_keys, pos, remove, list(keys))
+
+    async def _splice_keys(self, task, pos, remove, keys):
+        await self.cache.ensure_keys(keys)
+        if task is not None:
+            await task
+        self.item_model.splice_values(pos, remove, (self.cache[key] for key in keys))
 
 
-class ViewWithCopyPasteEditStackSong(ViewCacheWithEditStack, ViewWithCopyPasteSong):
+class ViewCacheWithCopy(ViewCacheMixin, ViewWithCopy):
+    pass
+
+
+class ViewCacheWithCopyPaste(ViewCacheMixin, ViewWithCopyPaste):
+    pass
+
+
+class ViewCacheWithCopyPasteSong(ViewCacheMixin, ViewWithCopyPasteSong):
     pass

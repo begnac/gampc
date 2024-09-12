@@ -24,10 +24,11 @@ import ampd
 
 from ..util import unit
 
-from ..ui import compound
 from ..ui import treelist
 
 from ..view.cache import ViewCacheWithCopy
+
+from ..control import compound
 
 from . import mixins
 

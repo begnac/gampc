@@ -23,8 +23,8 @@ from gi.repository import Gtk
 from ..util import cleanup
 from ..util import misc
 
-from . import contextmenu
-from . import listviewsearch
+from ..ui import contextmenu
+from ..ui import listviewsearch
 
 
 class WidgetWithEntry(cleanup.CleanupSignalMixin, Gtk.Box):
@@ -67,7 +67,7 @@ class TreeListItemFactory(Gtk.SignalListItemFactory):
         row = listitem.get_item()
         node = row.get_item()
         child.icon.set_from_icon_name(node.icon)
-        if node.modified:
+        if hasattr(node, 'edit_stack') and node.edit_stack.modified:
             child.label.set_label('* ' + node.name)
             child.label.set_css_classes(['modified'])
         else:

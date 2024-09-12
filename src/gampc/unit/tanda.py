@@ -34,20 +34,22 @@ import ampd
 from ..util import action
 from ..util import cleanup
 from ..util import db
-from ..util import editstack
 from ..util import field
 from ..util import item
 from ..util import misc
 from ..util import unit
 # from ..util.logger import logger
 
-from ..ui import compound
 # from ..ui import contextmenu
 from ..ui import dialog
 
 from ..view.actions import ViewWithContextMenu
-from ..view.cache import ViewCacheWithCopy, ViewCacheWithEditStack
+from ..view.cache import ViewCacheWithCopy
+from ..view.cache import ViewCacheWithCopyPaste
 from ..view.listitem import EditableListItemFactoryBase
+
+from ..control import compound
+from ..control import editstack
 
 from . import mixins
 # from . import search
@@ -56,11 +58,13 @@ from . import mixins
 class TandaItem(item.ItemBase):
     tandaid = GObject.Property()
     songs = GObject.Property()
+    edit_stack = GObject.Property()
     modified = GObject.Property(type=bool, default=False)
 
     def load(self, value):
         self.tandaid = value.pop('tandaid')
         self.edit_stack = editstack.EditStack([song['file'] for song in value['_songs']])
+        self.edit_stack.bind_property('modified', self, 'modified')
         super().load(value)
 
 
@@ -99,18 +103,6 @@ class TandaListItemFactory(EditableListItemFactoryBase):
             cell.add_css_class('modified')
         else:
             cell.remove_css_class('modified')
-
-
-class TandaEditTandaView(ViewWithContextMenu):
-    def __init__(self, *args, separator_file, **kwargs):
-        self.separator_file = separator_file
-        super().__init__(*args, factory_factory=TandaListItemFactory, selection_model=Gtk.SingleSelection, **kwargs)
-
-    def get_filenames(self, selection):
-        if self.item_selection_filter_model:
-            return [self.separator_file] + self.item_selection_filter_model[0].edit_stack.items + [self.separator_file]
-        else:
-            return []
 
 
 class StringListItemFactory(Gtk.SignalListItemFactory):
@@ -270,16 +262,28 @@ class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
         self.current_tandaid = model[0].tandaid if model else None
 
 
-class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
+class TandaEditTandaView(ViewWithContextMenu):
+    def __init__(self, *args, separator_file, **kwargs):
+        self.separator_file = separator_file
+        super().__init__(*args, factory_factory=TandaListItemFactory, selection_model=Gtk.SingleSelection, sortable=True, **kwargs)
+
+    def get_filenames(self, selection):
+        if self.item_selection_filter_model:
+            return [self.separator_file] + [song['file'] for song in self.item_selection_filter_model[0].value['_songs']] + [self.separator_file]
+        else:
+            return []
+
+
+class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Box):
     current_tandaid = GObject.Property()
 
     def __init__(self, tandas, queue_model, tanda_fields, song_fields, *args, cache, **kwargs):
-        super().__init__(*args, **kwargs, orientation=Gtk.Orientation.VERTICAL)
+        self.song_view = ViewCacheWithCopyPaste(song_fields, cache=cache, filterable=False)
+
+        super().__init__(*args, **kwargs, orientation=Gtk.Orientation.VERTICAL, edit_stack_view=self.song_view)
 
         self.tanda_fields = tanda_fields
-
-        self.tanda_view = TandaEditTandaView(tanda_fields, model=tandas, sortable=True, separator_file=self.separator_file)
-        self.song_view = ViewCacheWithEditStack(song_fields, cache=cache, filterable=False, edit_stack_ancestor=1)
+        self.tanda_view = TandaEditTandaView(tanda_fields, model=tandas, separator_file=self.separator_file)
         self.song_view.scrolled_item_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
@@ -301,17 +305,9 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
         self.current_tanda = None
 
-        self.connect_clean(self.song_view, 'edit-stack-changed', self.edit_stack_changed_cb)
-
-    def edit_stack_changed_cb(self, view):
-        item = self.current_tanda
-        if item is None:
-            return
-        assert view.edit_stack == item.edit_stack
-        if item.edit_stack.index and not item.modified:
-            item.modified = True
-        elif not item.edit_stack.index and item.modified:
-            item.modified = False
+        self.song_view.context_menu.append_section(None, self.edit_stack_menu)
+        self.tanda_view.context_menu.append_section(None, self.edit_stack_menu)
+        self.edit_stack_splicer = self.song_view.splice_keys
 
     def tanda_edited_cb(self, factory, pos, name, value):
         assert self.current_tanda == self.tanda_view.item_selection_model[pos]
@@ -323,14 +319,10 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
     def tanda_selection_changed_cb(self, model, p, r, a):
         if model:
             self.current_tanda = model[0]
-            self.song_view.set_edit_stack(self.current_tanda.edit_stack)
+            self.set_edit_stack(self.current_tanda.edit_stack)
         else:
             self.current_tanda = None
-            self.song_view.set_edit_stack(None)
-
-    # def set_modified(self, modified=True):
-    #     self.current_tanda._modified = modified
-    #     self.tanda_view.queue_draw()
+            self.set_edit_stack(None)
 
     # def renderer_editing_started_cb(self, renderer, editable, path, name):
     #     editable.connect('editing-done', self.editing_done_cb, path, name)
@@ -456,8 +448,8 @@ class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
         filenames = []
         for tanda in tandas:
             tandaid = tanda.tandaid
-            for song in tanda.edit_stack.items:
-                filenames.append((song, tandaid))
+            for song in tanda.value['_songs']:
+                filenames.append((song['file'], tandaid))
             filenames.append((self.separator_file, tandaid))
         self.set_keys(filenames)
 
