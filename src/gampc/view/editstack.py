@@ -71,12 +71,8 @@ class ViewWithEditStack(ViewWithCopyPaste):
         self.item_model.remove_all()
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.edit_stack.set_step_cb(self.step_cb)
+            self.edit_stack.set_step_cb(self.refocus)
             self.edit_stack_splicer(0, 0, self.edit_stack.items)
-        self.edit_stack_changed()
-
-    def step_cb(self, focus, selection):
-        self.refocus(focus, selection)
         self.edit_stack_changed()
 
     def refocus(self, focus, selection):

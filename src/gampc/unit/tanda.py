@@ -60,7 +60,7 @@ class TandaItem(item.ItemBase):
 
     def load(self, value):
         self.tandaid = value.pop('tandaid')
-        self.songs = value.pop('songs')
+        self.edit_stack = editstack.EditStack([song['file'] for song in value['_songs']])
         super().load(value)
 
 
@@ -76,10 +76,10 @@ class TandaListItemFactory(EditableListItemFactoryBase):
     def __init__(self, name):
         super().__init__(name)
         self.binders.append(('value', self.tanda_binder, name))
+        self.binders.append(('modified', self.modified_binder))
 
     @staticmethod
     def tanda_binder(widget, item_, name):
-        EditableListItemFactoryBase.value_binder(widget, item_, name)
         cell = widget.get_parent()
         if 'Last_Played' in name:
             value = item_.get_field('Last_Played_Weeks')
@@ -92,6 +92,14 @@ class TandaListItemFactory(EditableListItemFactoryBase):
         elif name in ('Genre',):
             cell.add_css_class(f'genre-{item_.get_field(name).lower()}')
 
+    @staticmethod
+    def modified_binder(widget, item_):
+        cell = widget.get_parent()
+        if item_.modified:
+            cell.add_css_class('modified')
+        else:
+            cell.remove_css_class('modified')
+
 
 class TandaEditTandaView(ViewWithContextMenu):
     def __init__(self, *args, separator_file, **kwargs):
@@ -100,7 +108,7 @@ class TandaEditTandaView(ViewWithContextMenu):
 
     def get_filenames(self, selection):
         if self.item_selection_filter_model:
-            return [self.separator_file] + self.item_selection_filter_model[0].songs.items + [self.separator_file]
+            return [self.separator_file] + self.item_selection_filter_model[0].edit_stack.items + [self.separator_file]
         else:
             return []
 
@@ -293,17 +301,29 @@ class TandaEdit(TandaSubWidgetMixin, Gtk.Box):
 
         self.current_tanda = None
 
+        self.connect_clean(self.song_view, 'edit-stack-changed', self.edit_stack_changed_cb)
+
+    def edit_stack_changed_cb(self, view):
+        item = self.current_tanda
+        if item is None:
+            return
+        assert view.edit_stack == item.edit_stack
+        if item.edit_stack.index and not item.modified:
+            item.modified = True
+        elif not item.edit_stack.index and item.modified:
+            item.modified = False
+
     def tanda_edited_cb(self, factory, pos, name, value):
         assert self.current_tanda == self.tanda_view.item_selection_model[pos]
         GLib.idle_add(self.tanda_edited, name, value)
 
     def tanda_edited(self, name, value):
-        self.current_tanda.songs.append_delta(editstack.DeltaItem(self.current_tanda, name, value or None))
+        self.current_tanda.edit_stack.append_delta(editstack.DeltaItem(self.current_tanda, name, value or None))
 
     def tanda_selection_changed_cb(self, model, p, r, a):
         if model:
             self.current_tanda = model[0]
-            self.song_view.set_edit_stack(self.current_tanda.songs)
+            self.song_view.set_edit_stack(self.current_tanda.edit_stack)
         else:
             self.current_tanda = None
             self.song_view.set_edit_stack(None)
@@ -436,7 +456,7 @@ class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
         filenames = []
         for tanda in tandas:
             tandaid = tanda.tandaid
-            for song in tanda.songs.items:
+            for song in tanda.edit_stack.items:
                 filenames.append((song, tandaid))
             filenames.append((self.separator_file, tandaid))
         self.set_keys(filenames)
@@ -542,8 +562,8 @@ class TandaDatabase(GObject.Object, db.Database):
             cursor.execute('INSERT INTO tandas DEFAULT VALUES')
             tanda['tandaid'] = self.connection.last_insert_rowid()
             tanda['_songs'] = songs
-            self._fill_tanda(tanda)
             self.update_tanda(tanda)
+            self.tanda_fields.set_derived_fields(tanda)
             self.tanda_model.splice_values(0, 0, [tanda])
 
     def update_tanda(self, tanda):
@@ -577,12 +597,8 @@ class TandaDatabase(GObject.Object, db.Database):
         tanda = self._dict_from_record(t, ['tandaid'] + self.tanda_fields.basic_names)
         query = self.connection.cursor().execute(f'SELECT {self.song_field_names} FROM tanda_songs,songs USING(file) WHERE tanda_songs.tandaid=? ORDER BY tanda_songs.position', (tanda['tandaid'],))
         tanda['_songs'] = list(map(self._song_from_record, query))
-        self._fill_tanda(tanda)
-        return tanda
-
-    def _fill_tanda(self, tanda):
         self.tanda_fields.set_derived_fields(tanda)
-        tanda['songs'] = editstack.EditStack([song['file'] for song in tanda['_songs']])
+        return tanda
 
     @staticmethod
     def _tanda_from_songs(songs):
@@ -799,7 +815,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
 
         tanda.edit.tanda_view.add_context_menu_actions(self.generate_edit_actions(tanda.edit), 'edit', self.TITLE)
-        tanda.edit.tanda_view.add_context_menu_actions(self.generate_queue_add_action(tanda.edit.tanda_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        tanda.edit.tanda_view.add_context_menu_actions(self.generate_queue_actions(tanda.edit.tanda_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         tanda.connect_clean(tanda.edit.song_view.item_view, 'activate', self.view_activate_cb)
 
         tanda.view.add_context_menu_actions(self.generate_queue_actions(tanda.view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
@@ -828,11 +844,11 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         if edit.current_tanda is None:
             return
         tanda = edit.current_tanda
-        new_value = dict(tanda.value, _songs=[self.unit_database.cache[filename] for filename in tanda.songs.items])
+        new_value = dict(tanda.value, _songs=[self.unit_database.cache[filename] for filename in tanda.edit_stack.items])
         self.fields.set_derived_fields(new_value)
         self.db.update_tanda(dict(new_value, tandaid=tanda.tandaid))
         tanda.value = new_value
-        tanda.songs.reset()
+        tanda.edit_stack.reset()
         edit.song_view.edit_stack_changed()
 
     # def action_tanda_reset_cb(self, action, parameter):

@@ -59,7 +59,7 @@ class DeltaItem:
     def __init__(self, item, key, new):
         self.item = weakref.ref(item)  # Otherwise cleanup is very difficult
         self.key = key
-        self.old = item.get_field(key)
+        self.old = item.value.get(key)
         self.new = new
 
     def apply(self, advance):

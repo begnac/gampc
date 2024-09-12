@@ -31,14 +31,11 @@ class EditableLabel(Gtk.Stack):
         'edited': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     }
 
-    label = GObject.Property(type=str)
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs, focusable=True, css_name='editablelabel')
 
-        self.label_ = Gtk.Label(halign=Gtk.Align.START)
-        self.add_named(self.label_, 'label')
-        self.bind_property('label', self.label_, 'label', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL)
+        self.label = Gtk.Label(halign=Gtk.Align.START)
+        self.add_named(self.label, 'label')
 
         self.entry = None
 
@@ -76,7 +73,7 @@ class EditableLabel(Gtk.Stack):
         GLib.idle_add(widget.stop_editing, True)
 
     def set_label(self, label):
-        self.label = label
+        self.label.set_label(str(label))
 
     @staticmethod
     def _start_editing(self, arg):
@@ -92,7 +89,7 @@ class EditableLabel(Gtk.Stack):
         self.entry = Gtk.Text()
         self.add_named(self.entry, 'entry')
         self.entry.connect('activate', self.activate_cb)
-        self.entry.set_text(self.label)
+        self.entry.set_text(self.label.get_label())
         self.set_visible_child_name('entry')
         self.entry.grab_focus()
         self.add_css_class('editing')
@@ -101,6 +98,7 @@ class EditableLabel(Gtk.Stack):
         if self.entry is None:
             return
         if commit:
+            self.label.set_label(self.entry.get_text())
             self.emit('edited', self.entry.get_text())
         self.set_visible_child_name('label')
         self.remove(self.entry)
