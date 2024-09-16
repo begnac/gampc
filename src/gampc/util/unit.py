@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,13 +19,11 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gdk
-from gi.repository import Gtk
 
 import importlib
 import collections
 
-from . import resource
+from . import cleanup
 from .logger import logger
 
 
@@ -33,79 +31,25 @@ class UnitLoadError(Exception):
     pass
 
 
-class Unit(resource.ResourceProvider):
-    REQUIRED_UNITS = []
-
-    def __init__(self, name, manager):
+class Unit(cleanup.CleanupSignalMixin, GObject.Object):
+    def __init__(self, manager):
         super().__init__()
-        self.name = name
         self.manager = manager
+        self.name = self.__module__.rsplit('.', 1)[1]
 
-        loaded_required = []
-        try:
-            for required in self.REQUIRED_UNITS:
-                setattr(self, 'unit_' + required, manager._use_unit(required))
-                loaded_required.append(required)
-        except UnitLoadError:
-            for required in loaded_required:
-                self.manager._free_unit(required)
-            raise
+        self.loaded_required = []
 
-    def shutdown(self):
-        logger.debug(f"Shutting down unit {self}")
-        self.remove_all_resources()
-        for required in reversed(self.REQUIRED_UNITS):
-            self.manager._free_unit(required)
+    def cleanup(self):
+        while self.loaded_required:
+            self.manager._free_unit(self.loaded_required.pop())
         del self.manager
+        super().cleanup()
 
-    def __del__(self):
-        logger.debug("Deleting {self}".format(self=self))
-
-
-class UnitMixinCss:
-    def __init__(self, name, manager):
-        super().__init__(name, manager)
-        self.css_provider = Gtk.CssProvider()
-        self.css_provider.load_from_data(self.CSS)
-        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
-    def shutdown(self):
-        Gtk.StyleContext.remove_provider_for_screen(Gdk.Screen.get_default(), self.css_provider)
-        super().shutdown()
-
-
-class UnitMixinConfig:
-    def __init__(self, name, manager):
-        self.REQUIRED_UNITS = ['config'] + self.REQUIRED_UNITS
-        super().__init__(name, manager)
-        self.config = self.unit_config.load_config(name)
-
-
-class UnitMixinServer:
-    def __init__(self, name, manager):
-        self.REQUIRED_UNITS = ['server'] + self.REQUIRED_UNITS
-        super().__init__(name, manager)
-        self.ampd = self.unit_server.ampd_client.executor.sub_executor()
-
-        self.unit_server.ampd_client.connect('client-connected', self.client_connected_cb)
-        if self.ampd.get_is_connected():
-            self.client_connected_cb(self.unit_server.ampd_client)
-
-    def shutdown(self):
-        self.unit_server.ampd_client.disconnect_by_func(self.client_connected_cb)
-        self.ampd.close()
-        super().shutdown()
-
-    @staticmethod
-    def client_connected_cb(client):
-        pass
-
-
-class UnitMixinCache:
-    def __init__(self, name, manager):
-        self.REQUIRED_UNITS = ['cache'] + self.REQUIRED_UNITS
-        super().__init__(name, manager)
-        self.cache = manager.get_unit('cache')
+    def require(self, name):
+        unit = self.manager._use_unit(name)
+        setattr(self, 'unit_' + name, unit)
+        self.loaded_required.append(name)
+        return unit
 
 
 class UnitManager(GObject.Object):
@@ -135,8 +79,8 @@ class UnitManager(GObject.Object):
         if name in self._units:
             unit = self._units[name]
         else:
-            unit_module = importlib.import_module('gampc.units.' + name)
-            unit = self._units[name] = unit_module.__unit__(name, self)
+            unit_module = importlib.import_module('gampc.unit.' + name)
+            unit = self._units[name] = unit_module.__unit__(self)
             unit.use_count = 0
             for aggregator in self._aggregators:
                 aggregator.link(unit)
@@ -152,7 +96,7 @@ class UnitManager(GObject.Object):
             for aggregator in reversed(self._aggregators):
                 aggregator.unlink(unit)
             del self._units[name]
-            unit.shutdown()
+            unit.cleanup()
 
     def add_aggregator(self, aggregator):
         for unit in self._units.values():

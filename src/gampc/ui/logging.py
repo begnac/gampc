@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,43 +24,52 @@ from gi.repository import Gtk
 import logging
 
 
-class Handeler(logging.Handler):
-    MAX_INFOBARS = 5
+class Handler(logging.Handler):
+    MAX_MESSAGES = 5
 
-    def __init__(self, box, timeout):
+    def __init__(self, timeout):
         super().__init__(logging.INFO)
-        self.box = box
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, can_focus=False)
         self.timeout = timeout
-        self.infobars = []
+        self.messages = []
 
-    def remove_infobar(self, infobar, response=None):
-        self._remove_infobar(infobar)
-        GLib.source_remove(infobar.timeout)
+    def remove_message(self, message):
+        self._remove_message(message)
+        GLib.source_remove(message.timeout)
 
-    def remove_infobar_timeout(self, infobar):
-        self._remove_infobar(infobar)
+    def remove_message_timeout(self, message):
+        self._remove_message(message)
         return GLib.SOURCE_REMOVE
 
-    def _remove_infobar(self, infobar):
-        self.infobars.remove(infobar)
-        self.box.remove(infobar)
+    def _remove_message(self, message):
+        message.button.disconnect_by_func(self.button_clicked_cb)
+        self.messages.remove(message)
+        self.box.remove(message)
 
-    def cull_infobars(self, n=0):
-        while len(self.infobars) > n:
-            self.remove_infobar(self.infobars[0])
+    def cull_messages(self, n=0):
+        while len(self.messages) > n:
+            self.remove_message(self.messages[0])
 
     def emit(self, record):
-        self.cull_infobars(self.MAX_INFOBARS - 1)
+        self.cull_messages(self.MAX_MESSAGES - 1)
 
-        message_type = Gtk.MessageType.ERROR if record.levelno >= 40 else Gtk.MessageType.WARNING if record.levelno >= 30 else Gtk.MessageType.INFO
         message_icon = 'error' if record.levelno >= 40 else 'warning' if record.levelno >= 30 else 'information'
-        infobar = Gtk.InfoBar(visible=True, message_type=message_type, show_close_button=True)
-        infobar.get_content_area().add(Gtk.Image(visible=True, icon_name='dialog-' + message_icon, icon_size=Gtk.IconSize.LARGE_TOOLBAR))
-        infobar.get_content_area().add(Gtk.Label(visible=True, wrap=True, label=record.msg))
-        infobar.connect('response', self.remove_infobar)
-        infobar.timeout = GLib.timeout_add(self.timeout, self.remove_infobar_timeout, infobar)
-        self.box.add(infobar)
-        self.infobars.append(infobar)
+        message = Gtk.Box(spacing=5)
 
-    def shutdown(self):
-        self.cull_infobars()
+        message.button = Gtk.Button(icon_name='process-stop')
+        message.button.connect('clicked', self.button_clicked_cb, message)
+
+        message.append(Gtk.Image(icon_name='dialog-' + message_icon))
+        message.append(Gtk.Label(wrap=True, label=record.msg, hexpand=True, halign=Gtk.Align.START))
+        message.append(message.button)
+
+        message.timeout = GLib.timeout_add(self.timeout, self.remove_message_timeout, message)
+
+        self.box.append(message)
+        self.messages.append(message)
+
+    def button_clicked_cb(self, button, message):
+        self.remove_message(message)
+
+    def cleanup(self):
+        self.cull_messages()

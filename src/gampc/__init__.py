@@ -22,8 +22,8 @@ import gi
 import gettext
 
 
-gi.require_version('Gdk', '3.0')
-gi.require_version('Gtk', '3.0')
+gi.require_version('Gdk', '4.0')
+gi.require_version('Gtk', '4.0')
 
 
 from gi.repository import Gtk  # noqa: E402
@@ -33,14 +33,14 @@ __application__ = 'gampc'
 __author__ = "Itaï BEN YAACOV"
 __author_email__ = "candeb@free.fr"
 __copyright__ = f"Copyright (C) 2015-2023 {__author__} <{__author_email__}>"
-__website__ = 'https://github.com/begnac/gampc'
+__website__ = 'https://github.com/begnac/gampc/tree/gtk4'
 
 __license_type__ = Gtk.License.GPL_3_0
 __program_name__ = "Graphical Asyncronous Music Player Client"
-__version__ = '0.3.2'
+__version__ = '0.4.0'
 
 gettext.install(__application__)
 
 __program_description__ = \
-    _("A Music Player Daemon client written in Python/Gtk+3, using"
+    _("A Music Player Daemon client written in Python/Gtk4, using"
       " asynchronous communication")

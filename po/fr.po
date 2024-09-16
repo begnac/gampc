@@ -1,8 +1,7 @@
 # French translations for GAMPC package
 # Traductions françaises du paquet GAMPC.
-# Copyright (C) 2015 THE GAMPC'S COPYRIGHT HOLDER
+# Copyright (C) Itaï BEN YAACOV
 # This file is distributed under the same license as the GAMPC package.
-# Itaï BEN YAACOV <candeb@free.fr>, 2015.
 #
 msgid ""
 msgstr ""

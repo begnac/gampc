@@ -2,7 +2,7 @@
 #
 # Graphical Asynchronous Music Player Client
 #
-# Copyright (C) 2015-2022 Itaï BEN YAACOV
+# Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,6 +19,18 @@
 
 
 from gi.repository import Gdk
+from gi.repository import Gtk
+
+import asyncio
+import decorator
+
+
+class Rectangle(Gdk.Rectangle):
+    def __init__(self, x, y, width=0, height=0):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
 
 
 def format_time(time):
@@ -29,9 +41,78 @@ def format_time(time):
     return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes:02}:{seconds:02}"
 
 
+def get_display():
+    return Gdk.Display.get_default()
+
+
 def get_modifier_state():
-    return Gdk.Keymap.get_default().get_modifier_state()
+    return get_display().get_default_seat().get_keyboard().get_modifier_state()
 
 
-def preprend_mixin(mixin):
-    return lambda class_: type(class_.__name__, (mixin, class_), {})
+def get_clipboard():
+    return get_display().get_clipboard()
+
+
+def find_descendant_at_xy(widget, x, y, levels):
+    for i in range(levels):
+        for child in widget.observe_children():
+            allocation = child.get_allocation()
+            if allocation.contains_point(x, y):
+                x, y = widget.translate_coordinates(child, x, y)
+                widget = child
+                break
+        else:
+            return None, x, y
+    return widget, x, y
+
+
+def get_selection(selection):
+    found, i, pos = Gtk.BitsetIter.init_first(selection.get_selection())
+    while found:
+        yield pos
+        found, pos = i.next()
+
+
+def add_unique_css_class(widget, prefix, suffix):
+    for css_class in widget.get_css_classes():
+        if css_class.startswith(prefix):
+            widget.remove_css_class(css_class)
+    if suffix is not None:
+        widget.add_css_class(f'{prefix}-{suffix}')
+
+
+@decorator.decorator
+def create_task(coro, *args, **kwargs):
+    return asyncio.create_task(coro(*args, **kwargs), name=coro.__name__)
+
+
+def prepend_mixin(mixin, extra={}):
+    def prepender(cls):
+        return type(cls.__name__, (mixin, cls,), extra)
+    return prepender
+
+
+def remove_control_move_shortcuts(widget):
+    if widget is None:   # Very odd but can happen.  Gtk bug?
+        return
+    for controller in list(widget.observe_controllers()):
+        if isinstance(controller, Gtk.ShortcutController):
+            new_controller = Gtk.ShortcutController()
+            changed = False
+            for shortcut in controller:
+                trigger = shortcut.get_trigger()
+                if isinstance(trigger, Gtk.KeyvalTrigger) and \
+                   trigger.get_modifiers() & Gdk.ModifierType.CONTROL_MASK and \
+                   trigger.get_keyval() in (Gdk.KEY_Up, Gdk.KEY_Down, Gdk.KEY_Left, Gdk.KEY_Right, Gdk.KEY_Tab):
+                    changed = True
+                else:
+                    new_controller.add_shortcut(shortcut)
+            if changed:
+                widget.remove_controller(controller)
+                widget.add_controller(new_controller)
+
+
+def remove_control_move_shortcuts_below(widget):
+    remove_control_move_shortcuts(widget)
+    for child in widget:
+        remove_control_move_shortcuts_below(child)

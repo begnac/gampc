@@ -18,16 +18,28 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import logging
-import os
+import asyncio
 
 
-root = logging.getLogger()
-root.setLevel(os.environ.get('LOGLEVEL', 'INFO'))
+class AsyncCache(dict):
+    def __init__(self, retrieve):
+        super().__init__()
+        self.retrieve = retrieve
+        self._pending = {}
 
-handler = logging.StreamHandler()
-# handler.setFormatter(logging.Formatter(fmt='%(levelname)s: %(name)s: %(message)s (%(pathname)s %(lineno)d)'))
-handler.setFormatter(logging.Formatter(fmt='%(levelname)s: %(name)s: %(message)s'))
-root.addHandler(handler)
+    async def ensure_keys(self, keys):
+        async with asyncio.TaskGroup() as tasks:
+            for key in keys:
+                tasks.create_task(self.ensure_key(key))
 
-logger = logging.getLogger(__name__.split('.')[0])
+    async def ensure_key(self, key):
+        while key in self._pending:
+            await self._pending[key]
+        if key not in self:
+            self._pending[key] = asyncio.current_task()
+            self[key] = await self.retrieve(key)
+            del self._pending[key]
+
+    async def get_async(self, key):
+        await self.ensure_key(key)
+        return self[key]

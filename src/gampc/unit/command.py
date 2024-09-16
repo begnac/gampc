@@ -1,6 +1,6 @@
 # coding: utf-8
 #
-# Generic Gtk application launcher script
+# Graphical Asynchronous Music Player Client
 #
 # Copyright (C) Itaï BEN YAACOV
 #
@@ -18,11 +18,25 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gdk
+from gi.repository import Gtk
 
-from . import app
+import ampd
 
-if Gdk.Display.get_default() is None:
-    print(_("Cannot open display"))
-else:
-    app.App().run()
+from ..util import unit
+
+from ..control import compound
+
+from . import mixins
+
+
+class __unit__(mixins.UnitComponentMixin, mixins.UnitServerMixin, unit.Unit):
+    TITLE = _("Execute MPD commands")
+    KEY = '7'
+
+    def new_widget(self):
+        return compound.WidgetWithEntry(Gtk.Label(max_width_chars=50, wrap=True, selectable=True, vexpand=True), self.entry_activate_cb)
+
+    @ampd.task
+    async def entry_activate_cb(self, entry, label):
+        reply = await self.ampd._raw(entry.get_text())
+        label.set_label('\n'.join(str(x) for x in reply) if reply else _("Empty reply"))
