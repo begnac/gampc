@@ -29,6 +29,8 @@ from ..util import misc
 class EditableLabel(Gtk.Stack):
     __gsignals__ = {
         'edited': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'action-copy': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'action-paste': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
     def __init__(self, **kwargs):
@@ -52,11 +54,12 @@ class EditableLabel(Gtk.Stack):
         trigger = Gtk.AlternativeTrigger.new(Gtk.KeyvalTrigger(keyval=Gdk.KEY_Return, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK),
                                              Gtk.KeyvalTrigger(keyval=Gdk.KEY_KP_Enter, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK))
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._start_editing)))
-
-        self.shortcut = Gtk.ShortcutController()
-        self.add_controller(self.shortcut)
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_Escape, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK)
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._quit_editing)))
+        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_c, modifiers=Gdk.ModifierType.CONTROL_MASK)
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._copy)))
+        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_v, modifiers=Gdk.ModifierType.CONTROL_MASK)
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._paste)))
 
     @staticmethod
     def released_cb(controller, n, x, y):
@@ -83,6 +86,14 @@ class EditableLabel(Gtk.Stack):
     def _quit_editing(self, arg):
         self.stop_editing(False)
 
+    @staticmethod
+    def _copy(self, arg):
+        self.emit('action-copy', self.label.get_label())
+
+    @staticmethod
+    def _paste(self, arg):
+        self.emit('action-paste')
+
     def start_editing(self):
         if self.entry is not None:
             return
@@ -97,7 +108,7 @@ class EditableLabel(Gtk.Stack):
     def stop_editing(self, commit):
         if self.entry is None:
             return
-        if commit:
+        if commit and self.entry.get_text() != self.label.get_label():
             self.label.set_label(self.entry.get_text())
             self.emit('edited', self.entry.get_text())
         self.set_visible_child_name('label')
