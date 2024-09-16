@@ -54,7 +54,7 @@ class UnitServerMixin(cleanup.CleanupBaseMixin):
         pass
 
 
-class ComponentWidget(cleanup.CleanupBaseMixin, Gtk.Box):
+class ComponentWidget(cleanup.CleanupSignalMixin, Gtk.Box):
     subtitle = GObject.Property(type=str)
 
     def __init__(self, widget, *args, **kwargs):

@@ -132,11 +132,14 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
 
     def factory(self):
         component = super().factory()
-        self.edit_stack.connect('notify::modified', self.notify_modified_cb, component)
+        component.connect_clean(self.edit_stack, 'notify::modified', self.notify_modified_cb, component)
         return component
 
     def notify_modified_cb(self, edit_stack, pspec, component):
-        component.subtitle = _("{title} [modified]").format(title=self.TITLE) if edit_stack.modified else self.TITLE
+        parts = [self.TITLE]
+        if edit_stack.modified:
+            parts.append(_("[modified]"))
+        component.subtitle = ' '.join(parts)
 
     def new_widget(self):
         stream = StreamWidget(self.unit_database.SEPARATOR_FILE, self.edit_stack, self.fields)

@@ -29,8 +29,9 @@ from ..util import misc
 class EditableLabel(Gtk.Stack):
     __gsignals__ = {
         'edited': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        'action-copy': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'action-copy': (GObject.SIGNAL_RUN_FIRST, None, ()),
         'action-paste': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'action-special': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
     def __init__(self, **kwargs):
@@ -57,9 +58,11 @@ class EditableLabel(Gtk.Stack):
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_Escape, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK)
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._quit_editing)))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_c, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._copy)))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'copy')))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_v, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._paste)))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'paste')))
+        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_z, modifiers=Gdk.ModifierType.CONTROL_MASK|Gdk.ModifierType.SHIFT_MASK)
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'special')))
 
     @staticmethod
     def released_cb(controller, n, x, y):
@@ -87,12 +90,8 @@ class EditableLabel(Gtk.Stack):
         self.stop_editing(False)
 
     @staticmethod
-    def _copy(self, arg):
-        self.emit('action-copy', self.label.get_label())
-
-    @staticmethod
-    def _paste(self, arg):
-        self.emit('action-paste')
+    def _signal(self, arg):
+        self.emit(f'action-{arg.unpack()}')
 
     def start_editing(self):
         if self.entry is not None:
