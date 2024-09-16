@@ -73,16 +73,12 @@ class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
         new = dict(old)
         new[name] = value
         self.edit_stack.hold_transaction()
-        self.edit_stack.append_delta(editstack.DeltaSplicer([new], pos, True, self.edit_stack_splicer))
-        self.edit_stack.append_delta(editstack.DeltaSplicer([old], pos, False, self.edit_stack_splicer))
+        self.edit_stack.append_delta(editstack.DeltaSplicer([new], pos, True))
+        self.edit_stack.append_delta(editstack.DeltaSplicer([old], pos, False))
         self.edit_stack.release_transaction()
 
     def action_save_cb(self, action, parameter):
         self.activate_action('stream.save')
-
-    @staticmethod
-    def edit_stack_getter(item):
-        return item.value
 
     def edit_stack_splicer(self, pos, remove, values):
         self.item_model.splice_values(pos, remove, values)

@@ -63,7 +63,7 @@ class TandaItem(item.ItemBase):
 
     def load(self, value):
         self.tandaid = value.pop('tandaid')
-        self.edit_stack = editstack.EditStack([song['file'] for song in value['_songs']])
+        self.edit_stack = editstack.EditStack([song['file'] for song in value['_songs']], self)
         self.edit_stack.bind_property('modified', self, 'modified')
         super().load(value)
 

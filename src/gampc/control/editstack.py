@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gtk
 
@@ -30,20 +31,19 @@ from ..ui import dialog
 
 
 class DeltaSplicer:
-    def __init__(self, items, position, advance, splicer):
+    def __init__(self, items, position, advance):
         self.items = items
         self.position = position
         self.advance = advance
-        self.splicer = splicer
 
-    def apply(self, advance):
+    def apply(self, advance, edit_stack):
         if not self.advance:
             advance = not advance
         if advance:
-            self.splicer(self.position, 0, self.items)
+            edit_stack.splice(self.position, 0, self.items)
             return self.position, list(range(self.position, self.position + len(self.items)))
         else:
-            self.splicer(self.position, len(self.items), [])
+            edit_stack.splice(self.position, len(self.items), [])
             return self.position, []
 
     def transpose_position_after(self, position, advance=True):
@@ -65,18 +65,17 @@ class DeltaSplicer:
 
 class DeltaItem:
     def __init__(self, item, key, new):
-        self.item = weakref.ref(item)  # Otherwise cleanup is very difficult
         self.key = key
         self.old = item.value.get(key)
         self.new = new
 
-    def apply(self, advance):
+    def apply(self, advance, edit_stack):
         if advance:
             old, new = self.old, self.new
         else:
             old, new = self.new, self.old
-        item = self.item()
-        assert item is not None and item.value.get(self.key) == old
+        item = edit_stack.get_item()
+        assert item.value.get(self.key) == old
         value = dict(item.value)
         if new is not None:
             value[self.key] = new
@@ -100,25 +99,31 @@ class Transaction:
         delta.transpose_self_after(self.deltas)
         self.deltas.append(delta)
 
-    def apply(self, advance):
+    def apply(self, advance, edit_stack):
         focus = None
         selection = []
         for delta in self.deltas if advance else reversed(self.deltas):
-            new_focus, new_selection = delta.apply(advance)
+            new_focus, new_selection = delta.apply(advance, edit_stack)
             focus = delta.transpose_position_after(focus, advance) if focus is not None else new_focus
             selection = [delta.transpose_position_after(position, advance) for position in selection] + new_selection
         return focus, selection
 
 
 class EditStack(GObject.Object):
+    __gsignals__ = {
+        'splice': (GObject.SIGNAL_RUN_FIRST, None, (int, int, int)),
+        'step': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
+    }
+
     modified = GObject.Property(type=bool, default=False)
 
-    def __init__(self, frozen=None):
+    def __init__(self, items=None, item=None):
         super().__init__()
         self.hold_counter = 0
         self.reset()
-        self.step_cb = None
-        self.frozen = frozen  # None if active
+        self.items = items
+        if item is not None:
+            self.item = weakref.ref(item)
 
     def reset(self):
         assert self.hold_counter == 0
@@ -126,26 +131,32 @@ class EditStack(GObject.Object):
         self.index = 0
         self.modified = False
 
+    def get_item(self):
+        return self.item()
+
+    def splice(self, p, r, a):
+        self.items[p:p + r] = a
+        self.emit('splice', p, r, len(a))
+
     def undo(self):
         assert self.hold_counter == 0
         while self.index:
             self.step(False)
 
     def step(self, advance):
-        assert self.hold_counter == 0 and self.frozen is None
+        assert self.hold_counter == 0
         if not advance:
             assert self.index > 0
             self.index -= 1
             if self.index == 0:
                 self.modified = False
-        focus, selection = self.transactions[self.index].apply(advance)
+        focus, selection = self.transactions[self.index].apply(advance, self)
         if advance:
             assert self.index < len(self.transactions)
             self.index += 1
             if not self.modified:
                 self.modified = True
-        if self.step_cb:
-            self.step_cb(focus, selection)
+        self.emit('step', focus, selection)
 
     def hold_transaction(self):
         if self.hold_counter == 0:
@@ -166,9 +177,6 @@ class EditStack(GObject.Object):
         self.hold_transaction()
         self.transaction.append(delta)
         self.release_transaction()
-
-    def set_step_cb(self, step_cb=None):
-        self.step_cb = step_cb
 
 
 class WidgetEditStackMixin:
@@ -225,24 +233,30 @@ class WidgetEditStackMixin:
 
     def set_edit_stack(self, edit_stack):
         if self.edit_stack is not None:
-            self.edit_stack.set_step_cb()
-            self.edit_stack.frozen = list(map(self.edit_stack_getter, self.edit_stack_view.item_model))
+            self.edit_stack.disconnect_by_func(self.splice_cb)
+            self.edit_stack.disconnect_by_func(self.step_cb)
         self.edit_stack_view.item_model.remove_all()
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.edit_stack.set_step_cb(self.refocus)
-            self.edit_stack_splicer(0, 0, self.edit_stack.frozen)
-            self.edit_stack.frozen = None
+            self.edit_stack_splicer(0, 0, self.edit_stack.items)
+            self.edit_stack.connect('step', self.step_cb)
+            self.edit_stack.connect('splice', self.splice_cb)
         self.edit_stack_changed()
 
+    def step_cb(self, edit_stack, focus, selection):
+        self.edit_stack_changed()
+        self.refocus(focus, selection)
+
+    def splice_cb(self, edit_stack, p, r, a):
+        self.edit_stack_splicer(p, r, edit_stack.items[p:p + a])
+
     def refocus(self, focus, selection):
-        if focus is not None:
-            self.edit_stack_view.item_view.scroll_to(focus, None, Gtk.ListScrollFlags.FOCUS, None)
         if selection is not None:
             self.edit_stack_view.item_selection_model.unselect_all()
             for pos in selection:
                 self.edit_stack_view.item_selection_model.select_item(pos, False)
-        self.edit_stack_changed()
+        if focus is not None:
+            GLib.timeout_add(100, self.edit_stack_view.item_view.scroll_to, focus, None, Gtk.ListScrollFlags.FOCUS, None)
 
     def edit_stack_changed(self):
         self.edit_stack_actions.lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.index > 0)
@@ -253,22 +267,20 @@ class WidgetEditStackMixin:
     def remove_positions(self, positions):
         if not positions:
             return
-        self.edit_stack.hold_transaction()
+        self.lock()
         i = j = positions[0]
         for k in positions[1:] + [0]:
             j += 1
             if j != k:
-                values = [self.edit_stack_getter(item) for item in self.edit_stack_view.item_model[i:j]]
-                self.edit_stack.append_delta(DeltaSplicer(values, i, False, self.edit_stack_splicer))
+                values = self.edit_stack.items[i:j]
+                self.edit_stack.append_delta(DeltaSplicer(values, i, False))
                 i = j = k
-        self.edit_stack.release_transaction()
+        self.unlock()
 
     def add_items(self, values, position):
         if not values:
             return
-        self.edit_stack.hold_transaction()
-        self.edit_stack.append_delta(DeltaSplicer(values, position, True, self.edit_stack_splicer))
-        self.edit_stack.release_transaction()
+        self.edit_stack.append_delta(DeltaSplicer(values, position, True))
 
     def lock(self):
         self.edit_stack.hold_transaction()
@@ -278,9 +290,5 @@ class WidgetEditStackMixin:
 
 
 class WidgetCacheEditStackMixin(WidgetEditStackMixin):
-    @staticmethod
-    def edit_stack_getter(item):
-        return item.get_key()
-
     def refocus(self, *args):
         self.edit_stack_view.aioqueue.queue_task(super().refocus, *args, sync=True)
