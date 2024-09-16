@@ -110,7 +110,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
 
         self.item_selection_model = selection_model()
         self.item_selection_filter_model = Gtk.SelectionFilterModel(model=self.item_selection_model)
-        self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_selection_model, enable_rubberband=False, hexpand=True, vexpand=True)
+        self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_selection_model, enable_rubberband=False, hexpand=True, vexpand=True, tab_behavior=Gtk.ListTabBehavior.CELL)
         self.item_view.add_css_class('items')
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view)
         self.view_search = listviewsearch.ListViewSearch(self.item_view.rows, lambda text, item: any(text.lower() in item.get_field(name).lower() for name in fields.fields))

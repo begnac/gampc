@@ -98,7 +98,7 @@ class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalM
         self.config = config
         self.left_selection = model
 
-        self.left = ScrolledListView(model=self.left_selection, factory=factory)
+        self.left = ScrolledListView(model=self.left_selection, factory=factory, tab_behavior=Gtk.ListTabBehavior.ITEM)
 
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config._get(), start_child=self.left, end_child=main, **kwargs, focusable=False)
 

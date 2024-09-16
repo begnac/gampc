@@ -21,7 +21,7 @@
 from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gio
-# from gi.repository import Gdk
+from gi.repository import Gdk
 from gi.repository import Gtk
 
 import re
@@ -76,11 +76,36 @@ class TandaSongItem(item.Item):
         super().load(value)
 
 
+class CellValue(GObject.Object):
+    def __init__(self, key, value):
+        super().__init__()
+        self.key = key
+        self.value = value
+
+
 class TandaListItemFactory(EditableListItemFactoryBase):
     def __init__(self, name):
         super().__init__(name)
         self.binders.append(('value', self.tanda_binder, name))
         self.binders.append(('modified', self.modified_binder))
+
+    def make_widget(self):
+        widget = super().make_widget()
+        widget.connect('action-copy', self.action_copy_cb, self.name)
+        widget.connect('action-paste', self.action_paste_cb, self.name)
+        return widget
+
+    @staticmethod
+    def action_copy_cb(widget, label, name):
+        widget.get_clipboard().set_content(Gdk.ContentProvider.new_for_value(CellValue(name, label)))
+
+    def action_paste_cb(self, widget, name):
+        widget.get_clipboard().read_value_async(CellValue, 0, None, self.action_paste_finish_cb, widget, name)
+
+    def action_paste_finish_cb(self, clipboard, result, widget, name):
+        value = clipboard.read_value_finish(result)
+        if value.key == name:
+            widget.emit('edited', value.value)
 
     @staticmethod
     def tanda_binder(widget, item_, name):
@@ -173,8 +198,8 @@ class TandaWidget(compound.WidgetWithPaned):
 
         super().__init__(self.right_box, config, self.artist_selection, StringListItemFactory())
 
-        self.edit = TandaEdit(self.tanda_artist_filter_model, queue_model, tanda_fields, song_fields, separator_file=separator_file, cache=cache)
-        self.view = TandaView(self.tanda_artist_filter_model, song_fields, separator_file=separator_file, cache=cache)
+        self.edit = TandaEdit(self.tanda_artist_filter_model, queue_model, tanda_fields, song_fields, separator_file=separator_file, cache=cache, context_menu=self.context_menu)
+        self.view = TandaView(self.tanda_artist_filter_model, song_fields, separator_file=separator_file, cache=cache, context_menu=self.context_menu)
         self.add_cleanup_below(self.edit, self.view)
         self.stack.add_titled(self.edit, 'edit', _("Edit tandas"))
         self.stack.add_titled(self.view, 'view', _("View tandas"))
@@ -277,13 +302,14 @@ class TandaEditTandaView(ViewWithContextMenu):
 class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Box):
     current_tandaid = GObject.Property()
 
-    def __init__(self, tandas, queue_model, tanda_fields, song_fields, *args, cache, **kwargs):
+    def __init__(self, tandas, queue_model, tanda_fields, song_fields, *args, cache, context_menu, **kwargs):
         self.song_view = ViewCacheWithCopyPaste(song_fields, cache=cache, filterable=False)
 
         super().__init__(*args, **kwargs, orientation=Gtk.Orientation.VERTICAL, edit_stack_view=self.song_view)
 
         self.tanda_fields = tanda_fields
         self.tanda_view = TandaEditTandaView(tanda_fields, model=tandas, separator_file=self.separator_file)
+        self.tanda_view.context_menu.prepend_section(None, context_menu)
         self.song_view.scrolled_item_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.song_view.set_vexpand(False)
         self.append(self.tanda_view)
@@ -441,8 +467,9 @@ class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Bo
 class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
     current_tandaid = GObject.Property()
 
-    def __init__(self, tandas, *args, **kwargs):
+    def __init__(self, tandas, *args, context_menu, **kwargs):
         super().__init__(*args, **kwargs, item_type=TandaSongItem, sortable=False)
+        self.context_menu.prepend_section(None, context_menu)
         self.connect_clean(tandas, 'items-changed', self.tandas_changed)
         item.setup_find_duplicate_items(self.item_model, ['Title', 'Artist', 'Performer', 'Date'], [self.separator_file])
         self.init_tandaid_view(self)

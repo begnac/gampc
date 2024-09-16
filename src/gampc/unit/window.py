@@ -136,7 +136,7 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
         super().__init__(manager)
         self.require('persistent')
         self.require('component')
-        self.config.message_timeout._get(default=5)
+        self.config.message_timeout._get(default=1)
 
     def generate_actions(self):
         yield action.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])
