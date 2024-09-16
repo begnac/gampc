@@ -200,13 +200,14 @@ class WidgetEditStackMixin:
             del self.edit_stack_view.add_items
             del self.edit_stack_view.lock
             del self.edit_stack_view.unlock
+        del self.edit_stack
         super().cleanup()
 
     def generate_edit_stack_actions(self):
         yield action.ActionInfo('undo', self.action_do_cb, _("Undo"), ['<Control>z'], arg=False, arg_format='b')
         yield action.ActionInfo('redo', self.action_do_cb, _("Redo"), ['<Shift><Control>z'], arg=True, arg_format='b')
         yield action.ActionInfo('reset', self.action_reset_cb, _("Reset"), ['<Control>r'])
-        # yield action.ActionInfo('save', self.action_save_cb, _("Save"), ['<Control>s'])
+        yield action.ActionInfo('save', self.action_save_cb, _("Save"), ['<Control>s'])
 
     def action_do_cb(self, action, parameter):
         self.edit_stack.step(parameter.unpack())
@@ -219,6 +220,8 @@ class WidgetEditStackMixin:
         self.edit_stack.undo()
         self.edit_stack.reset()
         self.edit_stack_changed()
+
+    action_save_cb = NotImplemented
 
     def set_edit_stack(self, edit_stack):
         if self.edit_stack is not None:
@@ -245,7 +248,7 @@ class WidgetEditStackMixin:
         self.edit_stack_actions.lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.index > 0)
         self.edit_stack_actions.lookup_action('redo').set_enabled(self.edit_stack and self.edit_stack.index < len(self.edit_stack.transactions))
         self.edit_stack_actions.lookup_action('reset').set_enabled(self.edit_stack and self.edit_stack.transactions)
-        # self.edit_stack_actions.lookup_action('save').set_enabled(self.edit_stack and self.edit_stack.index > 0)
+        self.edit_stack_actions.lookup_action('save').set_enabled(self.edit_stack and self.edit_stack.index > 0)
 
     def remove_positions(self, positions):
         if not positions:

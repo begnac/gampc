@@ -61,6 +61,9 @@ class PlaylistWidget(editstack.WidgetCacheEditStackMixin, compound.WidgetWithPan
 
         item.setup_find_duplicate_items(main.item_model, ['file'], [separator_file])
 
+    def action_save_cb(self, action, parameter):
+        self.activate_action('playlist.save')
+
     def edit_stack_changed(self):
         super().edit_stack_changed()
         item = self.left_selected_item
@@ -176,11 +179,10 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         playlist = PlaylistWidget(self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config.pane_separator, self.root.model)
         view = playlist.main
 
-        view.add_context_menu_actions(self.generate_actions(playlist), 'playlist-local', self.TITLE, target_menu=playlist.edit_stack_menu)
         view.add_context_menu_actions(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         view.add_context_menu_actions(self.generate_tanda_actions(view), 'tanda', self.TITLE)
 
-        playlist.add_context_menu_actions(self.generate_left_actions(playlist), 'playlist-global', self.TITLE)
+        playlist.add_context_menu_actions(self.generate_playlist_actions(playlist), 'playlist', self.TITLE)
         playlist.add_context_menu_actions(self.generate_queue_actions(view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
 
         playlist.connect_clean(view.item_view, 'activate', self.view_activate_cb)
@@ -255,11 +257,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
                 yield '/'.join(last_path) + '/'
             yield '/'.join(playlist_path)
 
-    def generate_actions(self, widget):
-        yield action.ActionInfo('save', self.global_action_cb, _("Save"), ['<Control>s'], activate_args=(widget,))
-
-    def generate_left_actions(self, widget):
-        yield from self.generate_actions(widget)
+    def generate_playlist_actions(self, widget):
+        yield action.ActionInfo('save', self.global_action_cb, activate_args=(widget,))
         yield action.ActionInfo('rename', self.global_action_cb, _("Rename"), activate_args=(widget,))
         yield action.ActionInfo('delete', self.global_action_cb, _("Delete"), activate_args=(widget,))
         yield action.ActionInfo('update-from-queue', self.global_action_cb, _("Update from play queue"), activate_args=(widget,))

@@ -100,16 +100,13 @@ class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalM
 
         self.left = ScrolledListView(model=self.left_selection, factory=factory)
 
-        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config._get(), start_child=self.left, end_child=main, **kwargs)
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config._get(), start_child=self.left, end_child=main, **kwargs, focusable=False)
 
         self.left_selection_pos = []
         self.connect_clean(self.left_selection, 'selection-changed', self.left_selection_changed_cb)
         self.connect('notify::position', self.paned_notify_position_cb, config)
 
         self.add_cleanup_below(self.left.view_search)
-
-    def grab_focus(self):
-        return self.left.view.grab_focus()
 
     def left_selection_changed_cb(self, selection, position, n_items):
         self.left_selection_pos = list(misc.get_selection(selection))
@@ -129,6 +126,10 @@ class WidgetWithPanedTreeList(WidgetWithPaned):
         super().__init__(main, config, model, TreeListItemFactory(), **kwargs)
 
         self.left.view.connect('activate', self.left_view_activate_cb)
+
+    def cleanup(self):
+        del self.left_selected_item
+        super().cleanup()
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)

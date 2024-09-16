@@ -309,6 +309,9 @@ class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Bo
         self.tanda_view.context_menu.append_section(None, self.edit_stack_menu)
         self.edit_stack_splicer = self.song_view.splice_keys
 
+    def action_save_cb(self, action, parameter):
+        self.activate_action('edit.save')
+
     def tanda_edited_cb(self, factory, pos, name, value):
         assert self.current_tanda == self.tanda_view.item_selection_model[pos]
         GLib.idle_add(self.tanda_edited, name, value)
@@ -820,7 +823,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
     def generate_edit_actions(self, edit):
         yield action.ActionInfo('delete', self.action_tanda_delete_cb, _("Delete tanda"), ['<Control>Delete'], activate_args=(edit,))
-        yield action.ActionInfo('save', self.action_tanda_save_cb, _("Save tanda"), ['<Control>s'], activate_args=(edit,))
+        yield action.ActionInfo('save', self.action_tanda_save_cb, activate_args=(edit,))
 
     @misc.create_task
     async def action_tanda_delete_cb(self, action, parameter, edit):

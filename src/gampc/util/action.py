@@ -62,10 +62,6 @@ class ActionInfo:
         self.dangerous = dangerous
         self.activate_args = activate_args
 
-    def add_to(self, *args):
-        for arg in args:
-            arg.add_action_info(self)
-
     def get_action(self, protect=None):
         if self.target is not None:
             parameter_type = None if self.arg_format is None else GLib.VariantType.new(self.arg_format)
