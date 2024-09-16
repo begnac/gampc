@@ -59,7 +59,7 @@ class Handler(logging.Handler):
         message.button = Gtk.Button(icon_name='process-stop')
         message.button.connect('clicked', self.button_clicked_cb, message)
 
-        message.append(Gtk.Image(icon_name='dialog-' + message_icon, icon_size=Gtk.IconSize.LARGE))
+        message.append(Gtk.Image(icon_name='dialog-' + message_icon))
         message.append(Gtk.Label(wrap=True, label=record.msg, hexpand=True, halign=Gtk.Align.START))
         message.append(message.button)
 

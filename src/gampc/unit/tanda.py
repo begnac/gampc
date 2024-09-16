@@ -52,19 +52,6 @@ from ..control import editstack
 from . import mixins
 
 
-class SearchDialogAsync(dialog.DialogAsync):
-    def __init__(self, search_component, **kwargs):
-        super().__init__(**kwargs)
-        self.model = search_component.widget.main.item_selection_filter_model
-        self.main_box.prepend(search_component)
-        self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
-        self.add_button(_("_OK"), Gtk.ResponseType.OK)
-
-    async def run(self, **kwargs):
-        if await super().run(**kwargs) == Gtk.ResponseType.OK and len(self.model) == 1:
-            return self.model[0].value
-
-
 class TandaItem(item.ItemBase):
     tandaid = GObject.Property()
     songs = GObject.Property()
@@ -774,15 +761,17 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
     @misc.create_task
     async def missing_song(self, window, song_file, *fields):
-        search_component = self.unit_search.factory()
-        search_component.disconnect_by_func(search_component.map_cb)
-        search_component.widget.entry.set_text(' '.join(f'{name}="{value}"' for name, value in zip(self.MISSING_SONG_FIELDS, fields)))
-        search_component.widget.entry.emit('activate')
-        dialog = SearchDialogAsync(search_component, transient_for=Gio.Application.get_default().get_active_window(), title=_("Replace {}").format(' / '.join(fields)))
-        dialog.main_box.prepend(search_component)
-        new_song = await dialog.run()
-        if new_song is not None:
-            self.db.replace_song(song_file, new_song)
+        search = self.unit_search.new_widget()
+        search.entry.set_text(' '.join(f'{name}="{value}"' for name, value in zip(self.MISSING_SONG_FIELDS, fields)))
+        search.entry.emit('activate')
+        dialog_ = dialog.DialogAsync(transient_for=Gio.Application.get_default().get_active_window(), title=_("Replace {}").format(' / '.join(fields)))
+        dialog_.main_box.prepend(search)
+        dialog_.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
+        dialog_.add_button(_("_OK"), Gtk.ResponseType.OK)
+        model = search.main.item_selection_filter_model
+        if await dialog_.run() == Gtk.ResponseType.OK and len(model) == 1:
+            self.db.replace_song(song_file, model[0].value)
+        search.cleanup()
 
     def action_cleanup_db_cb(self, action, parameter):
         self.db.clean_database()
