@@ -84,21 +84,16 @@ class TreeListItemFactory(Gtk.SignalListItemFactory):
     #     self.labels.remove(listitem.label)
 
 
-class ScrolledListView(Gtk.ScrolledWindow):
-    def __init__(self, **kwargs):
-        self.view = Gtk.ListView(**kwargs)
-        self.view_search = listviewsearch.ListViewSearch(self.view, lambda text, row: text.lower() in row.get_item().name.lower())
-        super().__init__(child=self.view)
-        misc.remove_control_move_shortcuts_below(self)
-
-
 class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalMixin, Gtk.Paned):
     def __init__(self, main, config, model, factory, **kwargs):
         self.main = main
         self.config = config
         self.left_selection = model
 
-        self.left = ScrolledListView(model=self.left_selection, factory=factory, tab_behavior=Gtk.ListTabBehavior.ITEM)
+        self.left_view = Gtk.ListView(model=self.left_selection, factory=factory, tab_behavior=Gtk.ListTabBehavior.ITEM)
+        self.left = Gtk.ScrolledWindow(child=self.left_view)
+        self.left_view_search = listviewsearch.ListViewSearch(self.left_view, lambda text, row: text.lower() in row.get_item().name.lower())
+        misc.remove_control_move_shortcuts_below(self.left_view)
 
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config._get(), start_child=self.left, end_child=main, **kwargs, focusable=False)
 
@@ -106,7 +101,7 @@ class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalM
         self.connect_clean(self.left_selection, 'selection-changed', self.left_selection_changed_cb)
         self.connect('notify::position', self.paned_notify_position_cb, config)
 
-        self.add_cleanup_below(self.left.view_search)
+        self.add_cleanup_below(self.left_view_search)
 
     def left_selection_changed_cb(self, selection, position, n_items):
         self.left_selection_pos = list(misc.get_selection(selection))
@@ -125,7 +120,7 @@ class WidgetWithPanedTreeList(WidgetWithPaned):
 
         super().__init__(main, config, model, TreeListItemFactory(), **kwargs)
 
-        self.left.view.connect('activate', self.left_view_activate_cb)
+        self.left_view.connect('activate', self.left_view_activate_cb)
 
     def cleanup(self):
         del self.left_selected_item
