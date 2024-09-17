@@ -24,6 +24,7 @@ import ampd
 
 from ..util import action
 from ..util import unit
+from ..util.logger import logger
 
 from . import mixins
 
