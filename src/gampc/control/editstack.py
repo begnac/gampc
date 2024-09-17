@@ -18,9 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GLib
 from gi.repository import GObject
-from gi.repository import Gtk
 
 import weakref
 
@@ -251,12 +249,12 @@ class WidgetEditStackMixin:
         self.edit_stack_splicer(p, r, edit_stack.items[p:p + a])
 
     def refocus(self, focus, selection):
+        if focus is not None:
+            self.edit_stack_view.scroll_to(focus)
         if selection is not None:
             self.edit_stack_view.item_selection_model.unselect_all()
             for pos in selection:
                 self.edit_stack_view.item_selection_model.select_item(pos, False)
-        if focus is not None:
-            GLib.timeout_add(100, self.edit_stack_view.item_view.scroll_to, focus, None, Gtk.ListScrollFlags.FOCUS, None)
 
     def edit_stack_changed(self):
         self.edit_stack_actions.lookup_action('undo').set_enabled(self.edit_stack and self.edit_stack.index > 0)
