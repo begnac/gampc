@@ -157,7 +157,6 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
             widget.edit_stack.reset()
             widget.edit_stack_changed()
 
-
     # def current_song_hook(self, song):
     #     if 'file' not in song or 'Title' not in song:
     #         return

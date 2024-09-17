@@ -61,7 +61,7 @@ class EditableLabel(Gtk.Stack):
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'copy')))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_v, modifiers=Gdk.ModifierType.CONTROL_MASK)
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'paste')))
-        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_z, modifiers=Gdk.ModifierType.CONTROL_MASK|Gdk.ModifierType.SHIFT_MASK)
+        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_z, modifiers=Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK)
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'special')))
 
     @staticmethod
