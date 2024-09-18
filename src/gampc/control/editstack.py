@@ -119,7 +119,7 @@ class EditStack(GObject.Object):
         super().__init__()
         self.hold_counter = 0
         self.reset()
-        self.items = items
+        self.items = items or []
         if item is not None:
             self.item = weakref.ref(item)
 
@@ -133,6 +133,7 @@ class EditStack(GObject.Object):
         return self.item()
 
     def splice(self, p, r, a):
+        assert self.hold_counter == 0
         self.items[p:p + r] = a
         self.emit('splice', p, r, len(a))
 

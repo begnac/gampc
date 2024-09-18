@@ -211,7 +211,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
     async def fill_contents_cb(self, node):
         if node.kind == NODE_PLAYLIST:
             item = await self.playlist_cache.get_async(self.PSEUDO_SEPARATOR.join(node.path))
-            node.edit_stack.items = item.files
+            node.edit_stack.splice(0, len(node.edit_stack.items), item.files)
 
     def get_pseudo_folder_contents(self, path):
         prefix = ''.join(folder + self.PSEUDO_SEPARATOR for folder in path)
