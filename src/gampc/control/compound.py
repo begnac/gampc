@@ -118,10 +118,13 @@ class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalM
     def paned_notify_position_cb(paned, param, config):
         config._set(paned.get_position())
 
+    def grab_focus(self):
+        return self.left_view.grab_focus()
+
 
 class WidgetWithPanedTreeList(WidgetWithPaned):
-    def __init__(self, main, config, root_model, **kwargs):
-        self.left_store = Gtk.TreeListModel.new(root_model, False, False, lambda node: node.expose())
+    def __init__(self, main, config, tree, **kwargs):
+        self.left_store = Gtk.TreeListModel.new(tree.root.model, False, False, tree.expose)
         model = Gtk.MultiSelection(model=self.left_store)
         model.select_item(0, True)
         self.left_selected_item = None

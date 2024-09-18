@@ -22,9 +22,9 @@ import os
 
 import ampd
 
+from ..util import misc
+from ..util import tree
 from ..util import unit
-
-from ..ui import treelist
 
 from ..view.cache import ViewCacheWithCopy
 
@@ -37,10 +37,10 @@ DIRECTORY = 'directory'
 
 
 class BrowserWidget(compound.WidgetWithPanedTreeList):
-    def __init__(self, fields, cache, config, root_model):
+    def __init__(self, fields, cache, config, tree):
         main = ViewCacheWithCopy(fields=fields, cache=cache, sortable=True)
-        super().__init__(main, config, root_model)
-        self.connect_clean(root_model, 'items-changed', self.root_items_changed_cb)
+        super().__init__(main, config, tree)
+        self.connect_clean(tree.root.model, 'items-changed', self.root_items_changed_cb)
         if len(self.left_selection) > 0:
             self.left_selection[0].set_expanded(True)
         self.add_cleanup_below(main)
@@ -54,6 +54,26 @@ class BrowserWidget(compound.WidgetWithPanedTreeList):
         self.main.set_keys(sum((selection[pos].get_item().keys for pos in self.left_selection_pos), []))
 
 
+class BrowserTree(tree.Tree):
+    def __init__(self, ampd, update_cache):
+        super().__init__()
+        self.ampd = ampd
+        self.update_cache = update_cache
+
+    @staticmethod
+    def get_root():
+        return tree.Node(contents={DIRECTORY: [{DIRECTORY: _("Music")}]})
+
+    @misc.create_task
+    async def fill_node(self, node):
+        for folder in sorted(os.path.basename(item[DIRECTORY]) for item in node.contents.get(DIRECTORY, [])):
+            path = node.path + [folder]
+            contents = await self.ampd.lsinfo('/'.join(path[1:]))
+            self.update_cache(contents.get('file', []))
+            node.model.append(tree.Node(name=folder, path=node.path, icon='folder-symbolic', contents=contents, leaf=DIRECTORY not in contents))
+        node.keys = [item['file'] for item in node.contents.get('file', [])]
+
+
 class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, unit.Unit):
     TITLE = _("Database Browser")
     KEY = '2'
@@ -65,14 +85,14 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
         self.require('fields')
         self.require('persistent')
 
-        self.root = treelist.TreeNode(parent_model=None, fill_sub_nodes_cb=self.fill_sub_nodes_cb, fill_contents_cb=self.fill_contents_cb)
+        self.tree = BrowserTree(self.ampd, self.unit_database.update)
 
     def cleanup(self):
-        del self.root
+        del self.tree
         super().cleanup()
 
     def new_widget(self):
-        browser = BrowserWidget(self.unit_fields.fields, self.unit_database.cache, self.config.pane_separator, self.root.model)
+        browser = BrowserWidget(self.unit_fields.fields, self.unit_database.cache, self.config.pane_separator, self.tree)
         view = browser.main
 
         view.add_context_menu_actions(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
@@ -84,20 +104,5 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
     @ampd.task
     async def client_connected_cb(self, client):
         while True:
-            self.root.reset()
-            await self.root.fill_sub_nodes()
-            self.root.expose()
+            self.tree.start()
             await self.ampd.idle(ampd.DATABASE)
-
-    async def fill_sub_nodes_cb(self, node):
-        if node.path:
-            contents = await self.ampd.lsinfo('/'.join(node.path[1:]))
-        else:
-            contents = {DIRECTORY: [{DIRECTORY: _("Music")}]}
-        for folder in sorted(os.path.basename(item[DIRECTORY]) for item in contents.get(DIRECTORY, [])):
-            node.append_sub_node(treelist.TreeNode(name=folder, path=node.path, icon='folder-symbolic'))
-        node.keys = [data['file'] for data in contents.get('file', [])]
-
-    @staticmethod
-    async def fill_contents_cb(node):
-        pass
