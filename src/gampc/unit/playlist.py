@@ -64,14 +64,6 @@ class PlaylistWidget(editstack.WidgetCacheEditStackMixin, compound.WidgetWithPan
     def action_save_cb(self, action, parameter):
         self.activate_action('playlist.save')
 
-    def edit_stack_changed(self):
-        super().edit_stack_changed()
-        item = self.left_selected_item
-        if item is None:
-            return
-        pos = item.parent_model.find(item).position
-        item.parent_model.items_changed(pos, 1, 1)
-
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
         if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
@@ -80,7 +72,7 @@ class PlaylistWidget(editstack.WidgetCacheEditStackMixin, compound.WidgetWithPan
         else:
             self.main.set_editable(False)
             self.set_edit_stack(None)
-            self.main.set_keys(sum(map(lambda node: list(node.edit_stack.frozen),
+            self.main.set_keys(sum(map(lambda node: list(node.edit_stack.items),
                                        filter(lambda node: node.kind == NODE_PLAYLIST,
                                               map(lambda pos: selection[pos].get_item(),
                                                   self.left_selection_pos))), []))
@@ -214,12 +206,12 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
             for name in folders:
                 node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=ICONS[NODE_FOLDER], kind=NODE_FOLDER))
             for name in playlists:
-                node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=ICONS[NODE_PLAYLIST], kind=NODE_PLAYLIST))
+                node.append_sub_node(treelist.TreeNode(name=name, path=node.path, icon=ICONS[NODE_PLAYLIST], kind=NODE_PLAYLIST, edit_stack=editstack.EditStack()))
 
     async def fill_contents_cb(self, node):
         if node.kind == NODE_PLAYLIST:
             item = await self.playlist_cache.get_async(self.PSEUDO_SEPARATOR.join(node.path))
-            node.edit_stack = editstack.EditStack(item.files)
+            node.edit_stack.items = item.files
 
     def get_pseudo_folder_contents(self, path):
         prefix = ''.join(folder + self.PSEUDO_SEPARATOR for folder in path)

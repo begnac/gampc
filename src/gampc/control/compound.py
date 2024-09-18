@@ -66,14 +66,22 @@ class TreeListItemFactory(Gtk.SignalListItemFactory):
         child = listitem.get_child()
         row = listitem.get_item()
         node = row.get_item()
-        child.icon.set_from_icon_name(node.icon)
-        if hasattr(node, 'edit_stack') and node.edit_stack.modified:
-            child.label.set_label('* ' + node.name)
-            child.label.set_css_classes(['modified'])
+        if hasattr(node, 'edit_stack'):
+            node.edit_stack.connect('notify::modified', self.notify_modified_cb, child.label, node.name)
+            self.notify_modified_cb(node.edit_stack, None, child.label, node.name)
         else:
             child.label.set_label(node.name)
-            child.label.set_css_classes([])
+        child.icon.set_from_icon_name(node.icon)
         child.set_list_row(row)
+
+    @staticmethod
+    def notify_modified_cb(edit_stack, pspec, label, name):
+        if edit_stack.modified:
+            label.set_label('* ' + name)
+            label.set_css_classes(['modified'])
+        else:
+            label.set_label(name)
+            label.set_css_classes([])
 
     # @staticmethod
     # def unbind_cb(self, listitem):
