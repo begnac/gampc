@@ -81,10 +81,14 @@ class PlaylistWidget(editstack.WidgetCacheEditStackMixin, lefttree.WidgetWithPan
             lefttree.WidgetWithPanedTreeList.left_view_activate_cb(left_view, position)
 
 
-class PlaylistCacheItem:
-    def __init__(self, files, last_modified):
-        self.files = files
-        self.last_modified = last_modified
+class PlaylistCache(cache.AsyncCache):
+    def __init__(self, ampd, playlists):
+        super().__init__()
+        self.ampd = ampd
+        self.playlists = playlists
+
+    async def retrieve(self, name):
+        return await self.ampd.listplaylist(name), self.playlists[name]
 
 
 class ChoosePathDialog(dialog.TextDialogAsync):
@@ -138,9 +142,8 @@ class FolderNode(lefttree.Node):
 
 
 class PlaylistTree(lefttree.Tree):
-    def __init__(self, playlists, cache):
+    def __init__(self, cache):
         super().__init__()
-        self.playlists = playlists
         self.cache = cache
 
     @staticmethod
@@ -150,9 +153,9 @@ class PlaylistTree(lefttree.Tree):
     @misc.create_task
     async def fill_node(self, node):
         if node.model is None:
-            item = await self.cache.get_async(PSEUDO_SEPARATOR.join(node.path))
+            files, last_modified = await self.cache.get_async(PSEUDO_SEPARATOR.join(node.path))
             node.edit_stack.reset()
-            node.edit_stack.splice(0, len(node.edit_stack.items), item.files)
+            node.edit_stack.splice(0, len(node.edit_stack.items), files)
         else:
             folders, playlists = self.get_pseudo_folder_contents(node.path)
             self.merge(node.model_model[0], folders, node.expanded, lambda name: FolderNode(name, node.path))
@@ -165,7 +168,7 @@ class PlaylistTree(lefttree.Tree):
 
         last_folder = None
 
-        for name in sorted(self.playlists.keys()):
+        for name in sorted(self.cache.playlists):
             if not name.startswith(prefix):
                 continue
             name = name[len(prefix):]
@@ -202,14 +205,9 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
         self.css_provider.load_from_string(self.CSS)
 
-        self.playlist_cache = cache.AsyncCache(self.playlist_retrieve)
         self.playlists = {}
-        self.tree = PlaylistTree(self.playlists, self.playlist_cache)
-
-    def cleanup(self):
-        super().cleanup()
-        del self.tree
-        del self.playlist_cache
+        self.playlist_cache = PlaylistCache(self.ampd, self.playlists)
+        self.tree = PlaylistTree(self.playlist_cache)
 
     def new_widget(self):
         playlist = PlaylistWidget(self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config.pane_separator, self.tree)
@@ -231,17 +229,13 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
             while True:
                 self.playlists.clear()
                 self.playlists.update((entry['playlist'], entry['Last_Modified']) for entry in await self.ampd.listplaylists() if entry['playlist'] != self.TEMPNAME)
-                for name, value in list(self.playlist_cache.items()):
-                    if value.last_modified != self.playlists.get(name):
+                for name, (files, last_modified) in list(self.playlist_cache.items()):
+                    if last_modified != self.playlists.get(name):
                         self.playlist_cache.pop(name)
                 self.tree.start()
                 await self.ampd.idle(ampd.STORED_PLAYLIST)
         finally:
             self.playlists = {}
-
-    async def playlist_retrieve(self, name):
-        files = await self.ampd.listplaylist(name)
-        return PlaylistCacheItem(files, self.playlists[name])
 
     def playlist_paths(self):
         last_path = []

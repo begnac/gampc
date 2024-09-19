@@ -31,6 +31,28 @@ from ..ui import dialog
 from . import mixins
 
 
+class SongCache(cache.AsyncCache):
+    def __init__(self, ampd, fields):
+        super().__init__()
+        self.ampd = ampd
+        self.fields = fields
+
+    async def retrieve(self, key):
+        try:
+            songs = await self.ampd.find('file', key)
+        except Exception as e:
+            print(key, type(e))
+            songs = []
+        if len(songs) == 0:
+            song = {'file': key, '_missing': True}
+        elif len(songs) == 1:
+            song = songs[0]
+            self.fields.set_derived_fields(song)
+        else:
+            raise ValueError
+        return song
+
+
 class __unit__(mixins.UnitServerMixin, unit.Unit):
     __gsignals__ = {
         'cleared': (GObject.SIGNAL_RUN_FIRST, None, ()),
@@ -41,7 +63,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
     def __init__(self, manager):
         super().__init__(manager)
         self.require('fields')
-        self.cache = cache.AsyncCache(self.cache_retrieve)
+        self.cache = SongCache(self.ampd, self.unit_fields.fields)
 
     def cleanup(self):
         super().cleanup()
@@ -65,18 +87,3 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
     async def separator_missing(self):
         await dialog.MessageDialogAsync(cancel_button=False,
                                         message=_("Some features require a file named '{separator}' at the music root directory.  Such a file, consisting of a three second silence, is provided.").format(separator=self.SEPARATOR_FILE)).run()
-
-    async def cache_retrieve(self, key):
-        try:
-            songs = await self.ampd.find('file', key)
-        except Exception as e:
-            print(key, type(e))
-            songs = []
-        if len(songs) == 0:
-            song = {'file': key, '_missing': True}
-        elif len(songs) == 1:
-            song = songs[0]
-            self.unit_fields.fields.set_derived_fields(song)
-        else:
-            raise ValueError
-        return song

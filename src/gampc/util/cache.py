@@ -22,9 +22,8 @@ import asyncio
 
 
 class AsyncCache(dict):
-    def __init__(self, retrieve):
+    def __init__(self):
         super().__init__()
-        self.retrieve = retrieve
         self._pending = {}
 
     async def ensure_keys(self, keys):
