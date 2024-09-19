@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import Gio
 from gi.repository import Gtk
 
 import ampd
@@ -27,31 +28,22 @@ from ..util import cache
 from ..util import cleanup
 from ..util import item
 from ..util import misc
-from ..util import tree
 from ..util import unit
 
 from ..ui import dialog
 
 from ..view.cache import ViewCacheWithCopyPasteSong
 
-from ..control import compound
+from ..control import lefttree
 from ..control import editstack
 
 from . import mixins
 
 
-NODE_FOLDER = 0
-NODE_PLAYLIST = 1
-
-ICONS = {
-    NODE_FOLDER: 'folder-symbolic',
-    NODE_PLAYLIST: 'view-list-symbolic',
-}
-
 PSEUDO_SEPARATOR = ' % '
 
 
-class PlaylistWidget(editstack.WidgetCacheEditStackMixin, compound.WidgetWithPanedTreeList):
+class PlaylistWidget(editstack.WidgetCacheEditStackMixin, lefttree.WidgetWithPanedTreeList):
     def __init__(self, fields, separator_file, cache, config, root_model):
         main = ViewCacheWithCopyPasteSong(fields=fields, separator_file=separator_file, cache=cache)
         super().__init__(main, config, root_model, edit_stack_view=main)
@@ -68,14 +60,14 @@ class PlaylistWidget(editstack.WidgetCacheEditStackMixin, compound.WidgetWithPan
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
-        if self.left_selected_item and self.left_selected_item.kind == NODE_PLAYLIST:
+        if self.left_selected_item and self.left_selected_item.model is None:
             self.main.set_editable(True)
             self.set_edit_stack(self.left_selected_item.edit_stack)
         else:
             self.main.set_editable(False)
             self.set_edit_stack(None)
             self.main.set_keys(sum(map(lambda node: list(node.edit_stack.items),
-                                       filter(lambda node: node.kind == NODE_PLAYLIST,
+                                       filter(lambda node: node.model is None,
                                               map(lambda pos: selection[pos].get_item(),
                                                   self.left_selection_pos))), []))
 
@@ -83,10 +75,10 @@ class PlaylistWidget(editstack.WidgetCacheEditStackMixin, compound.WidgetWithPan
     def left_view_activate_cb(left_view, position):
         row = left_view.get_model()[position]
         node = row.get_item()
-        if node.kind is NODE_FOLDER:
-            compound.WidgetWithPanedTreeList.left_view_activate_cb(left_view, position)
-        else:
+        if node.model is None:
             left_view.activate_action('playlist-global.rename')
+        else:
+            lefttree.WidgetWithPanedTreeList.left_view_activate_cb(left_view, position)
 
 
 class PlaylistCacheItem:
@@ -137,7 +129,15 @@ class ChoosePathDialog(dialog.TextDialogAsync):
         return True
 
 
-class PlaylistTree(tree.Tree):
+class FolderNode(lefttree.Node):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, model_factory=Gtk.FlattenListModel, icon='folder-symbolic', **kwargs)
+        self.model_model = Gio.ListStore()
+        self.model_model.splice(0, 0, [Gio.ListStore(), Gio.ListStore()])
+        self.model.set_model(self.model_model)
+
+
+class PlaylistTree(lefttree.Tree):
     def __init__(self, playlists, cache):
         super().__init__()
         self.playlists = playlists
@@ -145,19 +145,18 @@ class PlaylistTree(tree.Tree):
 
     @staticmethod
     def get_root():
-        return tree.Node(kind=NODE_FOLDER)
+        return FolderNode(expanded=True)
 
     @misc.create_task
     async def fill_node(self, node):
-        if node.kind == NODE_FOLDER:
-            folders, playlists = self.get_pseudo_folder_contents(node.path)
-            for name in folders:
-                node.model.append(tree.Node(name=name, path=node.path, icon=ICONS[NODE_FOLDER], kind=NODE_FOLDER))
-            for name in playlists:
-                node.model.append(tree.Node(name=name, path=node.path, icon=ICONS[NODE_PLAYLIST], kind=NODE_PLAYLIST, leaf=True, edit_stack=editstack.EditStack()))
-        else:
+        if node.model is None:
             item = await self.cache.get_async(PSEUDO_SEPARATOR.join(node.path))
-            node.edit_stack.splice(0, 0, item.files)
+            node.edit_stack.reset()
+            node.edit_stack.splice(0, len(node.edit_stack.items), item.files)
+        else:
+            folders, playlists = self.get_pseudo_folder_contents(node.path)
+            self.merge(node.model_model[0], folders, node.expanded, lambda name: FolderNode(name, node.path))
+            self.merge(node.model_model[1], playlists, node.expanded, lambda name: lefttree.Node(name, node.path, model_factory=None, icon='view-list-symbolic', edit_stack=editstack.EditStack()))
 
     def get_pseudo_folder_contents(self, path):
         prefix = PSEUDO_SEPARATOR.join(path + [''])
@@ -278,7 +277,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
                 widget.edit_stack.reset()
                 widget.edit_stack_changed()
         elif action.get_name() == 'rename':
-            await self.rename_playlist(window, path, widget.left_selected_item.kind == NODE_FOLDER)
+            await self.rename_playlist(window, path, widget.left_selected_item.model is not None)
         elif action.get_name() == 'delete':
             await self.delete_playlist(window, path)
         elif action.get_name() == 'update-from-queue':
