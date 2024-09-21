@@ -44,9 +44,6 @@ class Tree:
     def __init__(self):
         self.root = self.get_root()
 
-    def __del__(self):
-        print('ok')
-
     def start(self):
         self.fill_node(self.root)
 
