@@ -219,7 +219,7 @@ class TandaWidget(compound.WidgetWithPaned):
         self.tanda_genre_filter_model.set_model(tandas)
 
         misc.remove_control_move_shortcuts_below(self)
-        self.add_context_menu_actions(self.generate_actions(), 'tanda', _("Tanda Editor"))
+        self.add_context_menu_actions(self.generate_actions(), 'tanda-widget', _("Tanda Editor"))
 
     def cleanup(self):
         super().cleanup()
@@ -337,7 +337,7 @@ class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Bo
         self.edit_stack_splicer = self.song_view.splice_keys
 
     def action_save_cb(self, action, parameter):
-        self.activate_action('edit.save')
+        self.activate_action('tanda.save')
 
     def tanda_edited_cb(self, factory, pos, name, value):
         assert self.current_tanda == self.tanda_view.item_selection_model[pos]
@@ -672,6 +672,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
         tanda.add_context_menu_actions(self.generate_db_actions(), 'db', self.TITLE)
 
+        tanda.add_context_menu_actions(self.generate_save_actions(tanda.edit), 'tanda', self.TITLE)
         tanda.edit.tanda_view.add_context_menu_actions(self.generate_edit_actions(tanda.edit), 'edit', self.TITLE)
         tanda.edit.tanda_view.add_context_menu_actions(self.generate_queue_actions(tanda.edit.tanda_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
         tanda.connect_clean(tanda.edit.song_view.item_view, 'activate', self.view_activate_cb)
@@ -684,6 +685,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
     def generate_edit_actions(self, edit):
         yield action.ActionInfo('fill', lambda *args: None, _("Fill field"), ['<Control><Shift>z'])  # Fake action, implemented in TandaListItemFactory
         yield action.ActionInfo('delete', self.action_tanda_delete_cb, _("Delete tanda"), ['<Control>Delete'], activate_args=(edit,))
+
+    def generate_save_actions(self, edit):
         yield action.ActionInfo('save', self.action_tanda_save_cb, activate_args=(edit,))
 
     @misc.create_task
@@ -704,7 +707,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         self.db.update_tanda(dict(new_value, tandaid=tanda.tandaid))
         tanda.value = new_value
         tanda.edit_stack.reset()
-        edit.song_view.edit_stack_changed()
+        edit.edit_stack_changed()
 
     def generate_db_actions(self):
         yield action.ActionInfo('verify', self.action_tanda_verify_cb, _("Verify tanda database"), ['<Control><Shift>d'])

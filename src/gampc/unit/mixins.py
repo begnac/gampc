@@ -144,5 +144,4 @@ class UnitComponentPlaylistActionMixin(UnitComponentMixin):
 
 class UnitComponentTandaActionMixin(UnitComponentMixin):
     def generate_tanda_actions(self, widget):
-        return
         yield action.ActionInfo('tanda-define', self.manager.get_unit('tanda').action_tanda_define_cb, _("Define tanda"), activate_args=(widget,))

@@ -251,7 +251,7 @@ class WidgetEditStackMixin:
 
     def refocus(self, focus, selection):
         if focus is not None:
-            self.edit_stack_view.scroll_to(focus)
+            self.edit_stack_view.item_view.scroll_to(focus, None, 0, None)
         if selection is not None:
             self.edit_stack_view.item_selection_model.unselect_all()
             for pos in selection:
