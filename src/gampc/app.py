@@ -88,8 +88,6 @@ class App(Gtk.Application):
         self.unit_component = self.unit_manager.get_unit('component')
         self.unit_window = self.unit_manager.get_unit('window')
 
-        self.unit_window.app = self
-
         self.ampd = self.unit_server.ampd.sub_executor()
 
         self.notification = Gio.Notification.new(_("MPD status"))
@@ -115,11 +113,6 @@ class App(Gtk.Application):
         self.unit_server.ampd_server_properties.disconnect_by_func(self.set_inhibit)
         self.unit_manager.set_target()
         del self.unit_manager
-
-        del self.unit_window.app
-
-        # for name in self.list_actions():
-        #     self.remove_action(name)
 
         for name in self.list_actions():
             self.remove_action(name)
@@ -174,9 +167,9 @@ class App(Gtk.Application):
 
     @staticmethod
     def activate_cb(self):
-        win = self.get_active_window()
-        if win:
-            win.present()
+        window = self.get_active_window()
+        if window:
+            window.present()
         else:
             self.activate_action('new-window')
 

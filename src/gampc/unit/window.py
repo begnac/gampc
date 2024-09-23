@@ -20,7 +20,6 @@
 
 from gi.repository import GLib
 from gi.repository import GObject
-from gi.repository import Gio
 from gi.repository import Gtk
 
 from ..util import action
@@ -140,7 +139,7 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
         self.require('component')
         self.config.message_timeout._get(default=1)
 
-        self.unit_menubar.load_family(self.generate_actions(), _("Window"), Gio.Application.get_default(), self.unit_menubar.menubar_window_section, True)
+        self.unit_menubar.load_family(self.generate_actions(), _("Window"), Gtk.Application.get_default(), self.unit_menubar.menubar_window_section, True)
 
     def generate_actions(self):
         yield action.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])
@@ -149,13 +148,17 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
         # yield action.ActionInfo('notify', self.task_hold_app(self.action_notify_cb))
 
     def new_window(self, name='current'):
-        Window(self, application=self.app).activate_action('app.component-start', GLib.Variant('(sb)', (name, False)))
+        window = Window(self, application=Gtk.Application.get_default())
+        component = self.unit_component.get_component(name, False)
+        if component is not None and component.get_root() is None:
+            window.change_component(component)
+        window.present()
 
     def new_window_cb(self, action, parameter):
         self.new_window()
 
     def close_window_cb(self, action, parameter):
-        self.app.get_active_window().destroy()
+        Gtk.Application.get_default().get_active_window().destroy()
 
     def action_toggle_fullscreen_cb(self, action, parameter):
         window = self.app.get_active_window()
