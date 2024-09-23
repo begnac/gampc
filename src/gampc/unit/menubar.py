@@ -38,7 +38,7 @@ class __unit__(unit.Unit):
         self.require('help')
 
         self.action_info_families = self.unit_window.action_info_families = []
-        self.menubar = Gio.Menu()
+        self.menubar = self.unit_window.menubar = Gio.Menu()
         app = Gio.Application.get_default()
         app.set_menubar(self.menubar)
 

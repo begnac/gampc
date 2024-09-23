@@ -30,7 +30,7 @@ class PlaybackButtons(Gtk.Box):
     playing = GObject.Property(type=bool, default=False)
 
     def __init__(self):
-        super().__init__(can_focus=False)
+        super().__init__()
 
         play_or_pause = Gtk.Button(action_name='app.play-or-pause')
         self.bind_property('playing', play_or_pause, 'icon-name', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: 'media-playback-pause-symbolic' if value else 'media-playback-start-symbolic')
@@ -43,7 +43,7 @@ class PlaybackButtons(Gtk.Box):
 
 class OptionButtons(Gtk.Box):
     def __init__(self):
-        super().__init__(can_focus=False)
+        super().__init__()
 
         self.append(Gtk.ToggleButton(action_name='app.random', icon_name='media-playlist-shuffle-symbolic'))
         self.append(Gtk.ToggleButton(action_name='app.repeat', icon_name='media-playlist-repeat-symbolic'))
@@ -56,7 +56,7 @@ class TimeScale(Gtk.Box):
     elapsed = GObject.Property(type=float, default=0)
 
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, can_focus=False)
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL)
 
         scale = self.scale = Gtk.Scale(restrict_to_fill_level=False, show_fill_level=True, width_request=150, draw_value=False, has_origin=False)
         self.elapsed_label = Gtk.Label()
@@ -137,7 +137,7 @@ class TimeScale(Gtk.Box):
 
 
 class HeaderBar(Gtk.HeaderBar):
-    def __init__(self):
+    def __init__(self, menu):
         self.title = Gtk.Label(css_classes=['title'])
         self.subtitle = Gtk.Label(css_classes=['subtitle'])
         self.titlebox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
@@ -156,9 +156,10 @@ class HeaderBar(Gtk.HeaderBar):
         for widget in self.volume_button, self.playback_buttons, self.time_scale, self.bitrate_label:
             self.pack_start(widget)
 
+        self.menu_button = Gtk.MenuButton(icon_name='open-menu', menu_model=menu, primary=True)
         self.option_buttons = OptionButtons()
         self.protected_image = Gtk.Image(icon_name='security-high-symbolic', tooltip_text=_("Protected mode"))
-        for widget in self.option_buttons, self.protected_image:
+        for widget in self.menu_button, self.option_buttons, self.protected_image:
             self.pack_end(widget)
 
     def set_title(self, title):

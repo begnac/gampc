@@ -37,7 +37,7 @@ from . import mixins
 
 class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
-        super().__init__(show_menubar=True, **kwargs)
+        super().__init__(**kwargs)
 
         self.action_info_families = list(unit.action_info_families)
         for family in self.action_info_families:
@@ -59,7 +59,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(self.main)
 
-        self.headerbar = headerbar.HeaderBar()
+        self.headerbar = headerbar.HeaderBar(self.unit.menubar)
         self.set_titlebar(self.headerbar)
 
         self.unit.unit_persistent.bind_property('protect-active', self.headerbar.option_buttons, 'sensitive', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
