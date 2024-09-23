@@ -43,8 +43,9 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         self.menu = Gio.Menu()
 
     def cleanup(self):
-        self.clean_outputs()
+        # self.clean_outputs()
         super().cleanup()
+        self.actions = Gio.SimpleActionGroup()  # clean_outputs may still be called.
 
     def client_connected_cb(self, client):
         self.idle_output()

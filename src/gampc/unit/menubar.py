@@ -28,7 +28,6 @@ class __unit__(unit.Unit):
     def __init__(self, manager):
         super().__init__(manager)
 
-        self.require('window')
         self.require('persistent')
         self.require('playback')
         self.require('server')
@@ -37,15 +36,16 @@ class __unit__(unit.Unit):
         self.require('component')
         self.require('help')
 
-        self.action_info_families = self.unit_window.action_info_families = []
-        self.menubar = self.unit_window.menubar = Gio.Menu()
+        self.action_info_families = []
+        self.menubar = Gio.Menu()
         app = Gio.Application.get_default()
         app.set_menubar(self.menubar)
 
         app_menu = Gio.Menu()
         app_label = _("_Application")
         self.menubar.append_submenu(app_label, app_menu)
-        self.load_family(self.unit_window.generate_actions(), app_label, app, app_menu, True)
+        self.menubar_window_section = Gio.Menu()
+        app_menu.append_section(None, self.menubar_window_section)
         self.load_family(self.unit_persistent.generate_actions(), app_label, app, app_menu, True)
         quit_action = action.ActionInfo('quit', self.quit_cb, _("Quit"), ['<Control>q'])
         self.load_family([quit_action], app_label, app, app_menu, True)
