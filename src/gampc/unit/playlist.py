@@ -215,11 +215,11 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         playlist = PlaylistWidget(self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config.pane_separator, self.tree)
         view = playlist.main
 
-        view.add_context_menu_actions(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        view.add_context_menu_actions(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
         view.add_context_menu_actions(self.generate_tanda_actions(view), 'tanda', self.TITLE)
 
         playlist.add_context_menu_actions(self.generate_playlist_actions(playlist), 'playlist', self.TITLE)
-        playlist.add_context_menu_actions(self.generate_queue_actions(view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect)
+        playlist.add_context_menu_actions(self.generate_queue_actions(view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
 
         playlist.connect_clean(view.item_view, 'activate', self.view_activate_cb)
 

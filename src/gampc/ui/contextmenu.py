@@ -38,7 +38,7 @@ class MenuActionMixin(cleanup.CleanupBaseMixin):
         del self.actions
         super().cleanup()
 
-    def add_menu_actions(self, generator, prefix, label, *, target_menu, submenu=False, protect=None):
+    def add_menu_actions(self, generator, prefix, label, *, target_menu, submenu=False, prepend=False, protect=None):
         assert prefix not in self.actions
         family = action.ActionInfoFamily(generator, prefix, label)
         self.actions[prefix] = family.get_action_group(protect=protect)
@@ -46,9 +46,13 @@ class MenuActionMixin(cleanup.CleanupBaseMixin):
         self.add_controller(family.get_shortcut_controller())
         self.menus[prefix] = family.get_menu()
         if submenu:
-            target_menu.append_submenu(label, self.menus[prefix])
+            item = Gio.MenuItem.new_submenu(label, self.menus[prefix])
         else:
-            target_menu.append_section(None, self.menus[prefix])
+            item = Gio.MenuItem.new_section(None, self.menus[prefix])
+        if prepend:
+            target_menu.prepend_item(item)
+        else:
+            target_menu.append_item(item)
 
 
 class ContextMenuMixin:

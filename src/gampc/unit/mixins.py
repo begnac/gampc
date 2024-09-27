@@ -120,9 +120,9 @@ class UnitComponentQueueActionMixin(UnitComponentMixin, UnitServerMixin):
         await self.ampd.playid(item_id)
 
     def generate_queue_actions(self, view, selection=True):
-        yield action.ActionInfo('queue-add-high-priority', self.action_queue_add_cb, _("Add to play queue with high priority"), arg=selection, arg_format='b', activate_args=(view,))
         yield action.ActionInfo('queue-add', self.action_queue_add_cb, _("Add to play queue"), arg=selection, arg_format='b', activate_args=(view,))
         yield action.ActionInfo('queue-replace', self.action_queue_add_cb, _("Replace play queue"), arg=selection, arg_format='b', dangerous=True, activate_args=(view,))
+        yield action.ActionInfo('queue-add-high-priority', self.action_queue_add_cb, _("Add to play queue with high priority"), arg=selection, arg_format='b', activate_args=(view,))
 
     @ampd.task
     async def action_queue_add_cb(self, action, parameter, view):
