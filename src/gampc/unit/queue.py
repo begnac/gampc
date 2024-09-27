@@ -68,12 +68,77 @@ class QueueListItemFactory(LabelListItemFactory):
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
 
 
+class QueueTransaction:
+    def __init__(self, model, ampd):
+        self.model = model
+        self.ampd = ampd
+        self.hold_count = 0
+
+    def add_items(self, position, keys):
+        self.lock()
+        if self.valid:
+            if self.add is None:
+                self.add = position, keys
+            else:
+                self.valid = False
+        self.unlock()
+
+    def remove_positions(self, positions):
+        self.lock()
+        if self.valid:
+            for p in positions:
+                self.remove.setdefault(self.model[p].get_key(), []).append((p, self.model[p].Id))
+        self.unlock()
+
+    def lock(self):
+        if self.hold_count == 0:
+            self.valid = True
+            self.add = None
+            self.remove = {}
+        self.hold_count += 1
+
+    def unlock(self):
+        self.hold_count -= 1
+        if self.hold_count == 0:
+            if self.valid:
+                self.run()
+            del self.valid, self.add, self.remove
+
+    def run(self):
+        commands = []
+        if self.add is not None:
+            p, keys = self.add
+            p0 = p
+            for key in keys:
+                if key in self.remove:
+                    q, Id = self.remove[key].pop(0)
+                    if not self.remove[key]:
+                        del self.remove[key]
+                    if q < p0:
+                        p -= 1
+                    commands.append(self.ampd.moveid(Id, p))
+                else:
+                    commands.append(self.ampd.add(key, p))
+                p += 1
+        while self.remove:
+            key, remove = self.remove.popitem()
+            commands += [self.ampd.deleteid(Id) for p, Id in remove]
+        self._run(commands)
+
+    @ampd.task
+    async def _run(self, commands):
+        await self.ampd.command_list(commands)
+
+
 class QueueWidget(ViewWithCopyPasteSong):
     current_Id = GObject.Property()
 
-    def __init__(self, add_items, remove_ids, **kwargs):
-        self.add_items = add_items
-        self.remove_ids = remove_ids
+    def __init__(self, transaction, **kwargs):
+        self.lock = transaction.lock
+        self.unlock = transaction.unlock
+        self.add_items = transaction.add_items
+        self.remove_positions = transaction.remove_positions
+
         super().__init__(item_type=QueueItem, factory_factory=QueueListItemFactory, **kwargs)
         self.item_view.add_css_class('queue')
         self.item_view.remove_css_class('song-by-key')
@@ -89,10 +154,7 @@ class QueueWidget(ViewWithCopyPasteSong):
         for position, item_ in enumerate(self.item_selection_model):
             if item_.Id == self.current_Id:
                 self.scroll_to(position)
-
-    @ampd.task
-    async def remove_positions(self, positions):
-        await self.remove_ids(self.item_selection_model[pos].Id for pos in positions)
+                return
 
     def set_position(self, position):
         if position is not None:
@@ -128,8 +190,10 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         self.queue_model = item.ItemListStore(QueueItem)
         item.setup_find_duplicate_items(self.queue_model, ['Title'], [self.unit_database.SEPARATOR_FILE])
 
+        self.transaction = QueueTransaction(self.queue_model, self.ampd)
+
     def new_widget(self):
-        queue = QueueWidget(fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, add_items=self.add_items, remove_ids=self.remove_ids, model=self.queue_model)
+        queue = QueueWidget(self.transaction, fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, model=self.queue_model)
 
         queue.add_context_menu_actions(self.generate_priority_actions(queue), 'priority', _("Priority for random mode"), submenu=True)
         queue.add_context_menu_actions(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
@@ -225,5 +289,5 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         return self.ampd.command_list(map(self.ampd.deleteid, ids))
 
     @ampd.task
-    async def add_items(self, keys, position):
+    async def add_items(self, position, keys):
         await self.ampd.command_list(self.ampd.add(key, position) for key in reversed(keys))

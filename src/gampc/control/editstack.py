@@ -29,9 +29,9 @@ from ..ui import dialog
 
 
 class DeltaSplicer:
-    def __init__(self, items, position, advance):
-        self.items = items
+    def __init__(self, position, items, advance):
         self.position = position
+        self.items = items
         self.advance = advance
 
     def apply(self, advance, edit_stack):
@@ -272,14 +272,14 @@ class WidgetEditStackMixin:
             j += 1
             if j != k:
                 values = self.edit_stack.items[i:j]
-                self.edit_stack.append_delta(DeltaSplicer(values, i, False))
+                self.edit_stack.append_delta(DeltaSplicer(i, values, False))
                 i = j = k
         self.unlock()
 
-    def add_items(self, values, position):
+    def add_items(self, position, values):
         if not values:
             return
-        self.edit_stack.append_delta(DeltaSplicer(values, position, True))
+        self.edit_stack.append_delta(DeltaSplicer(position, values, True))
 
     def lock(self):
         self.edit_stack.hold_transaction()

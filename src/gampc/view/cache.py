@@ -54,7 +54,7 @@ class ViewWithCopyPasteSong(ViewFilenameMixin, ViewWithCopyPaste):
             pos = selection[0]
         else:
             return
-        self.add_items([self.separator_file], pos)
+        self.add_items(pos, [self.separator_file])
 
     # def action_delete_file_cb(self, action, parameter):
     #     store, paths = self.treeview.get_selection().get_selected_rows()

@@ -180,7 +180,7 @@ class ViewWithCopyPaste(ViewWithCopy):
     def action_paste_finish_cb(self, clipboard, result, pos):
         values = clipboard.read_value_finish(result).values
         if values is not None:
-            self.add_items(values, pos)
+            self.add_items(pos, values)
 
     def generate_url_actions(self):
         yield action.ActionInfo('add-url', self.action_add_url_cb, _("Add URL or filename"))
@@ -197,7 +197,7 @@ class ViewWithCopyPaste(ViewWithCopy):
         if url:
             item_ = item.Item(value=dict(file=url))
             transfer = self.transfer_type([item_])
-            self.add_items(transfer.values, pos)
+            self.add_items(pos, transfer.values)
 
     def set_drop_row(self, drop_row=None):
         if drop_row != self.drop_row:
@@ -221,7 +221,8 @@ class ViewWithCopyPaste(ViewWithCopy):
     #     self.set_row()
 
     def drop_cb(self, drop_target, value, x, y):
-        self.add_items(value.values, self.drop_row.get_first_child().get_first_child().pos + 1 if self.drop_row is not None else 0)
+        pos = self.drop_row.get_first_child().get_first_child().pos + 1 if self.drop_row is not None else 0
+        self.add_items(pos, value.values)
         return True
 
     add_items = remove_positions = NotImplemented
