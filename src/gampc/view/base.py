@@ -36,8 +36,6 @@ from .listitem import LabelListItemFactory
 
 class FieldItemColumn(Gtk.ColumnViewColumn):
     def __init__(self, field, *, sortable, **kwargs):
-        self.name = field.name
-
         super().__init__(**kwargs, id=field.name)
 
         field.bind_property('title', self, 'title', GObject.BindingFlags.SYNC_CREATE)
@@ -47,13 +45,13 @@ class FieldItemColumn(Gtk.ColumnViewColumn):
         self.set_resizable(True)
 
         if sortable:
-            sorter = Gtk.CustomSorter.new(self.sort_func, self.name)
+            sorter = Gtk.CustomSorter.new(self.sort_func, field)
             self.set_sorter(sorter)
 
     @staticmethod
-    def sort_func(item1, item2, name):
-        s1 = item1.get_field(name)
-        s2 = item2.get_field(name)
+    def sort_func(item1, item2, field):
+        s1 = item1.get_field(field.name, field.sort_default)
+        s2 = item2.get_field(field.name, field.sort_default)
         return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
 
@@ -113,7 +111,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         self.item_view = ItemView(fields, factory_factory, sortable=sortable, model=self.item_selection_model, enable_rubberband=False, hexpand=True, vexpand=True, tab_behavior=Gtk.ListTabBehavior.CELL)
         self.item_view.add_css_class('items')
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view)
-        self.view_search = listviewsearch.ListViewSearch(self.item_view.rows, lambda text, item: any(text.lower() in item.get_field(name).lower() for name in fields.fields))
+        self.view_search = listviewsearch.ListViewSearch(self.item_view.rows, lambda text, item: any(text.lower() in str(item.get_field(name, '')).lower() for name in fields.fields))
         self.append(self.scrolled_item_view)
         self.add_cleanup_below(self.item_view, self.view_search)
 

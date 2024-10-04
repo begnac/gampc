@@ -33,15 +33,15 @@ class Field(GObject.Object):
     title = GObject.Property(type=str)
     width = GObject.Property(type=int)
     visible = GObject.Property(type=bool, default=True)
-    xalign = GObject.Property(type=float, default=0.0)
     editable = GObject.Property(type=bool, default=False)
 
     get_value = None
 
-    def __init__(self, name, title=None, min_width=50, get_value=None, **kwargs):
+    def __init__(self, name, title=None, *, sort_default='', min_width=50, get_value=None, **kwargs):
         super().__init__(**kwargs)
         self.name = name
         self.title = title
+        self.sort_default = sort_default
         self.width = self.min_width = min_width
         if get_value:
             self.get_value = get_value
@@ -51,8 +51,8 @@ class Field(GObject.Object):
 
 
 class FieldWithTable(Field):
-    def __init__(self, name, title=None, table=None, min_width=50, **kwargs):
-        super().__init__(name, title, min_width, **kwargs)
+    def __init__(self, name, title=None, table=None, **kwargs):
+        super().__init__(name, title, **kwargs)
         self.table = table
 
     def get_value(self, data):

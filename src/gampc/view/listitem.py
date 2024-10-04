@@ -73,7 +73,7 @@ class ListItemFactoryBase(Gtk.SignalListItemFactory):
 
     @staticmethod
     def value_binder(widget, item_, name):
-        value = item_.get_field(name)
+        value = item_.get_field(name, '')
         widget.set_label(value)
 
 

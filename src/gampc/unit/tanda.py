@@ -115,14 +115,14 @@ class TandaListItemFactory(EditableListItemFactoryBase):
         cell = widget.get_parent()
         if 'Last_Played' in name:
             value = item_.get_field('Last_Played_Weeks')
-            if value:
-                cell.add_css_class(f'last-played-{min(10, int(value))}')
+            if value is not None:
+                misc.add_unique_css_class(cell, 'last-played', str(min(10, int(value))))
         elif name in ('Rhythm', 'Energy', 'Speed', 'Level'):
-            cell.add_css_class(f'property-{item_.get_field(name)}')
+            misc.add_unique_css_class(cell, 'property', item_.get_field(name))
         elif name == 'Emotion':
-            cell.add_css_class(f'emotion-{item_.get_field(name)}')
+            misc.add_unique_css_class(cell, 'emotion', item_.get_field(name))
         elif name in ('Genre',):
-            cell.add_css_class(f'genre-{item_.get_field(name).lower()}')
+            misc.add_unique_css_class(cell, 'genre', item_.get_field(name).lower())
 
     @staticmethod
     def modified_binder(widget, item_):
@@ -161,7 +161,7 @@ class StringListItemFactory(Gtk.SignalListItemFactory):
 
 
 class TandaWidget(compound.WidgetWithPaned):
-    GENRES = ('Tango', 'Vals', 'Milonga', _("Other"), _("All"))
+    GENRES = (_("Tango"), _("Vals"), _("Milonga"), _("Other"), _("All"))
     GENRE_OTHER = len(GENRES) - 2
     GENRE_ALL = len(GENRES) - 1
 
@@ -185,7 +185,7 @@ class TandaWidget(compound.WidgetWithPaned):
 
         self.button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         for i, genre in enumerate(self.GENRES):
-            button = Gtk.ToggleButton(label=genre, can_focus=False, action_name='tanda.genre-filter', action_target=GLib.Variant.new_int32(i))
+            button = Gtk.ToggleButton(label=genre, can_focus=False, action_name='tanda-widget.genre-filter', action_target=GLib.Variant.new_int32(i))
             self.button_box.append(button)
         self.button_box.append(Gtk.Label(hexpand=True))
         self.problem_button = Gtk.ToggleButton(icon_name='object-select-symbolic', can_focus=False, tooltip_text=_("Filter zero note"))
@@ -640,7 +640,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
         self.fields.register_field(field.Field('Last_Modified', _("Last modified")))
         self.fields.register_field(field.Field('Last_Played', _("Last played")))
-        self.fields.register_field(field.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=self.get_last_played_weeks))
+        self.fields.register_field(field.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=self.get_last_played_weeks, sort_default=float('inf')))
         self.fields.register_field(field.Field('n_songs', _("Number of songs"), min_width=30, get_value=self.get_n_songs))
         self.fields.register_field(field.Field('Duration', _("Duration"), get_value=lambda tanda: misc.format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
 
@@ -828,7 +828,6 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
                 return (datetime.date.today() - datetime.date(*map(int, tanda['Last_Played'].split('-')))).days // 7
             except Exception:
                 pass
-        return ''
 
     @staticmethod
     def get_n_songs(tanda):

@@ -34,7 +34,7 @@ class ItemBase(GObject.Object):
     def load(self, value):
         self.value = value
 
-    def get_field(self, name, default=''):
+    def get_field(self, name, default=None):
         return self.value.get(name, default)
 
 
