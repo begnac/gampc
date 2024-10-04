@@ -82,7 +82,7 @@ class ItemView(Gtk.ColumnView):
 
     def columns_changed_cb(self, columns, position, removed, added):
         self.fields.order.handler_block_by_func(self.fields_order_changed_cb)
-        self.fields.order[position:position + removed] = [Gtk.StringObject.new(col.name) for col in columns[position:position + added]]
+        self.fields.order[position:position + removed] = [Gtk.StringObject.new(col.get_id()) for col in columns[position:position + added]]
         self.fields.order.handler_unblock_by_func(self.fields_order_changed_cb)
 
     def fields_order_changed_cb(self, order, position, removed, added):
