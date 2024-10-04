@@ -116,7 +116,8 @@ class TandaListItemFactory(EditableListItemFactoryBase):
         if 'Last_Played' in name:
             value = item_.get_field('Last_Played_Weeks')
             if value is not None:
-                misc.add_unique_css_class(cell, 'last-played', str(min(10, int(value))))
+                value = str(min(10, int(value)))
+            misc.add_unique_css_class(cell, 'last-played', value)
         elif name in ('Rhythm', 'Energy', 'Speed', 'Level'):
             misc.add_unique_css_class(cell, 'property', item_.get_field(name))
         elif name == 'Emotion':
@@ -586,14 +587,14 @@ columnview.tanda-edit > listview > row > cell.genre-milonga {
 for t in range(11):
     CSS += f'''
     columnview.tanda-edit > listview > row > cell.last-played-{t} {{
-      background: rgba({255 - t * 255 // 10},{t * 255 // 10},0,1);
+      background: rgb({255 - t * 255 // 10},{t * 255 // 10},0);
     }}
     '''
 
 for p in range(5):
     CSS += f'''
     columnview.tanda-edit > listview > row > cell.property-{p + 1} {{
-      background: rgba({p * 255 // 4},{255 // 2},{255 - p * 255 // 4},1);
+      background: rgb({p * 255 // 4},{255 // 2},{255 - p * 255 // 4});
     }}
     '''
 
