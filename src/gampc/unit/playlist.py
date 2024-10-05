@@ -185,7 +185,7 @@ class PlaylistTree(lefttree.Tree):
         return folders, names
 
 
-class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mixins.UnitComponentTandaActionMixin, mixins.UnitConfigMixin, unit.Unit):
+class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mixins.UnitComponentTandaActionMixin, mixins.UnitComponentPlaylistActionMixin, mixins.UnitConfigMixin, unit.Unit):
     TITLE = _("Playlist")
     KEY = '5'
 
@@ -215,11 +215,12 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         playlist = PlaylistWidget(self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config.pane_separator, self.tree)
         view = playlist.main
 
-        view.add_context_menu_actions(self.generate_queue_actions(view), 'queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
-        view.add_context_menu_actions(self.generate_tanda_actions(view), 'tanda', self.TITLE)
+        view.add_context_menu_actions(self.generate_foreign_queue_actions(view), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
+        view.add_context_menu_actions(self.generate_foreign_tanda_actions(view), 'foreign-tanda', self.TITLE)
+        view.add_context_menu_actions(self.generate_foreign_playlist_actions(view), 'foreign-playlist', self.TITLE)
 
         playlist.add_context_menu_actions(self.generate_playlist_actions(playlist), 'playlist', self.TITLE)
-        playlist.add_context_menu_actions(self.generate_queue_actions(view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
+        playlist.add_context_menu_actions(self.generate_foreign_queue_actions(view, False), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
 
         playlist.connect_clean(view.item_view, 'activate', self.view_activate_cb)
 

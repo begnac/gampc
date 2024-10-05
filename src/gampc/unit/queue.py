@@ -204,8 +204,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         queue.set_position(self.queue_position)
         queue.totals_store = queue.item_model
 
-        queue.add_context_menu_actions(self.generate_playlist_actions(queue), 'playlist', self.TITLE)
-        queue.add_context_menu_actions(self.generate_tanda_actions(queue), 'tanda', self.TITLE)
+        queue.add_context_menu_actions(self.generate_foreign_playlist_actions(queue), 'foreign-playlist', self.TITLE)
+        queue.add_context_menu_actions(self.generate_foreign_tanda_actions(queue), 'foreign-tanda', self.TITLE)
 
         return queue
 

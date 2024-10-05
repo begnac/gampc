@@ -119,7 +119,7 @@ class UnitComponentQueueActionMixin(UnitComponentMixin, UnitServerMixin):
             item_id = await self.ampd.addid(filename)
         await self.ampd.playid(item_id)
 
-    def generate_queue_actions(self, view, selection=True):
+    def generate_foreign_queue_actions(self, view, selection=True):
         yield action.ActionInfo('queue-add', self.action_queue_add_cb, _("Add to play queue"), arg=selection, arg_format='b', activate_args=(view,))
         yield action.ActionInfo('queue-replace', self.action_queue_add_cb, _("Replace play queue"), arg=selection, arg_format='b', dangerous=True, activate_args=(view,))
         yield action.ActionInfo('queue-add-high-priority', self.action_queue_add_cb, _("Add to play queue with high priority"), arg=selection, arg_format='b', activate_args=(view,))
@@ -138,10 +138,10 @@ class UnitComponentQueueActionMixin(UnitComponentMixin, UnitServerMixin):
 
 
 class UnitComponentPlaylistActionMixin(UnitComponentMixin):
-    def generate_playlist_actions(self, widget, selection=True):
+    def generate_foreign_playlist_actions(self, widget, selection=True):
         yield action.ActionInfo('playlist-saveas', self.manager.get_unit('playlist').action_playlist_saveas_cb, _("Save as playlist"), arg=selection, arg_format='b', activate_args=(widget,))
 
 
 class UnitComponentTandaActionMixin(UnitComponentMixin):
-    def generate_tanda_actions(self, widget):
+    def generate_foreign_tanda_actions(self, widget):
         yield action.ActionInfo('tanda-define', self.manager.get_unit('tanda').action_tanda_define_cb, _("Define tanda"), activate_args=(widget,))

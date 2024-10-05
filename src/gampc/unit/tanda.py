@@ -675,10 +675,10 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
 
         tanda.add_context_menu_actions(self.generate_save_actions(tanda.edit), 'tanda', self.TITLE)
         tanda.edit.tanda_view.add_context_menu_actions(self.generate_edit_actions(tanda.edit), 'edit', self.TITLE)
-        tanda.edit.tanda_view.add_context_menu_actions(self.generate_queue_actions(tanda.edit.tanda_view, False), 'queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
+        tanda.edit.tanda_view.add_context_menu_actions(self.generate_foreign_queue_actions(tanda.edit.tanda_view, False), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
         tanda.connect_clean(tanda.edit.song_view.item_view, 'activate', self.view_activate_cb)
 
-        tanda.view.add_context_menu_actions(self.generate_queue_actions(tanda.view), 'queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
+        tanda.view.add_context_menu_actions(self.generate_foreign_queue_actions(tanda.view), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
         tanda.connect_clean(tanda.view.item_view, 'activate', self.view_activate_cb)
 
         return tanda
