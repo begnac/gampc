@@ -109,7 +109,7 @@ class __unit__(unit.Unit):
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.theme_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_SETTINGS)
 
         self.app_theme_css_provider = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.app_theme_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.app_theme_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
 
         self.unit_persistent.connect('notify::dark', self.notify_dark_cb, self.theme_css_provider, self.app_theme_css_provider)
         load_theme_css(self.unit_persistent.dark, self.theme_css_provider, self.app_theme_css_provider)

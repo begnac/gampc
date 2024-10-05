@@ -709,6 +709,8 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         tanda.value = new_value
         tanda.edit_stack.reset()
         edit.edit_stack_changed()
+        pos = list(self.tanda_model).index(edit.current_tanda)
+        self.tanda_model.items_changed(pos, 1, 1)
 
     def generate_db_actions(self):
         yield action.ActionInfo('verify', self.action_tanda_verify_cb, _("Verify tanda database"), ['<Control><Shift>d'])
