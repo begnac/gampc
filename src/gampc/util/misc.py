@@ -93,8 +93,6 @@ def prepend_mixin(mixin, extra={}):
 
 
 def remove_control_move_shortcuts(widget):
-    if widget is None:   # Very odd but can happen.  Gtk bug?
-        return
     for controller in list(widget.observe_controllers()):
         if isinstance(controller, Gtk.ShortcutController):
             new_controller = Gtk.ShortcutController()

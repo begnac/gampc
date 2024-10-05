@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gtk
 
@@ -27,10 +28,11 @@ from ..ui import editable
 
 
 class ListItemFactoryBase(Gtk.SignalListItemFactory):
-    def __init__(self, name):
+    def __init__(self, name, remove_shortcuts):
         super().__init__()
 
         self.name = name
+        self.remove_shortcuts = remove_shortcuts
 
         self.binders = []
         self.binders.append(('value', self.value_binder, name))
@@ -49,6 +51,16 @@ class ListItemFactoryBase(Gtk.SignalListItemFactory):
         widget = listitem.get_child()
         widget.pos = listitem.get_position()
         self.bind(widget, listitem.get_item())
+        if self.remove_shortcuts:
+            GLib.idle_add(self.remove_row_shortcuts, widget)
+
+    @staticmethod
+    def remove_row_shortcuts(widget):
+        cell = widget.get_parent()
+        if cell is not None:
+            row = cell.get_parent()
+            if row is not None:
+                misc.remove_control_move_shortcuts(row)
 
     @staticmethod
     def unbind_cb(self, listitem):
@@ -78,8 +90,8 @@ class ListItemFactoryBase(Gtk.SignalListItemFactory):
 
 
 class ListItemFactory(ListItemFactoryBase):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, *args):
+        super().__init__(*args)
 
         self.binders.append(('value', self.key_binder))
         self.binders.append(('duplicate', self.duplicate_binder))

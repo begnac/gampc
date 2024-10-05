@@ -65,10 +65,9 @@ class ItemView(Gtk.ColumnView):
         self.add_css_class('data-table')
 
         self.rows = self.get_last_child()
-        self.rows_model = self.rows.observe_children()
-        self.rows_model.connect('items-changed', lambda model, p, r, a: [misc.remove_control_move_shortcuts(row_widget) for row_widget in model[p:p + a]])
 
-        self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name)) for field in fields.fields.values()}
+        first_name = list(fields.fields).pop()
+        self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name, field.name == first_name)) for field in fields.fields.values()}
         for name in fields.order:
             self.append_column(self.columns[name.get_string()])
 

@@ -74,8 +74,8 @@ class TandaSongItem(item.Item):
 
 
 class TandaListItemFactory(EditableListItemFactoryBase):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, *args):
+        super().__init__(name, *args)
         self.binders.append(('value', self.special_binder, name))
         self.binders.append(('value', self.tanda_binder, name))
         self.binders.append(('modified', self.modified_binder))

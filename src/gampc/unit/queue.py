@@ -53,8 +53,8 @@ class QueueItem(item.Item):
 
 
 class QueueListItemFactory(LabelListItemFactory):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, *args):
+        super().__init__(name, *args)
         self.binders.append(('Id', self.id_binder))
         self.binders.append(('Prio', self.prio_binder, name))
 
