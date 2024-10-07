@@ -53,12 +53,14 @@ class Tree:
             self.fill_node(node)
         return node.model
 
-    def merge(self, store, names, fill, create_node):
+    def merge(self, store, names, fill, create_node, update_node=None):
         n = len(names)
         for pos in range(n):
             while pos < len(store) and store[pos].name < names[pos]:
                 store.remove(pos)
             if pos < len(store) and store[pos].name == names[pos]:
+                if update_node:
+                    update_node(store[pos])
                 if fill:
                     self.fill_node(store[pos])
                 else:

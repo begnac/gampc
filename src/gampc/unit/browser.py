@@ -70,9 +70,17 @@ class BrowserTree(lefttree.Tree):
     async def fill_node(self, node):
         contents = {os.path.basename(item[DIRECTORY]) or _("Music"): await self.ampd.lsinfo(item[DIRECTORY]) for item in node.contents.get(DIRECTORY, [])}
         if node.model is not None:
-            self.merge(node.model, sorted(contents), node.expanded, lambda name: lefttree.Node(name, node.path, icon='folder-symbolic', contents=contents[name], model_factory=Gio.ListStore if DIRECTORY in contents[name] else None))
+            self.merge(node.model, sorted(contents), node.expanded, lambda name: self.create_node(name, node.path, contents), lambda node: self.update_node(node, contents))
         self.update_cache(node.contents.get(FILE, []))
         node.keys = [item[FILE] for item in node.contents.get(FILE, [])]
+
+    @staticmethod
+    def create_node(name, path, contents):
+        return lefttree.Node(name, path, icon='folder-symbolic', contents=contents[name], model_factory=Gio.ListStore if DIRECTORY in contents[name] else None)
+
+    @staticmethod
+    def update_node(node, contents):
+        node.contents = contents[node.name]
 
 
 class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, unit.Unit):
