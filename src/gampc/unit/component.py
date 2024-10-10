@@ -116,7 +116,7 @@ class __unit__(unit.Unit):
             window = Gtk.Application.get_default().get_active_window()
             window.change_component(component)
         else:
-            window.component.grab_focus()
+            window.grab_focus()
         window.present()
 
     def component_stop_cb(self, action, parameter):
