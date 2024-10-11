@@ -39,7 +39,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
         super().__init__(**kwargs)
 
-        self.action_info_families = list(unit.unit_menubar.action_info_families)
+        self.action_info_families = list(unit.unit_menu.action_info_families)
         for family in self.action_info_families:
             self.add_controller(family.get_shortcut_controller())
 
@@ -59,7 +59,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(self.main)
 
-        self.headerbar = headerbar.HeaderBar(unit.unit_menubar.menubar)
+        self.headerbar = headerbar.HeaderBar(unit.unit_menu.menu)
         self.set_titlebar(self.headerbar)
 
         self.unit.unit_persistent.bind_property('protect-active', self.headerbar.option_buttons, 'sensitive', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
@@ -134,12 +134,12 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
 class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
     def __init__(self, manager):
         super().__init__(manager)
-        self.require('menubar')
+        self.require('menu')
         self.require('persistent')
         self.require('component')
         self.config.message_timeout._get(default=1)
 
-        self.unit_menubar.load_family(self.generate_actions(), _("Window"), Gtk.Application.get_default(), self.unit_menubar.menubar_window_section, True)
+        self.unit_menu.load_family(self.generate_actions(), _("Window"), Gtk.Application.get_default(), self.unit_menu.menu_window_section, True)
 
     def generate_actions(self):
         yield action.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])

@@ -37,24 +37,23 @@ class __unit__(unit.Unit):
         self.require('help')
 
         self.action_info_families = []
-        self.menubar = Gio.Menu()
+        self.menu = Gio.Menu()
         app = Gio.Application.get_default()
-        app.set_menubar(self.menubar)
 
         app_menu = Gio.Menu()
         app_label = _("_Application")
-        self.menubar.append_submenu(app_label, app_menu)
-        self.menubar_window_section = Gio.Menu()
-        app_menu.append_section(None, self.menubar_window_section)
+        self.menu.append_submenu(app_label, app_menu)
+        self.menu_window_section = Gio.Menu()
+        app_menu.append_section(None, self.menu_window_section)
         self.load_family(self.unit_persistent.generate_actions(), app_label, app, app_menu, True)
         quit_action = action.ActionInfo('quit', self.quit_cb, _("Quit"), ['<Control>q'])
         self.load_family([quit_action], app_label, app, app_menu, True)
 
-        self.load_family(self.unit_playback.generate_actions(), _("_Playback"), app, self.menubar)
+        self.load_family(self.unit_playback.generate_actions(), _("_Playback"), app, self.menu)
 
         server_menu = Gio.Menu()
         server_label = _("_Server")
-        self.menubar.append_submenu(server_label, server_menu)
+        self.menu.append_submenu(server_label, server_menu)
         self.load_family(self.unit_server.generate_database_actions(), server_label, app, server_menu, True)
         app.follow_action_group(self.unit_output.actions)
         server_menu.append_section(None, self.unit_output.menu)
@@ -62,13 +61,13 @@ class __unit__(unit.Unit):
         server_menu.append_submenu(_("Profiles"), self.unit_profiles.menu)
 
         component_label = _("_Component")
-        self.menubar.append_submenu(component_label, self.unit_component.menu)
+        self.menu.append_submenu(component_label, self.unit_component.menu)
         self.action_info_families.append(self.unit_component.start_family)
         self.action_info_families.append(self.unit_component.stop_family)
         self.unit_component.start_family.add_to_action_map(app)
         self.unit_component.stop_family.add_to_action_map(app)
 
-        self.load_family(self.unit_help.generate_actions(), _("_Help"), app, self.menubar)
+        self.load_family(self.unit_help.generate_actions(), _("_Help"), app, self.menu)
 
     def cleanup(self):
         self.action_info_families.clear()

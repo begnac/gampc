@@ -71,7 +71,7 @@ class App(Gtk.Application):
         # self.unit_config = self.unit_manager.get_unit('config')
 
         default_units = [
-            'menubar', 'help', 'profiles', 'server',
+            'menu', 'help', 'profiles', 'server',
             'output', 'persistent',
             'css',
             'playback', 'window',
