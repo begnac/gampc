@@ -38,6 +38,7 @@ class __unit__(unit.Unit):
 
         self.action_info_families = []
         self.menu = Gio.Menu()
+
         app = Gio.Application.get_default()
 
         app_menu = Gio.Menu()

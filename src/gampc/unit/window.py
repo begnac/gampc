@@ -59,8 +59,11 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(self.main)
 
-        self.headerbar = headerbar.HeaderBar(unit.unit_menu.menu)
+        self.headerbar = headerbar.HeaderBar()
         self.set_titlebar(self.headerbar)
+
+        self.menubar = Gtk.PopoverMenuBar(menu_model=unit.unit_menu.menu)
+        self.main.append(self.menubar)
 
         self.unit.unit_persistent.bind_property('protect-active', self.headerbar.option_buttons, 'sensitive', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
 
@@ -94,7 +97,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
             self.set_subtitle()
         self.component = component
         if self.component is not None:
-            self.main.prepend(self.component)
+            self.main.insert_child_after(self.component, self.menubar)
             self.component.grab_focus()
 
     def set_time_scale_sensitive(self, *args):
