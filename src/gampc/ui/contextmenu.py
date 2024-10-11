@@ -68,9 +68,9 @@ class ContextMenuMixin:
         self = controller.get_widget()
         if self.context_menu.get_n_items() == 0:
             return
-        menu = Gtk.PopoverMenu(menu_model=self.context_menu, flags=Gtk.PopoverMenuFlags.NESTED, has_arrow=False, pointing_to=misc.Rectangle(x, y), halign=Gtk.Align.START)
-        menu.set_parent(self)
-        menu.popup()
+        popover = Gtk.PopoverMenu(menu_model=self.context_menu, flags=Gtk.PopoverMenuFlags.NESTED, has_arrow=False, pointing_to=misc.Rectangle(x, y), halign=Gtk.Align.START)
+        popover.set_parent(self)
+        popover.popup()
 
 
 class ContextMenuActionMixin(ContextMenuMixin, MenuActionMixin):
