@@ -330,7 +330,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
     async def action_playlist_saveas_cb(self, action, parameter, view):
         filenames = view.get_filenames(parameter.unpack())
         if not filenames:
-            await dialog.MessageDialogAsync(message=_("Nothing to save!"), transient_for=view.widget.get_root(), title="", cancel_button=False).run()
+            await dialog.MessageDialogAsync(message=_("Nothing to save!"), transient_for=view.get_root(), title="", cancel_button=False).run()
             return
 
         playlist_path = await ChoosePathDialog(transient_for=view.get_root(), title=_("Save as playlist"), paths=self.playlist_paths()).run()
