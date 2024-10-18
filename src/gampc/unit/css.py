@@ -27,6 +27,10 @@ from ..util import unit
 def load_theme_css(dark, theme_css_provider, app_css_provider):
     theme_css_provider.load_named('Adwaita', 'dark' if dark else None)
 
+    background = 'rgb(53,53,53)' if dark else 'rgb(246,245,244)'
+    foreground = 'rgb(238,238,236)' if dark else 'rgb(46,52,54)'
+    border = 'rgb(27,27,27)' if dark else 'rgb(205,199,194)'
+
     css = ''
 
     css += '''
@@ -36,30 +40,27 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
     }
     '''
 
-    css += '''
-    columnview > listview > row > cell:focus-visible {
-      background: green;
-    }
+    css += f'''
+    columnview > listview > row > cell > :focus {{
+      border-style: solid;
+      border-width: 1px;
+      border-radius: 5px;
+      border-bottom-color: {border};
+      border-left-color: {border};
+      border-right-color: {border};
+      border-top-color: {border};
+    }}
     '''
 
-    css += '''
-    editablelabel.editing {
-      background-color: rgb(45,45,45);
-      border-bottom-color: rgb(27,27,27);
-      border-left-color: rgb(27,27,27);
-      border-right-color: rgb(27,27,27);
-      border-top-color: rgb(27,27,27);
-      color: rgb(255,255,255);
-    }
-    ''' if dark else '''
-    editablelabel.editing > label > text {
-      background-color: rgb(255,255,255);
-      border-bottom-color: rgb(205,199,194);
-      border-left-color: rgb(205,199,194);
-      border-right-color: rgb(205,199,194);
-      border-top-color: rgb(205,199,194);
-      color: rgb(0,0,0);
-    }
+    css += f'''
+    editablelabel.editing {{
+      color: {foreground};
+      background-color: {background};
+      border-bottom-color: {border};
+      border-left-color: {border};
+      border-right-color: {border};
+      border-top-color: {border};
+    }}
     '''
 
     css += '''
@@ -109,7 +110,7 @@ class __unit__(unit.Unit):
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.theme_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_SETTINGS)
 
         self.app_theme_css_provider = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.app_theme_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.app_theme_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
         self.unit_persistent.connect('notify::dark', self.notify_dark_cb, self.theme_css_provider, self.app_theme_css_provider)
         load_theme_css(self.unit_persistent.dark, self.theme_css_provider, self.app_theme_css_provider)
