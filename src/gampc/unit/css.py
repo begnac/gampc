@@ -83,7 +83,6 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
 
 PLAYING_CSS = '''
 columnview.song-by-{name} > listview > row > cell.{name}-{value} {{
-  background: rgba(128,128,128,0.2);
   font-style: italic;
   font-weight: bold;
 }}
