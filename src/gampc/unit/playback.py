@@ -57,12 +57,12 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         yield fadeout.derive(_("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], True)
         yield fadeout.derive(_("Next [fadeout]"), ['<Control><Shift>Right'], False)
         yield action.ActionInfo('volume-popup', self.volume_popup_cb, _("Adjust volume"), ['<Alt>v'])
-        volume = action.ActionInfo('volume', self.volume_cb, arg_format='(ib)')
+        volume = action.ActionInfo('volume', self.volume_cb, arg_format='(ib)', dangerous=True)
         yield volume
         yield volume.derive(_("Volume up"), ['<Control>plus', '<Control>KP_Add'], (5, True))
         yield volume.derive(_("Volume down"), ['<Control>minus', '<Control>KP_Subtract'], (-5, True))
         yield volume.derive(_("Mute"), ['<Control>AudioMute'], (0, False))
-        jump = action.ActionInfo('jump', self.jump_cb, arg_format='(ib)')
+        jump = action.ActionInfo('jump', self.jump_cb, arg_format='(ib)', dangerous=True)
         yield jump
         yield jump.derive(_("Restart playback"), ['<Alt>Up'], (0, False))
         yield jump.derive(_("End of song (-{} seconds)").format(15), ['<Alt>Down'], (-15, False))
@@ -128,7 +128,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
             self.fading = False
 
     def volume_popup_cb(self, action, parameter):
-        button = self.app.get_active_window().headerbar.volume_button
+        button = Gtk.Application.get_default().get_active_window().headerbar.volume_button
         if button.is_sensitive() and not button.get_popup().get_mapped():
             button.emit('popup')
         else:
