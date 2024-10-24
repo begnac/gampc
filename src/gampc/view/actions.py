@@ -151,9 +151,9 @@ class ViewWithCopyPaste(ViewWithCopy):
         cut = action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'], True, arg_format='b')
         yield cut
         yield from super().generate_editing_actions()
-        paste_after = action.ActionInfo('paste', self.action_paste_cb, _("Paste after"), ['<Control>v'], True, arg_format='b')
-        yield paste_after
-        yield paste_after.derive(_("Paste before"), ['<Control>b'], False)
+        paste = action.ActionInfo('paste', self.action_paste_cb, _("Paste"), ['<Control>v'], False, arg_format='b')
+        yield paste
+        yield paste.derive(_("Paste after"), ['<Control><Shift>v'], True)
         yield cut.derive(_("Delete"), ['Delete'], False)
 
     def action_cut_cb(self, action, parameter):
