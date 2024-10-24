@@ -48,8 +48,6 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
 
         section_app = Gtk.ShortcutsSection(title=_("Application shortcuts"), section_name='app')
         section_other = Gtk.ShortcutsSection(title=_("Window shortcuts"), section_name='win')
-        self.add_section(section_app)
-        self.add_section(section_other)
 
         for controller in iterate_help_controllers(window):
             if controller.prefix == 'app':
@@ -65,6 +63,10 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
                         groups[name] = group = Gtk.ShortcutsGroup(title=name)
                         section.add_group(group)
                     group.add_shortcut(Gtk.ShortcutsShortcut(title=shortcut.label, accelerator=' '.join(shortcut.accels)))
+
+        self.add_section(section_app)
+        if groups_other:
+            self.add_section(section_other)
 
 
 class __unit__(unit.Unit):
