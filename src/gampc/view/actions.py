@@ -169,12 +169,17 @@ class ViewWithCopyPaste(ViewWithCopy):
         self.item_selection_model.select_item(pos, True)
 
     def action_paste_cb(self, action, parameter):
+        after = parameter.unpack()
         row = self.item_view.rows.get_focus_child()
         if row is None:
-            return
-        pos = row.get_first_child().get_first_child().pos
-        if parameter.unpack():
-            pos += 1
+            if after:
+                return
+            else:
+                pos = self.item_model.get_n_items()
+        else:
+            pos = row.get_first_child().get_first_child().pos
+            if after:
+                pos += 1
         self.get_clipboard().read_value_async(self.transfer_type, 0, None, self.action_paste_finish_cb, pos)
 
     def action_paste_finish_cb(self, clipboard, result, pos):
