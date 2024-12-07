@@ -34,7 +34,6 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
     else:
         css += '@define-color drop-color rgb(46,194,126);'
 
-
     css += '''
     columnview.filter > listview > row {
       background: blue;
