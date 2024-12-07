@@ -27,11 +27,13 @@ from ..util import unit
 def load_theme_css(dark, theme_css_provider, app_css_provider):
     theme_css_provider.load_named('Adwaita', 'dark' if dark else None)
 
-    background = 'rgb(53,53,53)' if dark else 'rgb(246,245,244)'
-    foreground = 'rgb(238,238,236)' if dark else 'rgb(46,52,54)'
-    border = 'rgb(27,27,27)' if dark else 'rgb(205,199,194)'
-
     css = ''
+
+    if dark:
+        css += '@define-color drop-color rgb(38,162,105);'
+    else:
+        css += '@define-color drop-color rgb(46,194,126);'
+
 
     css += '''
     columnview.filter > listview > row {
@@ -40,32 +42,30 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
     }
     '''
 
-    css += f'''
-    columnview > listview > row > cell > :focus {{
+    css += '''
+    columnview > listview > row > cell > :focus {
       border-style: solid;
       border-width: 1px;
       border-radius: 5px;
-      border-bottom-color: {border};
-      border-left-color: {border};
-      border-right-color: {border};
-      border-top-color: {border};
-    }}
+      border-bottom-color: @borders;
+      border-left-color: @borders;
+      border-right-color: @borders;
+      border-top-color: @borders;
+    }
     '''
 
-    css += f'''
-    editablelabel.editing {{
-      color: {foreground};
-      background-color: {background};
-      border-bottom-color: {border};
-      border-left-color: {border};
-      border-right-color: {border};
-      border-top-color: {border};
-    }}
+    css += '''
+    editablelabel.editing {
+      border-bottom-color: @borders;
+      border-left-color: @borders;
+      border-right-color: @borders;
+      border-top-color: @borders;
+    }
     '''
 
     css += '''
       columnview > listview:drop(active) > row.drop-row {
-      border-bottom-color: rgb(46,194,126);
+      border-bottom-color: @drop-color;
     }
     '''
 
