@@ -200,7 +200,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         queue.connect_clean(self, 'notify::queue-position', self.notify_queue_position_cb, queue)
         queue.connect_clean(queue.item_selection_model, 'selection-changed', self.selection_changed_cb)
         queue.connect_clean(queue.item_view, 'activate', self.view_activate_cb)
-        self.bind_property('current-Id', queue, 'current-Id')
+        self.bind_property('current-Id', queue, 'current-Id', GObject.BindingFlags.SYNC_CREATE)
         queue.set_position(self.queue_position)
         queue.totals_store = queue.item_model
 
