@@ -184,7 +184,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         return list(map(lambda item: item.get_key(), self.item_selection_filter_model if selection else self.item_selection_model))
 
     def scroll_to(self, position):
-        self.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
         view_height = self.item_view.rows.get_allocation().height
-        # row_height = self.view.item_view.rows.get_focus_child().get_allocation().height
-        self.scrolled_item_view.get_vadjustment().set_value(23 * (position + 0.5) - view_height / 2)
+        row_height = self.item_view.rows.get_focus_child().get_allocation().height
+        self.scrolled_item_view.get_vadjustment().set_value(row_height * (position + 0.5) - view_height / 2)
+        self.item_view.scroll_to(position, None, Gtk.ListScrollFlags.FOCUS | Gtk.ListScrollFlags.SELECT, None)
