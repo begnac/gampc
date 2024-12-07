@@ -18,6 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import sys
+
 from gi.repository import Gdk
 
 from . import app
@@ -25,4 +27,4 @@ from . import app
 if Gdk.Display.get_default() is None:
     print(_("Cannot open display"))
 else:
-    app.App().run()
+    app.App().run(sys.argv)
