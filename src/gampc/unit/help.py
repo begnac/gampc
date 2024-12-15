@@ -74,7 +74,7 @@ class __unit__(unit.Unit):
         super().__init__(manager)
 
     def generate_actions(self):
-        # yield action.ActionInfo('app', 'BAD', self.BAD_cb, _("BAD"), ['<Control><Shift>b'])
+        yield action.ActionInfo('BAD', self.BAD_cb, _("BAD"), ['<Control><Shift>b'])
         yield action.ActionInfo('help', self.help_cb, _("Help"), ['<Control>h', 'F1'])
         yield action.ActionInfo('about', self.about_cb, _("About"), ['<Control><Shift>h'])
 
