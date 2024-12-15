@@ -63,6 +63,11 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.set_titlebar(self.headerbar)
 
         self.menubar = Gtk.PopoverMenuBar(menu_model=unit.unit_menu.menu)
+        for child in self.menubar.observe_children():
+            for controller in child.observe_controllers():
+                if isinstance(controller, Gtk.EventControllerMotion):
+                    enter_id = GObject.signal_lookup('enter', Gtk.EventControllerMotion)
+                    GObject.signal_handlers_disconnect_matched(controller, GObject.SignalMatchType.ID, enter_id, 0)
         self.main.append(self.menubar)
 
         self.unit.unit_persistent.bind_property('protect-active', self.headerbar.option_buttons, 'sensitive', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
