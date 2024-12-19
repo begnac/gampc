@@ -79,7 +79,13 @@ class __unit__(unit.Unit):
         yield action.ActionInfo('about', self.about_cb, _("About"), ['<Control><Shift>h'])
 
     def BAD_cb(self, *args):
-        print(Gtk.Application.get_default().get_active_window().get_focus())
+        focus = Gtk.Application.get_default().get_active_window().get_focus()
+        print(focus)
+        # for x in focus.observe_controllers():
+        #     print(x)
+        #     if isinstance(x, Gtk.ShortcutController):
+        #         for sh in x:
+        #             print(sh.get_trigger().to_string())
 
     def about_cb(self, *args):
         dialog = Gtk.AboutDialog(program_name=__program_name__, version=__version__, comments=__program_description__, copyright=__copyright__, license_type=__license_type__, logo_icon_name='face-cool-gampc', website=__website__)
