@@ -66,7 +66,7 @@ class ItemView(Gtk.ColumnView):
 
         self.rows = self.get_last_child()
 
-        first_name = list(fields.fields).pop()
+        first_name = fields.order[0].get_string()
         self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name, field.name == first_name)) for field in fields.fields.values()}
         for name in fields.order:
             self.append_column(self.columns[name.get_string()])
