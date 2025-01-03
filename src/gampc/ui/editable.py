@@ -31,7 +31,6 @@ class EditableLabel(Gtk.Stack):
         'edited': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
         'action-copy': (GObject.SIGNAL_RUN_FIRST, None, ()),
         'action-paste': (GObject.SIGNAL_RUN_FIRST, None, ()),
-        'action-special': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
     def __init__(self, **kwargs):
@@ -61,8 +60,6 @@ class EditableLabel(Gtk.Stack):
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'copy')))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_v, modifiers=Gdk.ModifierType.CONTROL_MASK)
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'paste')))
-        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_z, modifiers=Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'special')))
 
     @staticmethod
     def released_cb(controller, n, x, y):

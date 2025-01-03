@@ -18,15 +18,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import re
+import datetime
+import asyncio
+
 from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gio
 from gi.repository import Gdk
 from gi.repository import Gtk
-
-import re
-import datetime
-import asyncio
 
 import ampd
 
@@ -40,6 +40,7 @@ from ..util import unit
 from ..util.logger import logger
 
 from ..ui import dialog
+from ..ui import editable
 
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy
@@ -73,6 +74,17 @@ class TandaSongItem(item.Item):
         super().load(value)
 
 
+class TandaEditableLabel(editable.EditableLabel):
+    __gsignals__ = {
+        'action-fill': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_f, modifiers=Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK)
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'fill')))
+
+
 class TandaListItemFactory(EditableListItemFactoryBase):
     def __init__(self, name, *args):
         super().__init__(name, *args)
@@ -81,10 +93,10 @@ class TandaListItemFactory(EditableListItemFactoryBase):
         self.binders.append(('modified', self.modified_binder))
 
     def make_widget(self):
-        widget = super().make_widget()
+        widget = super().make_widget(factory=TandaEditableLabel)
         widget.connect('action-copy', self.action_copy_cb, self.name)
         widget.connect('action-paste', self.action_paste_cb, self.name)
-        widget.connect('action-special', self.action_special_cb, self.name)
+        widget.connect('action-fill', self.action_fill_cb, self.name)
         return widget
 
     @staticmethod
@@ -100,7 +112,7 @@ class TandaListItemFactory(EditableListItemFactoryBase):
         widget.emit('edited', clipboard.read_value_finish(result))
 
     @staticmethod
-    def action_special_cb(widget, name):
+    def action_fill_cb(widget, name):
         tanda = widget._item_special
         alt_tanda = TandaDatabase._tanda_from_songs(tanda.value['_songs'])
         if name in alt_tanda and alt_tanda[name] != widget.label.get_label():
@@ -684,7 +696,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         return tanda
 
     def generate_edit_actions(self, edit):
-        yield action.ActionInfo('fill', lambda *args: None, _("Fill field"), ['<Control><Shift>z'])  # Fake action, implemented in TandaListItemFactory
+        yield action.ActionInfo('fill', lambda *args: None, _("Fill field"), ['<Control><Alt>f'])  # Fake action, implemented in TandaListItemFactory
         yield action.ActionInfo('delete', self.action_tanda_delete_cb, _("Delete tanda"), ['<Control>Delete'], activate_args=(edit,))
 
     def generate_save_actions(self, edit):

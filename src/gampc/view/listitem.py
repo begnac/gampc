@@ -120,8 +120,8 @@ class EditableListItemFactoryBase(ListItemFactoryBase):
         'item-edited': (GObject.SIGNAL_RUN_FIRST, None, (int, str, str)),
     }
 
-    def make_widget(self):
-        widget = editable.EditableLabel()
+    def make_widget(self, factory=editable.EditableLabel):
+        widget = factory()
         widget.connect('edited', self.edited_cb, self.name)
         return widget
 
