@@ -18,9 +18,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
+from gi.repository import Gio
+
 from ..util import action
 from ..util import aioqueue
 from ..util import item
+from ..util import misc
+from ..ui import dialog
 
 from .actions import ViewWithCopy
 from .actions import ViewWithCopyPaste
@@ -34,6 +39,25 @@ class ViewFilenameMixin:
     transfer_type = ItemFilenameTransfer
     extra_transfer_types = (item.ItemStringTransfer,)
 
+    def generate_editing_actions(self):
+        yield action.ActionInfo('delete-file', self.action_delete_file_cb, _("Move files to trash"), ['<Control>Delete'])
+        yield from super().generate_editing_actions()
+
+    @misc.create_task
+    async def action_delete_file_cb(self, action, parameter):
+        deleted = self.get_filenames(True)
+        if deleted:
+            message = '\n\t'.join([_("Move these files to the trash bin?")] + deleted)
+            if not await dialog.MessageDialogAsync(transient_for=self.get_root(), title=_("Move to trash"), message=message).run():
+                return
+            for filename in deleted:
+                gfile = Gio.File.new_for_path(GLib.build_filenamev([GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC), filename]))
+                print(gfile.trash())
+                continue
+                if song._gfile is not None:
+                    song._gfile.trash()
+                    song._status = self.RECORD_MODIFIED
+
 
 class ViewWithCopyPasteSong(ViewFilenameMixin, ViewWithCopyPaste):
     def __init__(self, *args, separator_file, **kwargs):
@@ -45,9 +69,6 @@ class ViewWithCopyPasteSong(ViewFilenameMixin, ViewWithCopyPaste):
         yield action.ActionInfo('add-separator', self.action_add_separator_cb, _("Add separator"))
         yield from self.generate_url_actions()
 
-    # def generate_special_actions(self):
-    #     yield action.ActionInfo('delete-file', self.action_delete_file_cb, _("Move files to trash"), ['<Control>Delete'])
-
     def action_add_separator_cb(self, action, parameter):
         selection = self.get_selection()
         if selection:
@@ -55,23 +76,6 @@ class ViewWithCopyPasteSong(ViewFilenameMixin, ViewWithCopyPaste):
         else:
             return
         self.add_items(pos, [self.separator_file])
-
-    # def action_delete_file_cb(self, action, parameter):
-    #     store, paths = self.treeview.get_selection().get_selected_rows()
-    #     deleted = [self.store.get_record(self.store.get_iter(p)) for p in paths]
-    #     if deleted:
-    #         dialog = Gtk.Dialog(parent=self.get_window(), title=_("Move to trash"))
-    #         dialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
-    #         dialog.add_button(_("_OK"), Gtk.ResponseType.OK)
-    #         dialog.get_content_area().add(Gtk.Label(label='\n\t'.join([_("Move these files to the trash bin?")] + [song.file for song in deleted])))
-    #         reply = dialog.run()
-    #         dialog.destroy()
-    #         if reply != Gtk.ResponseType.OK:
-    #             return
-    #         for song in deleted:
-    #             if song._gfile is not None:
-    #                 song._gfile.trash()
-    #                 song._status = self.RECORD_MODIFIED
 
 
 class ViewCacheMixin(ViewFilenameMixin):
