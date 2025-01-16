@@ -196,7 +196,7 @@ class TandaWidget(compound.WidgetWithPaned):
         self.tanda_artist_filter = Gtk.CustomFilter.new(self.tanda_artist_filter_func)
         self.tanda_artist_filter_model = Gtk.FilterListModel(model=self.tanda_genre_filter_model, filter=self.tanda_artist_filter)
 
-        self.button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, can_focus=False)
         for i, genre in enumerate(self.GENRES):
             button = Gtk.ToggleButton(label=genre, can_focus=False, action_name='tanda-widget.genre-filter', action_target=GLib.Variant.new_int32(i))
             self.button_box.append(button)

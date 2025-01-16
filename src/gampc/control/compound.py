@@ -53,7 +53,7 @@ class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalM
         self.left_view_search = listviewsearch.ListViewSearch(self.left_view, lambda text, row: text.lower() in row.get_item().name.lower())
         misc.remove_control_move_shortcuts_below(self.left_view)
 
-        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config._get(), start_child=self.left, end_child=main, **kwargs, focusable=False)
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config._get(), start_child=self.left, end_child=main, **kwargs)
 
         self.left_selection_pos = []
         self.connect_clean(self.left_selection, 'selection-changed', self.left_selection_changed_cb)

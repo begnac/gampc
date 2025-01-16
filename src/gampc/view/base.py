@@ -18,11 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import re
+
 from gi.repository import Gio
 from gi.repository import GObject
 from gi.repository import Gtk
-
-import re
 
 from ..util import cleanup
 from ..util import item
@@ -124,11 +124,8 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
             self.scrolled_filter_view.get_hscrollbar().set_visible(False)
             for column in self.filter_view.get_columns():
                 self.connect_clean(column.get_factory(), 'item-edited', self.filter_edited_cb)
-            self.prepend(self.scrolled_filter_view)
             self.add_cleanup_below(self.filter_view)
 
-            self.bind_property('filtering', self.filter_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE)
-            self.bind_property('filtering', self.item_view, 'visible-titles', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
             self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
             self.connect('notify::filtering', self.notify_filtering_cb)
 
@@ -157,17 +154,22 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     @staticmethod
     def notify_filtering_cb(self, param):
         if self.filtering:
+            self.item_view.visible_titles = False
+            self.prepend(self.scrolled_filter_view)
             self.filter_store.append(self.filter_item)
             self.filter_filter.set_filter_func(self.filter_func)
             self.filter_view.grab_focus()
         else:
+            self.remove(self.scrolled_filter_view)
+            self.item_view.visible_titles = True
             self.filter_store.remove(0)
             self.filter_filter.set_filter_func(None)
             self.item_view.grab_focus()
 
     def filter_func(self, item):
-        for name, value in self.filter_item.value.items():
-            if re.search(value, item.get_field(name), re.IGNORECASE) is None:
+        for name, pattern in self.filter_item.value.items():
+            value = item.get_field(name)
+            if value is None or re.search(pattern, value, re.IGNORECASE) is None:
                 return False
         return True
 
