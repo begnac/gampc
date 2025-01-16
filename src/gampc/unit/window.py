@@ -63,6 +63,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.set_titlebar(self.headerbar)
 
         self.menubar = Gtk.PopoverMenuBar(menu_model=unit.unit_menu.menu)
+        self.bind_property('fullscreened', self.menubar, 'visible', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
         for child in self.menubar.observe_children():
             for controller in child.observe_controllers():
                 if isinstance(controller, Gtk.EventControllerMotion):
@@ -152,7 +153,7 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
     def generate_actions(self):
         yield action.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])
         yield action.ActionInfo('close-window', self.close_window_cb, _("Close window"), ['<Control>w'])
-        yield action.ActionInfo('toggle-fullscreen', self.action_toggle_fullscreen_cb, _("Fullscreen window"), ['<Alt>f'])
+        # yield action.ActionInfo('toggle-fullscreen', self.action_toggle_fullscreen_cb, _("Fullscreen window"), ['<Alt>f'])
         # yield action.ActionInfo('notify', self.task_hold_app(self.action_notify_cb))
 
     def new_window(self, name='current'):
@@ -168,9 +169,9 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
     def close_window_cb(self, action, parameter):
         Gtk.Application.get_default().get_active_window().destroy()
 
-    def action_toggle_fullscreen_cb(self, action, parameter):
-        window = self.app.get_active_window()
-        if window.is_fullscreen():
-            window.unfullscreen()
-        else:
-            window.fullscreen()
+    # def action_toggle_fullscreen_cb(self, action, parameter):
+    #     window = self.app.get_active_window()
+    #     if window.is_fullscreen():
+    #         window.unfullscreen()
+    #     else:
+    #         window.fullscreen()
