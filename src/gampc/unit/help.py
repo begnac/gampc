@@ -22,6 +22,8 @@ from gi.repository import Gtk
 
 from ..util import action
 from ..util import unit
+from ..util.logger import logger
+
 
 from .. import __program_name__, __version__, __program_description__, __copyright__, __license_type__, __website__
 
@@ -80,7 +82,7 @@ class __unit__(unit.Unit):
 
     def BAD_cb(self, *args):
         focus = Gtk.Application.get_default().get_active_window().get_focus()
-        print(focus)
+        logger.info(f"{focus}")
         # for x in focus.observe_controllers():
         #     print(x)
         #     if isinstance(x, Gtk.ShortcutController):
