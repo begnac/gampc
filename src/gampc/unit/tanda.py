@@ -719,7 +719,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         self.fields.set_derived_fields(new_value)
         self.db.update_tanda(dict(new_value, tandaid=tanda.tandaid))
         tanda.value = new_value
-        tanda.edit_stack.reset()
+        tanda.edit_stack.rebase()
         edit.edit_stack_changed()
         pos = list(self.tanda_model).index(edit.current_tanda)
         self.tanda_model.items_changed(pos, 1, 1)

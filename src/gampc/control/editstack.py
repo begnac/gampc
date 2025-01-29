@@ -90,8 +90,9 @@ class DeltaItem:
 
 
 class Transaction:
-    def __init__(self):
-        self.deltas = []
+    def __init__(self, *, deltas=None, advance=True):
+        self.deltas = [] if deltas is None else deltas
+        self.advance = advance
 
     def append(self, delta):
         delta.transpose_self_after(self.deltas)
@@ -100,11 +101,16 @@ class Transaction:
     def apply(self, advance, edit_stack):
         focus = None
         selection = []
+        if not self.advance:
+            advance = not advance
         for delta in self.deltas if advance else reversed(self.deltas):
             new_focus, new_selection = delta.apply(advance, edit_stack)
             focus = delta.transpose_position_after(focus, advance) if focus is not None else new_focus
             selection = [delta.transpose_position_after(position, advance) for position in selection] + new_selection
         return focus, selection
+
+    def reverse(self):
+        return Transaction(deltas=self.deltas, advance=not self.advance)
 
 
 class EditStack(GObject.Object):
@@ -126,8 +132,18 @@ class EditStack(GObject.Object):
     def reset(self):
         assert self.hold_counter == 0
         self.transactions = []
-        self.index = 0
+        self.index = self.base = 0
         self.modified = False
+
+    def rebase(self):
+        assert self.hold_counter == 0
+        self.base = self.index
+        self.modified = False
+
+    def to_base(self):
+        assert self.hold_counter == 0
+        while self.index != self.base:
+            self.step(self.index < self.base)
 
     def get_item(self):
         return self.item()
@@ -137,29 +153,29 @@ class EditStack(GObject.Object):
         self.items[p:p + r] = a
         self.emit('splice', p, r, len(a))
 
-    def undo(self):
-        assert self.hold_counter == 0
-        while self.index:
-            self.step(False)
-
     def step(self, advance):
         assert self.hold_counter == 0
         if not advance:
             assert self.index > 0
             self.index -= 1
-            if self.index == 0:
-                self.modified = False
         focus, selection = self.transactions[self.index].apply(advance, self)
         if advance:
             assert self.index < len(self.transactions)
             self.index += 1
-            if not self.modified:
-                self.modified = True
+        modified = self.index != self.base
+        if modified != self.modified:
+            self.modified = modified
         self.emit('step', focus, selection)
 
     def hold_transaction(self):
         if self.hold_counter == 0:
-            self.transactions = self.transactions[:self.index]
+            if self.base <= self.index:
+                self.transactions = self.transactions[:self.index]
+            else:
+                self.transactions = self.transactions[:self.base]
+                for transaction in reversed(self.transactions[self.index:self.base]):
+                    self.transactions.append(transaction.reverse())
+                self.index = len(self.transactions)
             self.transaction = Transaction()
         self.hold_counter += 1
 
@@ -222,10 +238,7 @@ class WidgetEditStackMixin:
     @misc.create_task
     async def action_reset_cb(self, action, parameter):
         assert self.edit_stack and self.edit_stack.transactions
-        if not await dialog.MessageDialogAsync(transient_for=self.get_root(), message=_("Reset and lose all modifications?")).run():
-            return
-        self.edit_stack.undo()
-        self.edit_stack.reset()
+        self.edit_stack.to_base()
         self.edit_stack_changed()
 
     action_save_cb = NotImplemented
