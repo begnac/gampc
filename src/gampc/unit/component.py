@@ -24,6 +24,7 @@ from gi.repository import Gtk
 
 from ..util import action
 from ..util import unit
+from ..util.logger import logger
 
 
 class Component:
@@ -112,10 +113,14 @@ class __unit__(unit.Unit):
         name, new_instance = parameter.unpack()
         component = self.get_component(name, new_instance)
         window = component.get_root()
+        active = Gtk.Application.get_default().get_active_window()
         if window is None:
-            window = Gtk.Application.get_default().get_active_window()
-            window.change_component(component)
-        window.present()
+            active.change_component(component)
+        elif window != active:
+            window.set_visible(False)
+            window.present()
+            focus = window.get_focus()
+            logger.info(f"{focus}, {focus.is_focus()}, {focus.has_focus()}")
 
     def component_stop_cb(self, action, parameter):
         window = Gtk.Application.get_default().get_active_window()
