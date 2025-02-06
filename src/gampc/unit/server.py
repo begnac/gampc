@@ -59,7 +59,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.profile = self.unit_profiles.profile_from_repr(self.server_profile)
         self.set_server_label()
 
-        self.connect_clean(self, 'notify::server-profile', self.notify_server_profile_cb)
+        self.connect('notify::server-profile', self.__class__.notify_server_profile_cb)
 
     def cleanup(self):
         self.want_to_connect = False
@@ -135,7 +135,6 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
             if self.ampd_server_properties.updating_db:
                 self.server_label += " [{}]".format(_("database update"))
 
-    @staticmethod
     def notify_server_profile_cb(self, param):
         self.profile = self.unit_profiles.profile_from_repr(self.server_profile)
         self.set_server_label()

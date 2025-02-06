@@ -74,7 +74,9 @@ class TimeScale(Gtk.Box):
         self.scale.get_adjustment().bind_property('upper', self.duration_label, 'label', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: ' / ' + misc.format_time(value))
         self.scale.get_adjustment().bind_property('upper', self.label_box, 'visible', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: value != 0.0)
 
-        self.connect('notify::sensitive', self.notify_sensitive_cb)
+        self.connect('map', self.__class__.map_cb)
+        self.connect('unmap', self.__class__.unmap_cb)
+        self.connect('notify::sensitive', self.__class__.notify_sensitive_cb)
         for controller in self.scale.observe_controllers():
             if isinstance(controller, Gtk.GestureClick):
                 self.scale_gesture_click = controller
@@ -87,16 +89,11 @@ class TimeScale(Gtk.Box):
         self.append(self.scale)
         self.append(self.label_box)
 
-        self.connect('realize', self.map_cb)
-        self.connect('unrealize', self.unmap_cb)
-
-    @staticmethod
     def map_cb(self):
         self.scale_gesture_click.connect('pressed', self.scale_pressed_cb)
         self.scale_gesture_click.connect('released', self.scale_released_cb)
         self.scale_gesture_click.connect('cancel', self.scale_cancel_cb)
 
-    @staticmethod
     def unmap_cb(self):
         self.scale_gesture_click.disconnect_by_func(self.scale_pressed_cb)
         self.scale_gesture_click.disconnect_by_func(self.scale_released_cb)
@@ -130,7 +127,6 @@ class TimeScale(Gtk.Box):
         if not self.elapsed_binding:
             self.elapsed_binding = self.bind_property('elapsed', self.scale.get_adjustment(), 'value', GObject.BindingFlags.SYNC_CREATE)
 
-    @staticmethod
     def notify_sensitive_cb(self, param):
         if not self.get_sensitive():
             self.set_elapsed_binding()

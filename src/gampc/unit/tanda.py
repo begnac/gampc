@@ -45,6 +45,7 @@ from ..ui import editable
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy
 from ..view.cache import ViewCacheWithCopyPaste
+from ..view.listitem import FactoryBase
 from ..view.listitem import EditableListItemFactory
 
 from ..control import compound
@@ -140,31 +141,13 @@ class TandaListItemFactory(EditableListItemFactory):
             widget.emit('edited', alt_tanda[name])
 
 
-class StringListItemFactory(Gtk.SignalListItemFactory):
-    def __init__(self):
-        super().__init__()
-
-        self.connect('setup', self.setup_cb)
-        self.connect('bind', self.bind_cb)
-        # self.connect('unbind', self.unbind_cb)
-        # self.connect('teardown', self.teardown_cb)
-
-    @staticmethod
+class StringListItemFactory(FactoryBase):
     def setup_cb(self, listitem):
         listitem.label = Gtk.Label(halign=Gtk.Align.START)
         listitem.set_child(listitem.label)
 
-    @staticmethod
     def bind_cb(self, listitem):
         listitem.label.set_label(listitem.get_item().get_string())
-
-    # @staticmethod
-    # def unbind_cb(self, listitem):
-    #     pass
-
-    # @staticmethod
-    # def teardown_cb(self, listitem):
-    #     self.labels.remove(listitem.label)
 
 
 class TandaWidget(compound.WidgetWithPaned):
@@ -278,10 +261,9 @@ class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
         super().__init__(*args, **kwargs)
 
     def init_tandaid_view(self, view):
-        self.connect_clean(self, 'map', self.map_cb, view)
+        self.connect('map', self.__class__.map_cb, view)
         self.connect_clean(view.item_selection_filter_model, 'items-changed', self.tandaid_selection_changed_cb)
 
-    @staticmethod
     def map_cb(self, view):
         if self.current_tandaid is None:
             return

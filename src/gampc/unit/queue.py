@@ -193,7 +193,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
 
         queue.add_context_menu_actions(self.generate_priority_actions(queue), 'priority', _("Priority for random mode"), submenu=True)
         queue.add_context_menu_actions(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
-        queue.connect_clean(self, 'notify::queue-position', self.notify_queue_position_cb, queue)
+        queue.connect_clean(self, 'notify::queue-position', self.__class__.notify_queue_position_cb, queue)
         queue.connect_clean(queue.item_selection_model, 'selection-changed', self.selection_changed_cb)
         queue.connect_clean(queue.item_view, 'activate', self.view_activate_cb)
         self.bind_property('current-Id', queue, 'current-Id', GObject.BindingFlags.SYNC_CREATE)
@@ -253,7 +253,6 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
             self.queue_model.remove_all()
             self.queue_position = None
 
-    @staticmethod
     def notify_queue_position_cb(self, pspec, queue):
         queue.set_position(self.queue_position)
 

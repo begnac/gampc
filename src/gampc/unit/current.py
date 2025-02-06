@@ -197,7 +197,7 @@ class CurrentWidget(cleanup.CleanupCssMixin, cleanup.CleanupSignalMixin, Gtk.Sta
         )
 
         self.connect_clean(self.layout, 'notify::size', self.notify_size_cb)
-        self.connect('notify::current-song', self.notify_current_song_cb)
+        self.connect('notify::current-song', self.__class__.notify_current_song_cb)
 
         self.bind_property('size', self.welcome, 'size')
 
@@ -213,7 +213,6 @@ class CurrentWidget(cleanup.CleanupCssMixin, cleanup.CleanupSignalMixin, Gtk.Sta
     def notify_size_cb(self, layout, pspec):
         self.set_size()
 
-    @staticmethod
     def notify_current_song_cb(self, pspec):
         if self.current_song:
             self.info.artist.set_name(self.current_song.get('Artist', ''))

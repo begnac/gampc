@@ -53,13 +53,13 @@ class EditableLabel(Gtk.Stack):
         self.add_controller(self.shortcut)
         trigger = Gtk.AlternativeTrigger.new(Gtk.KeyvalTrigger(keyval=Gdk.KEY_Return, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK),
                                              Gtk.KeyvalTrigger(keyval=Gdk.KEY_KP_Enter, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK))
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._start_editing)))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__._start_editing)))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_Escape, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._quit_editing)))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__._quit_editing)))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_c, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'copy')))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__._signal), arguments=GLib.Variant('s', 'copy')))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_v, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'paste')))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__._signal), arguments=GLib.Variant('s', 'paste')))
 
     @staticmethod
     def released_cb(controller, n, x, y):
@@ -78,15 +78,12 @@ class EditableLabel(Gtk.Stack):
     def set_label(self, label):
         self.label.set_label(str(label))
 
-    @staticmethod
     def _start_editing(self, arg):
         self.start_editing()
 
-    @staticmethod
     def _quit_editing(self, arg):
         self.stop_editing(False)
 
-    @staticmethod
     def _signal(self, arg):
         self.emit(f'action-{arg.unpack()}')
 

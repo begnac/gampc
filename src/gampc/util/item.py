@@ -44,8 +44,8 @@ class Item(BaseItem):
         self._row = None
         self._widgets = {}
 
-        self.connect('notify::value', type(self).notify_value_cb)
-        self.connect('notify', type(self).notify_cb)
+        self.connect('notify::value', self.__class__.notify_value_cb)
+        self.connect('notify', self.__class__.notify_cb)
 
     def bind(self, name, widget):
         self._widgets[name] = widget

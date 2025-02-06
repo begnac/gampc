@@ -49,8 +49,8 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.default_width = self.unit.config.width._get(default=1000)
         self.default_height = self.unit.config.height._get(default=600)
         self.set_default_size(self.default_width, self.default_height)
-        self.connect('notify::default-width', self.notify_default_size_cb)
-        self.connect('notify::default-height', self.notify_default_size_cb)
+        self.connect('notify::default-width', self.__class__.notify_default_size_cb)
+        self.connect('notify::default-height', self.__class__.notify_default_size_cb)
 
         self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::state', self.update_title)
@@ -129,7 +129,6 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         server = self.unit.unit_server.server_label.rsplit('@', 1)[-1].strip()
         self.headerbar.set_title(f"{title} @ {server}")
 
-    @staticmethod
     def notify_default_size_cb(self, param):
         if not self.is_fullscreen():
             width, height = self.get_default_size()

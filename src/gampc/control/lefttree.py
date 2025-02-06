@@ -22,6 +22,8 @@ from gi.repository import GObject
 from gi.repository import Gio
 from gi.repository import Gtk
 
+from ..view.listitem import FactoryBase
+
 from . import compound
 
 
@@ -70,16 +72,7 @@ class Tree:
         store[n:] = []
 
 
-class TreeListItemFactory(Gtk.SignalListItemFactory):
-    def __init__(self):
-        super().__init__()
-
-        self.connect('setup', self.setup_cb)
-        self.connect('bind', self.bind_cb)
-        # self.connect('unbind', self.unbind_cb)
-        # self.connect('teardown', self.teardown_cb)
-
-    @staticmethod
+class TreeListItemFactory(FactoryBase):
     def setup_cb(self, listitem):
         box = Gtk.Box(spacing=4)
         child = Gtk.TreeExpander(child=box, focusable=False)
@@ -89,7 +82,6 @@ class TreeListItemFactory(Gtk.SignalListItemFactory):
         box.append(child.label)
         listitem.set_child(child)
 
-    @staticmethod
     def bind_cb(self, listitem):
         child = listitem.get_child()
         row = listitem.get_item()
@@ -102,14 +94,6 @@ class TreeListItemFactory(Gtk.SignalListItemFactory):
             child.label.set_label(node.name)
         child.icon.set_from_icon_name(node.icon)
         child.set_list_row(row)
-
-    # @staticmethod
-    # def unbind_cb(self, listitem):
-    #     pass
-
-    # @staticmethod
-    # def teardown_cb(self, listitem):
-    #     self.labels.remove(listitem.label)
 
     @staticmethod
     def notify_modified_cb(edit_stack, pspec, label, name):

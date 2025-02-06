@@ -44,11 +44,11 @@ class ListViewSearch(Gtk.SearchEntry):
         self.popover.set_child(self)
 
         # self.connect('activate', self.search_cb, widget, True, True, test_func)
-        self.connect('next-match', self.search_cb, widget, True, False, test_func)
-        self.connect('previous-match', self.search_cb, widget, False, False, test_func)
-        self.connect('search-changed', self.search_cb, widget, None, True, test_func)
-        self.connect('stop-search', self.stop_search_cb)
-        self.connect('activate', self.stop_search_cb)
+        self.connect('next-match', self.__class__.search_cb, widget, True, False, test_func)
+        self.connect('previous-match', self.__class__.search_cb, widget, False, False, test_func)
+        self.connect('search-changed', self.__class__.search_cb, widget, None, True, test_func)
+        self.connect('stop-search', self.__class__.stop_search_cb)
+        self.connect('activate', self.__class__.stop_search_cb)
 
     def cleanup(self):
         self.widget.remove_controller(self.search_controller)
@@ -64,7 +64,6 @@ class ListViewSearch(Gtk.SearchEntry):
         self.pos = self.base
         self.up = True
 
-    @staticmethod
     def search_cb(self, widget, up, from_base, test_func):
         if up is None:
             up = self.up
@@ -94,7 +93,6 @@ class ListViewSearch(Gtk.SearchEntry):
                 return
         self.add_css_class('error')
 
-    @staticmethod
     def stop_search_cb(self):
         self.popover.popdown()
         self.popover.unparent()

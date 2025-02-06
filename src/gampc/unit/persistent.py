@@ -41,17 +41,11 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
 
         self.require('database')
 
-        self.unit_server.ampd_server_properties.connect('notify::state', self.notify_protect_requested_cb)
-        self.connect('notify::protect-requested', self.notify_protect_requested_cb)
-        self.connect('notify', self.notify_sticker_cb)
+        self.connect_clean(self.unit_server.ampd_server_properties, 'notify::state', lambda obj, param: self.notify_protect_requested_cb(param))
+        self.connect('notify::protect-requested', self.__class__.notify_protect_requested_cb)
+        self.connect('notify', self.__class__.notify_sticker_cb)
         for option in ampd.OPTION_NAMES:
             self.unit_server.ampd_server_properties.connect('notify::' + option, self.notify_option_cb)
-
-    def cleanup(self):
-        self.disconnect_by_func(self.notify_sticker_cb)
-        self.disconnect_by_func(self.notify_protect_requested_cb)
-        self.unit_server.ampd_server_properties.disconnect_by_func(self.notify_protect_requested_cb)
-        super().cleanup()
 
     def generate_actions(self):
         yield action.PropertyActionInfo('dark', self, _("Dark interface"), ['<Control><Alt>d'])
@@ -80,7 +74,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
 
     @ampd.task
     async def read_sticker_properties(self):
-        self.handler_block_by_func(self.notify_sticker_cb)
+        self.handler_block_by_func(self.__class__.notify_sticker_cb)
         try:
             stickers = await self.ampd.sticker_list('song', self.unit_database.SEPARATOR_FILE)
         except (ampd.errors.ReplyError, ampd.errors.ConnectionError):
@@ -88,9 +82,9 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         pdict = dict(sticker.split('=', 1) for sticker in stickers)
         for key in self.STICKER_PROPERTIES:
             self.set_property(key, pdict.get(key) == 'True')
-        self.handler_unblock_by_func(self.notify_sticker_cb)
+        self.handler_unblock_by_func(self.__class__.notify_sticker_cb)
 
-    def notify_protect_requested_cb(self, o, param):
+    def notify_protect_requested_cb(self, param):
         self.protect_active = self.protect_requested and self.unit_server.ampd_server_properties.state == 'play'
         if self.protect_requested:
             for option in ampd.OPTION_NAMES:
@@ -101,7 +95,6 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         if self.protect_requested:
             await getattr(self.ampd, param.name)(0)
 
-    @staticmethod
     @ampd.task
     async def notify_sticker_cb(self, param):
         if param.name in self.STICKER_PROPERTIES:

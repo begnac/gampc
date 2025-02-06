@@ -130,7 +130,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
             misc.remove_control_move_shortcuts(self.scrolled_filter_view)
 
             self.scrolled_item_view.get_hadjustment().bind_property('value', self.scrolled_filter_view.get_hadjustment(), 'value', GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
-            self.connect('notify::filtering', type(self).notify_filtering_cb)
+            self.connect('notify::filtering', self.__class__.notify_filtering_cb)
 
             self.filter_filter = Gtk.CustomFilter()
             next_model = Gtk.FilterListModel(model=next_model, filter=self.filter_filter)
