@@ -18,34 +18,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gtk
 
-from ..util import misc
+from ..util.misc import FactoryBase
 
 from ..ui import editable
-
-
-class FactoryBase(Gtk.SignalListItemFactory):
-    def __init__(self):
-        super().__init__()
-        self.connect('setup', self.__class__.setup_cb)
-        self.connect('bind', self.__class__.bind_cb)
-        self.connect('unbind', self.__class__.unbind_cb)
-        self.connect('teardown', self.__class__.teardown_cb)
-
-    def setup_cb(self, listitem):
-        pass
-
-    def bind_cb(self, listitem):
-        pass
-
-    def unbind_cb(self, listitem):
-        pass
-
-    def teardown_cb(self, listitem):
-        pass
 
 
 class RowFactory(FactoryBase):

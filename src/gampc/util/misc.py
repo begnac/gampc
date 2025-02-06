@@ -114,3 +114,24 @@ def remove_control_move_shortcuts_below(widget):
     remove_control_move_shortcuts(widget)
     for child in widget:
         remove_control_move_shortcuts_below(child)
+
+
+class FactoryBase(Gtk.SignalListItemFactory):
+    def __init__(self):
+        super().__init__()
+        self.connect('setup', self.__class__.setup_cb)
+        self.connect('bind', self.__class__.bind_cb)
+        self.connect('unbind', self.__class__.unbind_cb)
+        self.connect('teardown', self.__class__.teardown_cb)
+
+    def setup_cb(self, listitem):
+        pass
+
+    def bind_cb(self, listitem):
+        pass
+
+    def unbind_cb(self, listitem):
+        pass
+
+    def teardown_cb(self, listitem):
+        pass

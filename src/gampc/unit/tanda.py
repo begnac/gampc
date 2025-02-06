@@ -45,7 +45,6 @@ from ..ui import editable
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy
 from ..view.cache import ViewCacheWithCopyPaste
-from ..view.listitem import FactoryBase
 from ..view.listitem import EditableListItemFactory
 
 from ..control import compound
@@ -141,7 +140,7 @@ class TandaListItemFactory(EditableListItemFactory):
             widget.emit('edited', alt_tanda[name])
 
 
-class StringListItemFactory(FactoryBase):
+class StringListItemFactory(misc.FactoryBase):
     def setup_cb(self, listitem):
         listitem.label = Gtk.Label(halign=Gtk.Align.START)
         listitem.set_child(listitem.label)
