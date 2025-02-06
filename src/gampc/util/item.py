@@ -48,6 +48,7 @@ class Item(BaseItem):
         self.connect('notify', self.__class__.notify_cb)
 
     def bind(self, name, widget):
+        widget._item = self
         self._widgets[name] = widget
         for prop, binder in self.get_binders():
             binder(name, widget)

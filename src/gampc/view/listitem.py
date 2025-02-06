@@ -49,13 +49,10 @@ class ListItemFactory(FactoryBase):
         listitem.set_child(self.make_widget())
 
     def bind_cb(self, listitem):
-        widget = listitem.get_child()
-        widget.pos = listitem.get_position()
-        listitem.get_item().bind(self.name, widget)
+        listitem.get_item().bind(self.name, listitem.get_child())
 
     def unbind_cb(self, listitem):
-        item_ = listitem.get_item()
-        item_.unbind(self.name)
+        listitem.get_item().unbind(self.name)
 
 
 class LabelListItemFactory(ListItemFactory):
