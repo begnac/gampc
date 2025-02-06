@@ -654,7 +654,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         self.tanda_model = item.ItemListStore(item_type=TandaItem)
         self.tanda_sorter = Gtk.CustomSorter.new(self.tanda_sort_func)
         self.tanda_sort_model = Gtk.SortListModel(model=self.tanda_model, sorter=self.tanda_sorter)
-        self.queue_model = item.ItemListStore(item_type=item.BaseItem)
+        self.queue_model = item.ItemListStore(item_type=item.SongItem)
 
         self.db = TandaDatabase(self.tanda_model, self.fields, self.unit_fields.fields, self.name, self.unit_database.cache)
         self.update_cache_full(None)
