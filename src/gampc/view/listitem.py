@@ -27,86 +27,57 @@ from ..util import misc
 from ..ui import editable
 
 
-class ListItemFactoryBase(Gtk.SignalListItemFactory):
-    def __init__(self, name, remove_shortcuts):
+class FactoryBase(Gtk.SignalListItemFactory):
+    def __init__(self):
         super().__init__()
+        self.connect('setup', type(self).setup_cb)
+        self.connect('bind', type(self).bind_cb)
+        self.connect('unbind', type(self).unbind_cb)
+        self.connect('teardown', type(self).teardown_cb)
 
+    def setup_cb(self, listitem):
+        pass
+
+    def bind_cb(self, listitem):
+        pass
+
+    def unbind_cb(self, listitem):
+        pass
+
+    def teardown_cb(self, listitem):
+        pass
+
+
+class RowFactory(FactoryBase):
+    def bind_cb(self, listitem):
+        listitem.get_item()._position = listitem.get_position()
+        listitem.connect('notify::position', type(self).notify_position_cb)
+
+    def unbind_cb(self, listitem):
+        listitem.disconnect_by_func(type(self).notify_position_cb)
+        del listitem.get_item()._position
+
+    def notify_position_cb(listitem, param):
+        listitem.get_item()._position = listitem.get_position()
+        print(listitem, listitem.get_position(), listitem.get_item())
+
+
+class ListItemFactory(FactoryBase):
+    def __init__(self, name):
+        super().__init__()
         self.name = name
-        self.remove_shortcuts = remove_shortcuts
 
-        self.binders = []
-        self.binders.append(('value', self.value_binder, name))
-
-        self.connect('setup', self.setup_cb)
-        self.connect('bind', self.bind_cb)
-        self.connect('unbind', self.unbind_cb)
-        # self.connect('teardown', self.teardown_cb)
-
-    @staticmethod
     def setup_cb(self, listitem):
         listitem.set_child(self.make_widget())
 
-    @staticmethod
     def bind_cb(self, listitem):
         widget = listitem.get_child()
         widget.pos = listitem.get_position()
-        self.bind(widget, listitem.get_item())
-        if self.remove_shortcuts:
-            GLib.idle_add(self.remove_row_shortcuts, widget)
+        listitem.get_item().bind(self.name, widget)
 
-    @staticmethod
-    def remove_row_shortcuts(widget):
-        cell = widget.get_parent()
-        if cell is not None:
-            row = cell.get_parent()
-            if row is not None:
-                misc.remove_control_move_shortcuts(row)
-
-    @staticmethod
     def unbind_cb(self, listitem):
-        self.unbind(listitem.get_child(), listitem.get_item())
-
-    # @staticmethod
-    # def teardown_cb(self, listitem):
-    #     pass
-
-    def bind(self, widget, item_):
-        for name, binder, *args in self.binders:
-            binder(widget, item_, *args)
-        item_.connect('notify', self.notify_item_cb, widget)
-
-    def unbind(self, widget, item_):
-        item_.disconnect_by_func(self.notify_item_cb)
-
-    def notify_item_cb(self, item_, param, widget):
-        for name, binder, *args in self.binders:
-            if name == param.name:
-                binder(widget, item_, *args)
-
-    @staticmethod
-    def value_binder(widget, item_, name):
-        value = item_.get_field(name, '')
-        widget.set_label(value)
-
-
-class ListItemFactory(ListItemFactoryBase):
-    def __init__(self, *args):
-        super().__init__(*args)
-
-        self.binders.append(('value', self.key_binder))
-        self.binders.append(('duplicate', self.duplicate_binder))
-
-    @staticmethod
-    def key_binder(widget, item_):
-        misc.add_unique_css_class(widget.get_parent(), 'key', item_.get_key().encode().hex())
-
-    @staticmethod
-    def duplicate_binder(widget, item_):
-        if item_.duplicate is None:
-            suffix = None
-        else:
-            suffix = str(item_.duplicate % 64)
-        misc.add_unique_css_class(widget.get_parent(), 'duplicate', suffix)
+        item_ = listitem.get_item()
+        item_.unbind(self.name)
 
 
 class LabelListItemFactory(ListItemFactory):
@@ -115,7 +86,7 @@ class LabelListItemFactory(ListItemFactory):
         return Gtk.Label(halign=Gtk.Align.START)
 
 
-class EditableListItemFactoryBase(ListItemFactoryBase):
+class EditableListItemFactory(ListItemFactory):
     __gsignals__ = {
         'item-edited': (GObject.SIGNAL_RUN_FIRST, None, (int, str, str)),
     }
@@ -127,11 +98,3 @@ class EditableListItemFactoryBase(ListItemFactoryBase):
 
     def edited_cb(self, widget, text, name):
         self.emit('item-edited', widget.pos, name, text)
-
-    @staticmethod
-    def start_editing_cb(cell, arg):
-        cell.get_first_child().start_editing()
-
-
-class EditableListItemFactory(EditableListItemFactoryBase, ListItemFactory):
-    pass

@@ -41,31 +41,27 @@ QUEUE_ID_CSS_PREFIX = 'queue-Id'
 QUEUE_PRIORITY_CSS_PREFIX = 'queue-priority'
 
 
-class QueueItem(item.Item):
+class QueueSongItem(item.SongItem):
     Id = GObject.Property()
     Prio = GObject.Property()
 
-    def load(self, value):
-        self.Id = value.pop('Id')
-        value.pop('Pos')
-        self.Prio = value.pop('Prio', None)
-        super().load(value)
+    def notify_value_cb(self, param):
+        self.Id = self.value.pop('Id')
+        self.value.pop('Pos')
+        self.Prio = self.value.pop('Prio', None)
+        super().notify_value_cb(param)
 
+    def get_binders(self):
+        yield from super().get_binders()
+        yield 'Id', self.id_binder
+        yield 'Prio', self.prio_binder
 
-class QueueListItemFactory(LabelListItemFactory):
-    def __init__(self, name, *args):
-        super().__init__(name, *args)
-        self.binders.append(('Id', self.id_binder))
-        self.binders.append(('Prio', self.prio_binder, name))
+    def id_binder(self, name, widget):
+        misc.add_unique_css_class(widget.get_parent(), 'Id', self.Id)
 
-    @staticmethod
-    def id_binder(widget, item):
-        misc.add_unique_css_class(widget.get_parent(), 'Id', item.Id)
-
-    @staticmethod
-    def prio_binder(widget, item, name):
+    def prio_binder(self, name, widget):
         if name == 'FormattedTime':
-            misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if item.Prio is not None else None)
+            misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if self.Prio is not None else None)
 
 
 class QueueTransaction:
@@ -139,7 +135,7 @@ class QueueWidget(ViewWithCopyPasteSong):
         self.add_items = transaction.add_items
         self.remove_positions = transaction.remove_positions
 
-        super().__init__(item_type=QueueItem, factory_factory=QueueListItemFactory, **kwargs)
+        super().__init__(factory_factory=LabelListItemFactory, **kwargs)
         self.item_view.add_css_class('queue')
         self.item_view.remove_css_class('song-by-key')
         self.item_view.add_css_class('song-by-Id')
@@ -187,7 +183,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
 
         self.css_provider.load_from_string(self.CSS)
 
-        self.queue_model = item.ItemListStore(QueueItem)
+        self.queue_model = item.ItemListStore(item_type=QueueSongItem)
         item.setup_find_duplicate_items(self.queue_model, ['Title'], [self.unit_database.SEPARATOR_FILE])
 
         self.transaction = QueueTransaction(self.queue_model, self.ampd)

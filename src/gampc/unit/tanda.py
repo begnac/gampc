@@ -45,7 +45,7 @@ from ..ui import editable
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy
 from ..view.cache import ViewCacheWithCopyPaste
-from ..view.listitem import EditableListItemFactoryBase
+from ..view.listitem import EditableListItemFactory
 
 from ..control import compound
 from ..control import editstack
@@ -53,25 +53,52 @@ from ..control import editstack
 from . import mixins
 
 
-class TandaItem(item.ItemBase):
+class TandaItem(item.Item):
     tandaid = GObject.Property()
     songs = GObject.Property()
     edit_stack = GObject.Property()
     modified = GObject.Property(type=bool, default=False)
 
-    def load(self, value):
-        self.tandaid = value.pop('tandaid')
-        self.edit_stack = editstack.EditStack([song['file'] for song in value['_songs']], self)
+    def notify_value_cb(self, param):
+        self.tandaid = self.value.pop('tandaid')
+        self.edit_stack = editstack.EditStack([song['file'] for song in self.value['_songs']], self)
         self.edit_stack.bind_property('modified', self, 'modified')
-        super().load(value)
+        super().notify_value_cb(param)
+
+    def get_binders(self):
+        yield from super().get_binders()
+        yield 'modified', self.modified_binder
+
+    def value_binder(self, name, widget):
+        super().value_binder(name, widget)
+        widget._item_special = self
+        cell = widget.get_parent()
+        if 'Last_Played' in name:
+            value = self.get_field('Last_Played_Weeks')
+            if value is not None:
+                value = str(min(10, int(value)))
+            misc.add_unique_css_class(cell, 'last-played', value)
+        elif name in ('Rhythm', 'Energy', 'Speed', 'Level'):
+            misc.add_unique_css_class(cell, 'property', self.get_field(name))
+        elif name == 'Emotion':
+            misc.add_unique_css_class(cell, 'emotion', self.get_field(name))
+        elif name in ('Genre',):
+            misc.add_unique_css_class(cell, 'genre', self.get_field(name).lower())
+
+    def modified_binder(self, name, widget):
+        cell = widget.get_parent()
+        if self.modified:
+            cell.add_css_class('modified')
+        else:
+            cell.remove_css_class('modified')
 
 
-class TandaSongItem(item.Item):
+class TandaSongItem(item.SongItem):
     tandaid = GObject.Property()
 
-    def load(self, value):
-        self.tandaid = value.pop('tandaid')
-        super().load(value)
+    def notify_value_cb(self, param):
+        self.tandaid = self.value.pop('tandaid')
+        super().notify_value_cb(param)
 
 
 class TandaEditableLabel(editable.EditableLabel):
@@ -85,13 +112,7 @@ class TandaEditableLabel(editable.EditableLabel):
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'fill')))
 
 
-class TandaListItemFactory(EditableListItemFactoryBase):
-    def __init__(self, name, *args):
-        super().__init__(name, *args)
-        self.binders.append(('value', self.special_binder, name))
-        self.binders.append(('value', self.tanda_binder, name))
-        self.binders.append(('modified', self.modified_binder))
-
+class TandaListItemFactory(EditableListItemFactory):
     def make_widget(self):
         widget = super().make_widget(factory=TandaEditableLabel)
         widget.connect('action-copy', self.action_copy_cb, self.name)
@@ -117,33 +138,6 @@ class TandaListItemFactory(EditableListItemFactoryBase):
         alt_tanda = TandaDatabase._tanda_from_songs(tanda.value['_songs'])
         if name in alt_tanda and alt_tanda[name] != widget.label.get_label():
             widget.emit('edited', alt_tanda[name])
-
-    @staticmethod
-    def special_binder(widget, item_, name):
-        widget._item_special = item_
-
-    @staticmethod
-    def tanda_binder(widget, item_, name):
-        cell = widget.get_parent()
-        if 'Last_Played' in name:
-            value = item_.get_field('Last_Played_Weeks')
-            if value is not None:
-                value = str(min(10, int(value)))
-            misc.add_unique_css_class(cell, 'last-played', value)
-        elif name in ('Rhythm', 'Energy', 'Speed', 'Level'):
-            misc.add_unique_css_class(cell, 'property', item_.get_field(name))
-        elif name == 'Emotion':
-            misc.add_unique_css_class(cell, 'emotion', item_.get_field(name))
-        elif name in ('Genre',):
-            misc.add_unique_css_class(cell, 'genre', item_.get_field(name).lower())
-
-    @staticmethod
-    def modified_binder(widget, item_):
-        cell = widget.get_parent()
-        if item_.modified:
-            cell.add_css_class('modified')
-        else:
-            cell.remove_css_class('modified')
 
 
 class StringListItemFactory(Gtk.SignalListItemFactory):
@@ -657,10 +651,10 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         self.fields.register_field(field.Field('n_songs', _("Number of songs"), min_width=30, get_value=self.get_n_songs))
         self.fields.register_field(field.Field('Duration', _("Duration"), get_value=lambda tanda: misc.format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
 
-        self.tanda_model = item.ItemListStore(TandaItem)
+        self.tanda_model = item.ItemListStore(item_type=TandaItem)
         self.tanda_sorter = Gtk.CustomSorter.new(self.tanda_sort_func)
         self.tanda_sort_model = Gtk.SortListModel(model=self.tanda_model, sorter=self.tanda_sorter)
-        self.queue_model = item.ItemListStore()
+        self.queue_model = item.ItemListStore(item_type=item.BaseItem)
 
         self.db = TandaDatabase(self.tanda_model, self.fields, self.unit_fields.fields, self.name, self.unit_database.cache)
         self.update_cache_full(None)

@@ -120,8 +120,6 @@ class ViewWithCopyPaste(ViewWithCopy):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, sortable=False, **kwargs)
 
-        self.connect_clean(self, 'notify::filtering', self.check_editable)
-
         self.drop_target = Gtk.DropTarget(actions=Gdk.DragAction.COPY | Gdk.DragAction.MOVE, formats=Gdk.ContentFormats.new_for_gtype(self.transfer_type))
         self.connect_clean(self.drop_target, 'enter', self.drop_action_cb)
         self.connect_clean(self.drop_target, 'motion', self.drop_action_cb)
@@ -139,13 +137,17 @@ class ViewWithCopyPaste(ViewWithCopy):
         self._editable = editable
         self.check_editable()
 
-    def check_editable(self, *args):
+    def check_editable(self):
         editable = self._editable and not self.filtering
         actions = self.actions['view-edit']
         for name in actions.list_actions():
             if name != 'copy':
                 actions.lookup_action(name).set_enabled(editable)
         self.drag_source.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE if editable else Gdk.DragAction.COPY)
+
+    def notify_filtering_cb(self, param):
+        super().notify_filtering_cb(param)
+        self.check_editable()
 
     def generate_editing_actions(self):
         cut = action.ActionInfo('cut', self.action_cut_cb, _("Cut"), ['<Control>x'], True, arg_format='b')
