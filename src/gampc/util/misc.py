@@ -55,14 +55,17 @@ def get_clipboard():
 
 def find_descendant_at_xy(widget, x, y, levels):
     for i in range(levels):
-        for child in widget.observe_children():
-            allocation = child.get_allocation()
-            if allocation.contains_point(x, y):
-                x, y = widget.translate_coordinates(child, x, y)
-                widget = child
-                break
-        else:
-            return None, x, y
+        child = widget.get_first_child()
+        while child:
+            if child.get_mapped():
+                allocation = child.get_allocation()
+                if allocation.contains_point(x, y):
+                    x, y = widget.translate_coordinates(child, x, y)
+                    break
+            child = child.get_next_sibling()
+        widget = child
+        if widget is None:
+            break
     return widget, x, y
 
 
