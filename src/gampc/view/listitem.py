@@ -26,20 +26,6 @@ from ..util.misc import FactoryBase
 from ..ui import editable
 
 
-class RowFactory(FactoryBase):
-    def bind_cb(self, listitem):
-        listitem.get_item()._position = listitem.get_position()
-        listitem.connect('notify::position', self.__class__.notify_position_cb)
-
-    def unbind_cb(self, listitem):
-        listitem.disconnect_by_func(self.__class__.notify_position_cb)
-        del listitem.get_item()._position
-
-    def notify_position_cb(listitem, param):
-        listitem.get_item()._position = listitem.get_position()
-        print(listitem, listitem.get_position(), listitem.get_item())
-
-
 class ListItemFactory(FactoryBase):
     def __init__(self, name):
         super().__init__()

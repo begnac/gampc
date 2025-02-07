@@ -96,17 +96,17 @@ class ViewWithCopy(ViewWithContextMenu):
             return
 
         self.drag_selection = self.get_selection()
-        pos = row.get_first_child().get_first_child()._item._position
+        pos = self.get_row_position(row)
         if pos not in self.drag_selection:
             self.item_selection_model.select_item(pos, True)
             self.drag_selection = [pos]
         self.lock()
         return self.content_from_items(self.item_selection_filter_model)
 
-    # def drag_begin_cb(self, source, drag):
+    # def drag_begin_cb(self, drag_source, drag):
     #     pass
 
-    # def drag_cancel_cb(self, source, drag, reason):
+    # def drag_cancel_cb(self, drag_source, drag, reason):
     #     return False
 
     def drag_end_cb(self, drag_source, drag, delete):
@@ -114,6 +114,9 @@ class ViewWithCopy(ViewWithContextMenu):
             self.remove_positions(self.drag_selection)
         self.unlock()
         del self.drag_selection
+
+    def get_row_position(self, row):
+        return list(self.item_selection_model).index(row.get_first_child().get_first_child()._item)
 
 
 class ViewWithCopyPaste(ViewWithCopy):
@@ -179,7 +182,7 @@ class ViewWithCopyPaste(ViewWithCopy):
             else:
                 pos = self.item_model.get_n_items()
         else:
-            pos = row.get_first_child().get_first_child()._item._position
+            pos = self.get_row_position(row)
             if after:
                 pos += 1
         self.get_clipboard().read_value_async(self.transfer_type, 0, None, self.action_paste_finish_cb, pos)
@@ -228,7 +231,7 @@ class ViewWithCopyPaste(ViewWithCopy):
     #     self.set_row()
 
     def drop_cb(self, drop_target, value, x, y):
-        pos = 0 if self.drop_row is None else self.drop_row.get_first_child().get_first_child()._item._position + 1
+        pos = 0 if self.drop_row is None else self.get_row_position(self.drop_row) + 1
         self.add_items(pos, value.values)
         return True
 
