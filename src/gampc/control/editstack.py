@@ -25,8 +25,6 @@ import weakref
 from ..util import action
 from ..util import misc
 
-from ..ui import dialog
-
 
 class DeltaSplicer:
     def __init__(self, position, items, advance):
@@ -62,9 +60,9 @@ class DeltaSplicer:
 
 
 class DeltaItem:
-    def __init__(self, item, key, new):
+    def __init__(self, key, old, new):
         self.key = key
-        self.old = item.value.get(key)
+        self.old = old
         self.new = new
 
     def apply(self, advance, edit_stack):

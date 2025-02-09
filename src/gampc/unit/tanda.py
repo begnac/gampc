@@ -18,9 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import re
-import datetime
 import asyncio
+import datetime
+import functools
+import re
 
 from gi.repository import GLib
 from gi.repository import GObject
@@ -45,7 +46,6 @@ from ..ui import editable
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy
 from ..view.cache import ViewCacheWithCopyPaste
-from ..view.listitem import EditableListItemFactory
 
 from ..control import compound
 from ..control import editstack
@@ -59,19 +59,19 @@ class TandaItem(item.Item):
     edit_stack = GObject.Property()
     modified = GObject.Property(type=bool, default=False)
 
-    def notify_value_cb(self, param):
-        self.tandaid = self.value.pop('tandaid')
-        self.edit_stack = editstack.EditStack([song['file'] for song in self.value['_songs']], self)
+    def new_value(self, value):
+        self.tandaid = value.pop('tandaid')
+        self.edit_stack = editstack.EditStack([song['file'] for song in value['_songs']], self)
         self.edit_stack.bind_property('modified', self, 'modified')
-        super().notify_value_cb(param)
+        super().new_value(value)
 
     def get_binders(self):
         yield from super().get_binders()
         yield 'modified', self.modified_binder
 
-    def value_binder(self, name, widget):
-        super().value_binder(name, widget)
-        widget._item_special = self
+    def value_binder(self, widget):
+        super().value_binder(widget)
+        name = widget.get_name()
         cell = widget.get_parent()
         if 'Last_Played' in name:
             value = self.get_field('Last_Played_Weeks')
@@ -85,7 +85,7 @@ class TandaItem(item.Item):
         elif name in ('Genre',):
             misc.add_unique_css_class(cell, 'genre', self.get_field(name).lower())
 
-    def modified_binder(self, name, widget):
+    def modified_binder(self, widget):
         cell = widget.get_parent()
         if self.modified:
             cell.add_css_class('modified')
@@ -96,9 +96,9 @@ class TandaItem(item.Item):
 class TandaSongItem(item.SongItem):
     tandaid = GObject.Property()
 
-    def notify_value_cb(self, param):
-        self.tandaid = self.value.pop('tandaid')
-        super().notify_value_cb(param)
+    def new_value(self, value):
+        self.tandaid = value.pop('tandaid')
+        super().new_value(value)
 
 
 class TandaEditableLabel(editable.EditableLabel):
@@ -106,38 +106,16 @@ class TandaEditableLabel(editable.EditableLabel):
         'action-fill': (GObject.SIGNAL_RUN_FIRST, None, ()),
     }
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_f, modifiers=Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self._signal), arguments=GLib.Variant('s', 'fill')))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.fill_cb)))
 
-
-class TandaListItemFactory(EditableListItemFactory):
-    def make_widget(self):
-        widget = super().make_widget(factory=TandaEditableLabel)
-        widget.connect('action-copy', self.action_copy_cb, self.name)
-        widget.connect('action-paste', self.action_paste_cb, self.name)
-        widget.connect('action-fill', self.action_fill_cb, self.name)
-        return widget
-
-    @staticmethod
-    def action_copy_cb(widget, name):
-        widget.get_clipboard().set_content(Gdk.ContentProvider.new_for_value(widget.label.get_label()))
-
-    @staticmethod
-    def action_paste_cb(widget, name):
-        widget.get_clipboard().read_value_async(str, 0, None, TandaListItemFactory.action_paste_finish_cb, widget, name)
-
-    @staticmethod
-    def action_paste_finish_cb(clipboard, result, widget, name):
-        widget.emit('edited', clipboard.read_value_finish(result))
-
-    @staticmethod
-    def action_fill_cb(widget, name):
-        tanda = widget._item_special
-        alt_tanda = TandaDatabase._tanda_from_songs(tanda.value['_songs'])
-        if name in alt_tanda and alt_tanda[name] != widget.label.get_label():
-            widget.emit('edited', alt_tanda[name])
+    def fill_cb(self, args):
+        name = self.get_name()
+        alt_tanda = TandaDatabase._tanda_from_songs(self._item.value['_songs'])
+        if name in alt_tanda and alt_tanda[name] != self.label.get_label():
+            self.edit_manager.emit('edited', self, {name: alt_tanda[name]})
 
 
 class StringListItemFactory(misc.FactoryBase):
@@ -207,7 +185,6 @@ class TandaWidget(compound.WidgetWithPaned):
 
         self.tanda_genre_filter_model.set_model(tandas)
 
-        misc.remove_control_move_shortcuts_below(self)
         self.add_context_menu_actions(self.generate_actions(), 'tanda-widget', _("Tanda Editor"))
 
     def cleanup(self):
@@ -279,7 +256,8 @@ class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
 class TandaEditTandaView(ViewWithContextMenu):
     def __init__(self, *args, separator_file, **kwargs):
         self.separator_file = separator_file
-        super().__init__(*args, factory_factory=TandaListItemFactory, selection_model=Gtk.SingleSelection, sortable=True, **kwargs)
+        self.edit_manager = editable.EditManager()
+        super().__init__(*args, factory_factory=item.ListItemFactory, widget_factory=functools.partial(TandaEditableLabel, self.edit_manager), selection_model=Gtk.SingleSelection, sortable=True, **kwargs)
 
     def get_filenames(self, selection):
         if self.item_selection_filter_model:
@@ -315,8 +293,7 @@ class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Bo
         self.tanda_view.item_view.add_css_class('tanda-edit')
 
         self.connect_clean(self.tanda_view.item_selection_filter_model, 'items-changed', self.tanda_selection_changed_cb)
-        for column in self.tanda_view.item_view.get_columns():
-            self.connect_clean(column.get_factory(), 'item-edited', self.tanda_edited_cb)
+        self.connect_clean(self.tanda_view.edit_manager, 'edited', self.tanda_edited_cb)
 
         self.current_tanda = None
 
@@ -327,12 +304,15 @@ class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Bo
     def action_save_cb(self, action, parameter):
         self.activate_action('tanda.save')
 
-    def tanda_edited_cb(self, factory, pos, name, value):
-        assert self.current_tanda == self.tanda_view.item_selection_model[pos]
-        GLib.idle_add(self.tanda_edited, name, value)
+    def tanda_edited_cb(self, manager, widget, changes):
+        assert self.current_tanda is widget._item
+        GLib.idle_add(self.tanda_edited, changes)
 
-    def tanda_edited(self, name, value):
-        self.current_tanda.edit_stack.append_delta(editstack.DeltaItem(self.current_tanda, name, value or None))
+    def tanda_edited(self, changes):
+        self.current_tanda.edit_stack.hold_transaction()
+        for name, value in changes.items():
+            self.current_tanda.edit_stack.append_delta(editstack.DeltaItem(name, self.current_tanda.value.get(name), value or None))
+        self.current_tanda.edit_stack.release_transaction()
 
     def tanda_selection_changed_cb(self, model, p, r, a):
         if model:

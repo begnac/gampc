@@ -47,15 +47,15 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         self.fading = False
 
     def generate_actions(self):
-        yield action.ActionInfo('play-or-pause', self.play_or_pause_cb, _("_Play/pause"), ['<Control>Up', 'AudioPlay', 'space'], dangerous=True)
+        yield action.ActionInfo('play-or-pause', self.play_or_pause_cb, _("_Play/pause"), ['<Alt>Up', 'AudioPlay', 'space'], dangerous=True)
         yield action.ActionInfo('play', self.mpd_command_cb, dangerous=True)
-        yield action.ActionInfo('stop', self.mpd_command_cb, _("_Stop"), ['<Control>Down', 'AudioStop'], dangerous=True)
-        yield action.ActionInfo('next', self.mpd_command_cb, _("_Next"), ['<Control>Right', 'AudioNext'], dangerous=True)
-        yield action.ActionInfo('previous', self.mpd_command_cb, _("_Previous"), ['<Control>Left', 'AudioPrev'], dangerous=True)
+        yield action.ActionInfo('stop', self.mpd_command_cb, _("_Stop"), ['<Alt>Down', 'AudioStop'], dangerous=True)
+        yield action.ActionInfo('next', self.mpd_command_cb, _("_Next"), ['<Alt>Right', 'AudioNext'], dangerous=True)
+        yield action.ActionInfo('previous', self.mpd_command_cb, _("_Previous"), ['<Alt>Left', 'AudioPrev'], dangerous=True)
         fadeout = action.ActionInfo('fadeout-then', self.fadeout_then_cb, arg_format='b')
         yield fadeout
-        yield fadeout.derive(_("Stop [fadeout]"), ['<Control><Shift>Down', '<Shift>AudioStop'], True)
-        yield fadeout.derive(_("Next [fadeout]"), ['<Control><Shift>Right'], False)
+        yield fadeout.derive(_("Stop [fadeout]"), ['<Alt>End', '<Shift>AudioStop'], True)
+        yield fadeout.derive(_("Next [fadeout]"), ['<Alt>Page_Down'], False)
         yield action.ActionInfo('volume-popup', self.volume_popup_cb, _("Adjust volume"), ['<Alt>v'])
         volume = action.ActionInfo('volume', self.volume_cb, arg_format='(ib)', dangerous=True)
         yield volume
@@ -64,10 +64,10 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         yield volume.derive(_("Mute"), ['<Control>AudioMute'], (0, False))
         jump = action.ActionInfo('jump', self.jump_cb, arg_format='(ib)', dangerous=True)
         yield jump
-        yield jump.derive(_("Restart playback"), ['<Alt>Up'], (0, False))
-        yield jump.derive(_("End of song (-{} seconds)").format(15), ['<Alt>Down'], (-15, False))
-        yield jump.derive(_("Skip backwards ({} seconds)").format(5), ['<Alt>Left'], (-5, True))
-        yield jump.derive(_("Skip forwards ({} seconds)").format(5), ['<Alt>Right'], (5, True))
+        yield jump.derive(_("Restart playback"), ['<Shift><Alt>Up'], (0, False))
+        yield jump.derive(_("End of song (-{} seconds)").format(15), ['<Shift><Alt>Down'], (-15, False))
+        yield jump.derive(_("Skip backwards ({} seconds)").format(5), ['<Shift><Alt>Left'], (-5, True))
+        yield jump.derive(_("Skip forwards ({} seconds)").format(5), ['<Shift><Alt>Right'], (5, True))
 
     @hold_app
     @ampd.task

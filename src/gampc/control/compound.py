@@ -51,7 +51,6 @@ class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalM
         self.left_view = Gtk.ListView(model=self.left_selection, factory=factory, tab_behavior=Gtk.ListTabBehavior.ITEM)
         self.left = Gtk.ScrolledWindow(child=self.left_view)
         self.left_view_search = listviewsearch.ListViewSearch(self.left_view, lambda text, row: text.lower() in row.get_item().name.lower())
-        misc.remove_control_move_shortcuts_below(self.left_view)
 
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config._get(), start_child=self.left, end_child=main, **kwargs)
 

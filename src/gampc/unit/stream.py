@@ -18,6 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import functools
+
 from gi.repository import GLib
 
 from ..util import action
@@ -28,10 +30,10 @@ from ..util import misc
 from ..util import unit
 
 from ..ui import dialog
+from ..ui import editable
 
 from ..view.actions import ViewWithCopyPaste
 from ..view.cache import ItemFilenameTransfer
-from ..view.listitem import EditableListItemFactory
 
 from ..control import editstack
 
@@ -47,10 +49,10 @@ class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
     extra_transfer_types = (ItemFilenameTransfer, item.ItemStringTransfer)
 
     def __init__(self, separator_file, edit_stack, *args, **kwargs):
-        super().__init__(*args, **kwargs, factory_factory=EditableListItemFactory)
+        edit_manager = editable.EditManager()
+        super().__init__(*args, **kwargs, factory_factory=item.ListItemFactory, widget_factory=functools.partial(editable.EditableLabel, edit_manager))
         self.item_view.add_css_class('song-by-key')
-        for column in self.item_view.get_columns():
-            self.connect_clean(column.get_factory(), 'item-edited', self.item_edited_cb)
+        self.connect_clean(edit_manager, 'edited', self.item_edited_cb)
         self.context_menu.append_section(None, self.edit_stack_menu)
         self.item_view.add_css_class('stream')
         item.setup_find_duplicate_items(self.item_model, ['file'], [separator_file])
@@ -65,16 +67,18 @@ class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
         yield from super().generate_editing_actions()
         yield from self.generate_url_actions()
 
-    def item_edited_cb(self, factory, pos, name, value):
-        GLib.idle_add(self.item_edited, pos, name, value)
+    def item_edited_cb(self, manager, widget, changes):
+        GLib.idle_add(self.item_edited, widget, changes)
 
-    def item_edited(self, pos, name, value):
-        old = self.item_selection_model[pos].value
+    def item_edited(self, widget, changes):
+        item_ = widget._item
+        i = self.item_model.find(item_).position
+        old = item_.value
         new = dict(old)
-        new[name] = value
+        new.update(changes)
         self.edit_stack.hold_transaction()
-        self.edit_stack.append_delta(editstack.DeltaSplicer([new], pos, True))
-        self.edit_stack.append_delta(editstack.DeltaSplicer([old], pos, False))
+        self.edit_stack.append_delta(editstack.DeltaSplicer(i, [new], True))
+        self.edit_stack.append_delta(editstack.DeltaSplicer(i, [old], False))
         self.edit_stack.release_transaction()
 
     def action_save_cb(self, action, parameter):

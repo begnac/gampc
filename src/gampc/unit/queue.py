@@ -32,7 +32,6 @@ from ..util import unit
 from ..ui import ssde
 
 from ..view.cache import ViewWithCopyPasteSong
-from ..view.listitem import LabelListItemFactory
 
 from . import mixins
 
@@ -45,22 +44,22 @@ class QueueSongItem(item.SongItem):
     Id = GObject.Property()
     Prio = GObject.Property()
 
-    def notify_value_cb(self, param):
-        self.Id = self.value.pop('Id')
-        self.value.pop('Pos')
-        self.Prio = self.value.pop('Prio', None)
-        super().notify_value_cb(param)
+    def new_value(self, value):
+        self.Id = value.pop('Id')
+        value.pop('Pos')
+        self.Prio = value.pop('Prio', None)
+        super().new_value(value)
 
     def get_binders(self):
         yield from super().get_binders()
         yield 'Id', self.id_binder
         yield 'Prio', self.prio_binder
 
-    def id_binder(self, name, widget):
+    def id_binder(self, widget):
         misc.add_unique_css_class(widget.get_parent(), 'Id', self.Id)
 
-    def prio_binder(self, name, widget):
-        if name == 'FormattedTime':
+    def prio_binder(self, widget):
+        if widget.get_name() == 'FormattedTime':
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if self.Prio is not None else None)
 
 
@@ -135,7 +134,7 @@ class QueueWidget(ViewWithCopyPasteSong):
         self.add_items = transaction.add_items
         self.remove_positions = transaction.remove_positions
 
-        super().__init__(factory_factory=LabelListItemFactory, **kwargs)
+        super().__init__(**kwargs)
         self.item_view.add_css_class('queue')
         self.item_view.remove_css_class('song-by-key')
         self.item_view.add_css_class('song-by-Id')

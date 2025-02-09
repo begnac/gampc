@@ -23,18 +23,21 @@ from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
 
+from ..util import item
 from ..util import misc
 
 
-class EditableLabel(Gtk.Stack):
+class EditManager(GObject.Object):
     __gsignals__ = {
-        'edited': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        'action-copy': (GObject.SIGNAL_RUN_FIRST, None, ()),
-        'action-paste': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'edited': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
     }
 
-    def __init__(self, **kwargs):
+
+class EditableLabel(Gtk.Stack):
+    def __init__(self, edit_manager, **kwargs):
         super().__init__(**kwargs, focusable=True, css_name='editablelabel')
+
+        self.edit_manager = edit_manager
 
         self.label = Gtk.Label(halign=Gtk.Align.START)
         self.add_named(self.label, 'label')
@@ -57,9 +60,9 @@ class EditableLabel(Gtk.Stack):
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_Escape, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK)
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__._quit_editing)))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_c, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__._signal), arguments=GLib.Variant('s', 'copy')))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.copy_cb)))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_v, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__._signal), arguments=GLib.Variant('s', 'paste')))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.paste_cb)))
 
     @staticmethod
     def released_cb(controller, n, x, y):
@@ -78,14 +81,23 @@ class EditableLabel(Gtk.Stack):
     def set_label(self, label):
         self.label.set_label(str(label))
 
-    def _start_editing(self, arg):
+    def _start_editing(self, args):
         self.start_editing()
 
-    def _quit_editing(self, arg):
+    def _quit_editing(self, args):
         self.stop_editing(False)
 
-    def _signal(self, arg):
-        self.emit(f'action-{arg.unpack()}')
+    def copy_cb(self, args):
+        self.get_clipboard().set_content(item.PartialTransfer({self.get_name(): self.label.get_label()}).get_content())
+        return True
+
+    def paste_cb(self, args):
+        self.get_clipboard().read_value_async(item.PartialTransfer, 0, None, self.paste_finish_cb)
+        return False
+
+    def paste_finish_cb(self, clipboard, result):
+        if not result.had_error():
+            self.edit_manager.emit('edited', self, clipboard.read_value_finish(result).value)
 
     def start_editing(self):
         if self.entry is not None:
@@ -103,7 +115,7 @@ class EditableLabel(Gtk.Stack):
             return
         if commit and self.entry.get_text() != self.label.get_label():
             self.label.set_label(self.entry.get_text())
-            self.emit('edited', self.entry.get_text())
+            self.edit_manager.emit('edited', self, {self.get_name(): self.entry.get_text()})
         self.set_visible_child_name('label')
         self.remove(self.entry)
         self.entry = None

@@ -174,7 +174,12 @@ class ViewWithCopyPaste(ViewWithCopy):
         self.item_selection_model.select_item(pos, True)
 
     def action_paste_cb(self, action, parameter):
-        after = parameter.unpack()
+        self.get_clipboard().read_value_async(self.transfer_type, 0, None, self.action_paste_finish_cb, parameter.unpack())
+
+    def action_paste_finish_cb(self, clipboard, result, after):
+        if result.had_error():
+            return
+        values = clipboard.read_value_finish(result).value
         row = self.item_view.rows.get_focus_child()
         if row is None:
             if after:
@@ -185,10 +190,6 @@ class ViewWithCopyPaste(ViewWithCopy):
             pos = self.get_row_position(row)
             if after:
                 pos += 1
-        self.get_clipboard().read_value_async(self.transfer_type, 0, None, self.action_paste_finish_cb, pos)
-
-    def action_paste_finish_cb(self, clipboard, result, pos):
-        values = clipboard.read_value_finish(result).values
         if values is not None:
             self.add_items(pos, values)
 
@@ -207,7 +208,7 @@ class ViewWithCopyPaste(ViewWithCopy):
         if url:
             item_ = item.Item(value=dict(file=url))
             transfer = self.transfer_type([item_])
-            self.add_items(pos, transfer.values)
+            self.add_items(pos, transfer.value)
 
     def set_drop_row(self, drop_row=None):
         if drop_row != self.drop_row:
@@ -232,7 +233,7 @@ class ViewWithCopyPaste(ViewWithCopy):
 
     def drop_cb(self, drop_target, value, x, y):
         pos = 0 if self.drop_row is None else self.get_row_position(self.drop_row) + 1
-        self.add_items(pos, value.values)
+        self.add_items(pos, value.value)
         return True
 
     add_items = remove_positions = NotImplemented
