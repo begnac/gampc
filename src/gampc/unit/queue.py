@@ -29,7 +29,7 @@ from ..util import item
 from ..util import misc
 from ..util import unit
 
-from ..ui import ssde
+from ..ui import dialog
 
 from ..view.cache import ViewWithCopyPasteSong
 
@@ -209,7 +209,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         yield priority
         yield priority.derive(_("High"), arg=255)
         yield priority.derive(_("Normal"), arg=0)
-        # yield priority.derive(_("Choose"), arg=-1)
+        yield priority.derive(_("Choose"), arg=-1)
 
     @ampd.task
     async def action_priority_cb(self, action, parameter, queue):
@@ -219,11 +219,11 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
 
         priority = parameter.unpack()
         if priority == -1:
-            priority = sum(int(item.Prio or '0') for item in items) // len(items)
-            struct = ssde.Integer(default=priority, min_value=0, max_value=255)
-            priority = await struct.edit(queue.get_root())
+            priority = sum(int(item_.Prio or '0') for item_ in items) // len(items)
+            priority = await dialog.SpinButtonDialogAsync(transient_for=queue.get_root(), value=priority, max_value=255).run()
             if priority is None:
                 return
+            priority = int(priority)
 
         await self.ampd.prioid(priority, *(item_.Id for item_ in items))
 

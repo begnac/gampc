@@ -25,7 +25,7 @@ import asyncio
 
 
 class DialogAsync(Gtk.Window):
-    def __init__(self, **kwargs):
+    def __init__(self, *, cancel_button=True, **kwargs):
         self.button_box = Gtk.Box(halign=Gtk.Align.CENTER)
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.main_box.append(self.button_box)
@@ -38,6 +38,10 @@ class DialogAsync(Gtk.Window):
         self.shortcut = Gtk.ShortcutController()
         self.add_controller(self.shortcut)
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Escape, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK), action=Gtk.CallbackAction.new(self.escape_pressed_cb, self.future)))
+
+        if cancel_button:
+            self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
+        self.ok_button = self.add_button(_("_OK"), Gtk.ResponseType.OK)
 
     def add_button(self, label, response):
         button = Gtk.Button.new_with_mnemonic(label)
@@ -59,27 +63,18 @@ class DialogAsync(Gtk.Window):
         self.present()
         result = await self.future
         self.destroy()
-        return result
+        return result == Gtk.ResponseType.OK
 
 
 class MessageDialogAsync(DialogAsync):
-    def __init__(self, *, message, cancel_button=True, title=None, **kwargs):
+    def __init__(self, *, message, title=None, **kwargs):
         super().__init__(title=title or message, **kwargs)
         self.main_box.prepend(Gtk.Label(label=message))
-        if cancel_button:
-            self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
-        self.add_button(_("_OK"), Gtk.ResponseType.OK)
-
-    async def run(self, **kwargs):
-        return await super().run(**kwargs) == Gtk.ResponseType.OK
 
 
 class TextDialogAsync(DialogAsync):
     def __init__(self, text=None, **kwargs):
         super().__init__(**kwargs)
-
-        self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
-        self.ok_button = self.add_button(_("_OK"), Gtk.ResponseType.OK)
 
         self.entry = Gtk.Entry()
         self.main_box.prepend(self.entry)
@@ -88,8 +83,7 @@ class TextDialogAsync(DialogAsync):
         self.entry.connect('notify::text', self.entry_notify_text_cb)
 
     async def run(self):
-        result = await super().run()
-        result = self.entry.get_text() if result == Gtk.ResponseType.OK else None
+        result = self.entry.get_text() if await super().run() else None
         self.entry.disconnect_by_func(self.entry_notify_text_cb)
         return result
 
@@ -99,3 +93,18 @@ class TextDialogAsync(DialogAsync):
     @staticmethod
     def validate_text(text):
         return True
+
+
+class SpinButtonDialogAsync(DialogAsync):
+    def __init__(self, value=None, min_value=0, max_value=0, step_increment=1, page_increment=10, **kwargs):
+        super().__init__(**kwargs)
+
+        self.spin_button = Gtk.SpinButton()
+        self.spin_button.set_range(min_value, max_value)
+        self.spin_button.set_increments(step_increment, page_increment)
+        if value is not None:
+            self.spin_button.set_value(value)
+        self.main_box.prepend(self.spin_button)
+
+    async def run(self):
+        return self.spin_button.get_value() if await super().run() else None
