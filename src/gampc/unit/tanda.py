@@ -120,11 +120,10 @@ class TandaEditableLabel(editable.EditableLabel):
 
 class StringListItemFactory(misc.FactoryBase):
     def setup_cb(self, listitem):
-        listitem.label = Gtk.Label(halign=Gtk.Align.START)
-        listitem.set_child(listitem.label)
+        listitem.set_child(Gtk.Label(halign=Gtk.Align.START))
 
     def bind_cb(self, listitem):
-        listitem.label.set_label(listitem.get_item().get_string())
+        listitem.get_child().set_label(listitem.get_item().get_string())
 
 
 class TandaWidget(compound.WidgetWithPaned):
