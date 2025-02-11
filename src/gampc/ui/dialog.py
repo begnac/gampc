@@ -83,9 +83,9 @@ class TextDialogAsync(DialogAsync):
         self.entry.connect('notify::text', self.entry_notify_text_cb)
 
     async def run(self):
-        result = self.entry.get_text() if await super().run() else None
+        result = await super().run()
         self.entry.disconnect_by_func(self.entry_notify_text_cb)
-        return result
+        return self.entry.get_text() if result else None
 
     def entry_notify_text_cb(self, entry, param):
         self.ok_button.set_sensitive(self.validate_text(entry.get_text()))

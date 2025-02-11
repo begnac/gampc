@@ -30,15 +30,21 @@ from ..util.logger import logger
 from . import mixins
 
 
+class Profile:
+    def __init__(self, arg):
+        if '=' in arg:
+            self.address, self.name = arg.split('=', 1)
+        else:
+            self.address = arg
+            self.name = _("Unknown profile")
+
+
 class __unit__(mixins.UnitConfigMixin, unit.Unit):
     server_label = GObject.Property(type=str, default='')
     server_profile = GObject.Property(type=str)
 
     def __init__(self, manager):
         super().__init__(manager)
-
-        self.require('profiles')
-        self.require('fields')
 
         self.ampd_client = ampd.ClientGLib()
         self.connect_clean(self.ampd_client, 'client-connected', self.client_connected_cb)
@@ -52,11 +58,11 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
 
         self.want_to_connect = False
 
-        self.server_profile = self.config.server_profile._get(default=self.unit_profiles.LOCAL_HOST_NAME)
+        self.server_profile = self.config.server_profile._get(default='')
         self.server_profile_previous = self.config.server_profile_previous._get(default=self.server_profile)
         self.server_profile_backup = self.server_profile
 
-        self.profile = self.unit_profiles.profile_from_repr(self.server_profile)
+        self.profile = Profile(self.server_profile)
         self.set_server_label()
 
         self.connect('notify::server-profile', self.__class__.notify_server_profile_cb)
@@ -74,7 +80,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
     def generate_connection_actions(self):
         yield action.ActionInfo('connect', self.ampd_connect, _("Connect"), ['<Alt><Shift>c'])
         yield action.ActionInfo('disconnect', self.ampd_disconnect, _("Disconnect"), ['<Alt><Shift>d'])
-        yield action.ActionInfo('connect-to-previous', self.ampd_connect_to_previous, _("Connect to previous"), ['<Control><Alt>p'])
+        yield action.ActionInfo('connect-to-previous', self.connect_to_previous, _("Connect to previous"), ['<Control><Alt>p'])
         yield action.PropertyActionInfo('server-profile', self)
         for name in ampd.OPTION_NAMES:
             yield action.PropertyActionInfo(name, self.ampd_server_properties, arg_format='i')
@@ -90,7 +96,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.set_server_label()
 
     @ampd.task
-    async def ampd_connect_to_previous(self, *args):
+    async def connect_to_previous(self, *args):
         self.server_profile = self.server_profile_previous
 
     @ampd.task
@@ -136,7 +142,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
                 self.server_label += " [{}]".format(_("database update"))
 
     def notify_server_profile_cb(self, param):
-        self.profile = self.unit_profiles.profile_from_repr(self.server_profile)
+        self.profile = Profile(self.server_profile)
         self.set_server_label()
         self.config.server_profile._set(self.server_profile)
         self.ampd_connect()

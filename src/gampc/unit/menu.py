@@ -60,6 +60,7 @@ class __unit__(unit.Unit):
         server_menu.append_section(None, self.unit_output.menu)
         self.load_family(self.unit_server.generate_connection_actions(), server_label, app, server_menu, True)
         server_menu.append_submenu(_("Profiles"), self.unit_profiles.menu)
+        app.add_action(self.unit_profiles.get_edit_action().get_action())
 
         component_label = _("_Component")
         self.menu.append_submenu(component_label, self.unit_component.menu)

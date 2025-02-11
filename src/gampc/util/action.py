@@ -118,7 +118,7 @@ class ActionInfoFamily:
             menu_item = action_info.get_menu_item(self.prefix)
             if menu_item is not None:
                 menu.append_item(menu_item)
-                menu.append_section(None, Gio.Menu())
+                # menu.append_section(None, Gio.Menu())
         return menu
 
     def add_to_action_map(self, action_map, protect=None):

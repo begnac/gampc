@@ -19,6 +19,7 @@
 
 
 from gi.repository import Gio
+from gi.repository import Gtk
 
 import zeroconf
 import zeroconf.asyncio
@@ -26,9 +27,10 @@ import re
 import asyncio
 
 from ..util import action
+from ..util import misc
 from ..util import unit
 
-from ..ui import ssde
+from ..ui import dialog
 
 from . import mixins
 
@@ -37,68 +39,70 @@ ZEROCONF_MPD_TYPE = '_mpd._tcp.local.'
 ZEROCONF_NAME_REGEXP = f'^(?P<name>[^\\[]*)(\\[[0-9]+\\])?\\.{ZEROCONF_MPD_TYPE}$'
 
 
-class Profile:
-    def __init__(self, name, address=None):
-        self.name = name
-        self.address = address
+class ProfileDialogAsync(dialog.DialogAsync):
+    def __init__(self, name, address, used_names, **kwargs):
+        super().__init__(**kwargs)
 
-    @staticmethod
-    def from_repr(profile_repr):
-        if '=' in profile_repr:
-            address, name = profile_repr.split('=', 1)
-        else:
-            address = profile_repr
-            name = _("Unknown profile")
-        return Profile(name, address)
+        self.name_entry = Gtk.Entry(text=name)
+        self.address_entry = Gtk.Entry(text=address)
+        # port_adjustment = Gtk.adjustment(value=port, lower=1024, upper=49150)
+        # self.port_spin_button = Gtk.SpingButton(adjustment=port_adjustment)
+        box = Gtk.Box()
+        box.append(self.name_entry)
+        box.append(self.address_entry)
+        # box.append(self.port_spin_button)
+        self.main_box.prepend(box)
+        # self.name_entry.connect('notify::text', self.entry_notify_text_cb)
+        # self.address_entry.connect('notify::text', self.entry_notify_text_cb)
 
-    def get_action(self):
-        return action.ActionInfo('server-profile', None, self.name, arg=repr(self), arg_format='s')
+    async def run(self):
+        result = await super().run()
+        # self.name_entry.disconnect_by_func(self.entry_notify_text_cb)
+        # self.address_entry.disconnect_by_func(self.entry_notify_text_cb)
+        return (self.name_entry.get_text(), self.address_entry.get_text()) if result else (None, None)
 
-    def __repr__(self):
-        return f'{self.address}={self.name}'
+    # def entry_notify_text_cb(self, entry, param):
+    #     if self.name_entry.get_text() and self.address_entry.get_text():
+    #         self.ok_button.set_sensitive(True)
+    #     else:
+    #         self.ok_button.set_sensitive(False)
 
 
 class __unit__(mixins.UnitConfigMixin, unit.Unit):
-    LOCAL_HOST_NAME = _("Local host")
-    LOCAL_HOST_ADDRESS = 'localhost:6600'
-
     def __init__(self, manager):
         super().__init__(manager)
 
-        self.user_profiles_struct = ssde.List(
-            label=_("Profiles"),
-            substruct=ssde.Dict(
-                label=_("Profile"),
-                substructs=[
-                    ssde.Text(name='name', label=_("Name"), default=_("<Name>")),
-                    ssde.Text(name='address', label=_("[password@]host:port"), default=_("<Host>") + ':6600'),
-                ]))
+        profiles = self.config.profiles._get(default={})
+        if not isinstance(profiles, dict):
+            self.config.profiles._set(dict(profiles))
 
-        default_profiles = [
-            {
-                'name': self.LOCAL_HOST_NAME,
-                'address': self.LOCAL_HOST_ADDRESS,
-            },
-        ]
+        self.menu_zeroconf = Gio.Menu()
+        self.menu_localhost = Gio.Menu()
+        self.menu_user = Gio.Menu()
+        self.menu_user_hosts = Gio.Menu()
+        self.menu_user_edit = Gio.Menu()
+        self.menu_user_edit_real = Gio.Menu()
 
-        self.config.profiles._get(default=default_profiles)
-
-        self.zeroconf_menu = Gio.Menu()
         self.zeroconf_profiles_setup()
-
-        self.user_menu = Gio.Menu()
+        self.menu_from_profiles(self.menu_localhost, {_("Local host"): 'localhost:6600'})
         self.user_profiles_setup()
 
         self.menu = Gio.Menu()
-        self.menu.append_section(None, self.zeroconf_menu)
-        self.menu.append_section(None, self.user_menu)
+        self.menu.append_section(None, self.menu_zeroconf)
+        self.menu.append_section(None, self.menu_localhost)
+        self.menu.append_section(None, self.menu_user)
+        self.menu_user.append_section(None, self.menu_user_hosts)
+        self.menu_user.append_submenu(_("Edit hosts"), self.menu_user_edit)
 
     def cleanup(self):
         super().cleanup()
         asyncio.get_event_loop().run_until_complete(self.zeroconf_profiles_cleanup())
 
+    def get_edit_action(self):
+        return action.ActionInfo('edit-user-profile', self.edit_user_profile_cb, arg_format='(ss)')
+
     def generate_actions(self):
-        yield action.ActionInfo('edit-user-profiles', self.edit_user_profiles_cb, _("Edit profiles"))
+        yield self.get_edit_action()
 
     def zeroconf_profiles_setup(self):
         self.zc_profiles = {}
@@ -122,20 +126,38 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
             self.zc_profiles.pop(short_name)
         if state_change in (zeroconf.ServiceStateChange.Added, zeroconf.ServiceStateChange.Updated) and short_name not in self.zc_profiles:
             info = await self.azc.async_get_service_info(service_type, name)
-            self.zc_profiles[short_name] = Profile(short_name, f'{info.server[:-1]}:{info.port}').get_action()
-        family = action.ActionInfoFamily(self.zc_profiles.values(), 'app')
-        self.zeroconf_menu.remove_all()
-        self.zeroconf_menu.append_section(None, family.get_menu())
+            self.zc_profiles[short_name] = f'{info.server[:-1]}:{info.port}'
+        self.menu_from_profiles(self.menu_zeroconf, self.zc_profiles)
 
     def user_profiles_setup(self):
-        family = action.ActionInfoFamily((Profile(**profile).get_action() for profile in self.config.profiles._get()), 'app')
-        self.user_menu.remove_all()
-        self.user_menu.append_section(None, family.get_menu())
+        self.menu_from_profiles(self.menu_user_hosts, self.config.profiles._get())
+        edit_action = self.get_edit_action()
+        edit_actions = (edit_action.derive(name, arg=(name, address)) for name, address in self.config.profiles._get().items())
+        edit_family = action.ActionInfoFamily(edit_actions, 'app')
+        self.menu_user_edit.remove_all()
+        self.menu_user_edit.append_section(None, edit_family.get_menu())
+        self.menu_user_edit.append_item(edit_action.derive(_("Add profile"), arg=('', '<host>:6600')).get_menu_item('app'))
 
-    def edit_user_profiles_cb(self, *args):
-        value = self.user_profiles_struct.edit(None, self.config.profiles._get(), self.config.edit_dialog_size._get(default=[500, 500]))
-        if value:
-            self.config.profiles._set(value)
-            self.user_profiles_setup()
+    @staticmethod
+    def menu_from_profiles(menu, profiles):
+        base_action = action.ActionInfo('server-profile', None, arg_format='s')
+        actions = (base_action.derive(name, arg=f'{address}={name}') for name, address in profiles.items())
+        family = action.ActionInfoFamily(actions, 'app')
+        menu.remove_all()
+        menu.append_section(None, family.get_menu())
 
-    profile_from_repr = staticmethod(Profile.from_repr)
+    @misc.create_task
+    async def edit_user_profile_cb(self, action_, arg):
+        name, address = arg.unpack()
+        used_names = list(self.config.profiles._get())
+        if name in used_names:
+            used_names.remove(name)
+        new_name, new_address = await ProfileDialogAsync(name, address, used_names).run()
+        if new_name is None:
+            return
+        profiles = self.config.profiles._get()
+        if name != '':
+            del profiles[name]
+        if new_name != '':
+            profiles[new_name] = new_address
+        self.user_profiles_setup()
