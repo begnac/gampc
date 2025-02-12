@@ -112,7 +112,6 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
             self.headerbar.time_scale.set_sensitive(True)
 
     def notify_current_song_cb(self, *args):
-        self.headerbar.time_scale.break_interaction()
         self.update_title()
 
     def update_title(self, *args):

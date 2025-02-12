@@ -64,8 +64,7 @@ class TimeScale(Gtk.Box):
         self.label_box = Gtk.Box()
 
         self.bind_property('elapsed', self.scale, 'fill-level', GObject.BindingFlags.SYNC_CREATE)
-        self.bind_property('duration', self.scale.get_adjustment(), 'upper', GObject.BindingFlags.SYNC_CREATE)
-        self.bind_property('duration', self.scale.get_adjustment(), 'value', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: self.scale.get_fill_level())
+        self.connect('notify::duration', self.__class__.notify_duration_cb)
 
         self.elapsed_binding = None
         self.set_elapsed_binding()
@@ -99,6 +98,11 @@ class TimeScale(Gtk.Box):
         self.scale_gesture_click.disconnect_by_func(self.scale_released_cb)
         self.scale_gesture_click.disconnect_by_func(self.scale_cancel_cb)
 
+    def notify_duration_cb(self, param):
+        self.break_interaction()
+        self.scale.set_range(0, self.duration)
+        self.scale.get_adjustment().set_value(self.elapsed)
+
     def scale_pressed_cb(self, controller, n_pressed, x, y):
         if controller.get_current_button() == 1 and n_pressed == 1 and self.elapsed_binding:
             self.elapsed_binding.unbind()
@@ -124,7 +128,7 @@ class TimeScale(Gtk.Box):
             GLib.idle_add(self.set_sensitive, True)
 
     def set_elapsed_binding(self):
-        if not self.elapsed_binding:
+        if self.elapsed_binding is None:
             self.elapsed_binding = self.bind_property('elapsed', self.scale.get_adjustment(), 'value', GObject.BindingFlags.SYNC_CREATE)
 
     def notify_sensitive_cb(self, param):
