@@ -61,15 +61,6 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
     '''
 
     css += '''
-    editablelabel.editing {
-      border-bottom-color: @borders;
-      border-left-color: @borders;
-      border-right-color: @borders;
-      border-top-color: @borders;
-    }
-    '''
-
-    css += '''
       columnview > listview:drop(active) > row.drop-row {
       border-bottom-color: @drop-color;
     }
