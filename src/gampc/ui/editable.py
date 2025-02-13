@@ -79,7 +79,7 @@ class EditableLabel(Gtk.Stack):
         GLib.idle_add(widget.stop_editing, True)
 
     def set_label(self, label):
-        self.label.set_label(str(label))
+        self.label.set_label(label)
 
     def _start_editing(self, args):
         self.start_editing()

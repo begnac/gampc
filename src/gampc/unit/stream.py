@@ -59,10 +59,6 @@ class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
 
         self.set_edit_stack(edit_stack)
 
-    def cleanup(self):
-        self.set_edit_stack(None)
-        super().cleanup()
-
     def generate_editing_actions(self):
         yield from super().generate_editing_actions()
         yield from self.generate_url_actions()

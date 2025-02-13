@@ -236,7 +236,7 @@ class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
         super().__init__(*args, **kwargs)
 
     def init_tandaid_view(self, view):
-        self.connect('map', self.__class__.map_cb, view)
+        self.connect_clean(self, 'map', self.__class__.map_cb, view)
         self.connect_clean(view.item_selection_filter_model, 'items-changed', self.tandaid_selection_changed_cb)
 
     def map_cb(self, view):
