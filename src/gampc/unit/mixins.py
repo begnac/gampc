@@ -65,6 +65,13 @@ class ComponentWidget(cleanup.CleanupSignalMixin, Gtk.Box):
         self.widget = widget
         self.add_cleanup_below(widget)
 
+    # Should not be necessary !
+    def cleanup(self):
+        super().cleanup()
+        self.remove(self.widget)
+        del self.widget
+        del self._cleanup_below
+
     def notify_subtitle_cb(self, pspec):
         window = self.get_root()
         if window is not None:
