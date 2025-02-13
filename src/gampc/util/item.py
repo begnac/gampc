@@ -30,7 +30,7 @@ class BaseItem(GObject.Object):
 
     def __init__(self, *, value=None):
         super().__init__()
-        if self.value is not None:
+        if value is not None:
             self.new_value(value)
 
     def new_value(self, value):
