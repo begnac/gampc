@@ -475,27 +475,49 @@ class TandaDatabase(db.Database):
 
     @staticmethod
     def _tanda_from_songs(songs):
-        tanda_fields = (('ArtistSortName', '???'),
-                        ('Genre', '???'),
-                        ('PerformersLastNames', '???'))
-        merged = {field: [song.get(field, default) for song in songs] for field, default in tanda_fields}
-        merged['Genre'] = [genre if genre.split(' ', 1)[0] not in ('Tango', 'Vals', 'Milonga') else genre.split(' ', 1)[0] for genre in merged['Genre']]
-        sorted_merged = {field: sorted(set(merged[field])) for field, default in tanda_fields}
-        tanda = {}
-        tanda['Artist'] = '; '.join(sorted_merged['ArtistSortName'])
-        match = re.match(r'(.*) \((.*)\)', tanda['Artist'])
+        def transform(value, patterns):
+            for pattern, template in patterns:
+                match = re.search(pattern, value)
+                if match:
+                    return match.expand(template)
+            return value
+
+        ARTIST_PATTERNS = [
+            # ('^(La Típica Sanata|Otros Aires|.* Orquesta)$', '\\1'),
+            # ('^(.* Tango)$', '\\1'),
+            ('^(.*), dir\\. (.*) ([^ ]+)$', '\\3, \\2 (\\1)'),
+            ('^(Orquesta Típica|Dúo|Cuarteto|Sexteto) (.*)$', '\\2, \\1'),
+            ('^(.*) ((?:Di |De |Del )*[^ ]+)$', '\\2, \\1'),
+        ]
+
+        LAST_NAME_PATTERNS = [
+            ('^(.*) ((?:Di |De |Del )*[^ ]+)$', '\\2'),
+        ]
+
+        GENRE_PATTERNS = [
+            ('^(Tango|Vals|Milonga) .*$', '\\1'),
+        ]
+
+        artists = set()
+        performers = set()
+        genres = set()
+        for song in songs:
+            artists.add(transform(song.get('Artist', '???'), ARTIST_PATTERNS))
+            genres.add(transform(song.get('Genre', '???'), GENRE_PATTERNS))
+            for performer in song.get('Performer', '???').split(', '):
+                performers.add(transform(performer, LAST_NAME_PATTERNS))
+        tanda = {
+            'Artist': '; '.join(sorted(artists)),
+            'Performer': ', '.join(sorted(performers)),
+            'Genre': ', '.join(sorted(genres)),
+            'Last_Modified': str(datetime.date.today()),
+        }
+
+        match = re.search('^(.*) \\((.*)\\)$', tanda['Artist'])
         if match:
             tanda['Artist'] = match.group(1)
             tanda['Comment'] = match.group(2)
 
-        performers = []
-        for song_performers in merged['PerformersLastNames']:
-            for performer in song_performers.split(', '):
-                if performer not in performers:
-                    performers.append(performer)
-        tanda['Performer'] = ', '.join(performers)
-        tanda['Genre'] = ', '.join(sorted_merged['Genre'])
-        tanda['Last_Modified'] = str(datetime.date.today())
         return tanda
 
     # Cleanup stuff
