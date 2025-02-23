@@ -18,15 +18,27 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import re
+
 from gi.repository import GObject
 from gi.repository import Gio
 from gi.repository import Gtk
 
-import re
+from . import config
+
+
+def get_fields_config():
+    return config.ConfigFixedDict({
+        'info': config.ConfigOpenDict(config.ConfigFixedDict({
+            'visible': config.ConfigItem(bool),
+            'width': config.ConfigItem(int),
+        })),
+        'order': config.ConfigList(config.ConfigItem(str)),
+    })
 
 
 def config_notify_cb(obj, param, config):
-    config[param.name]._set(obj.get_property(param.name))
+    config[param.name] = obj.get_property(param.name)
 
 
 class Field(GObject.Object):
@@ -71,8 +83,7 @@ class FieldFamily(GObject.Object):
     def __init__(self, config):
         super().__init__(order=Gio.ListStore(item_type=Gtk.StringObject))
         self.config = config
-        self.old_order = self.config.order._get(default=[])
-        self.config.order._set([])
+        self.old_order, self.config['order'] = self.config['order'], []
         self.order.connect('items-changed', self.order_changed_cb, self.config)
 
         self.names = []
@@ -82,7 +93,7 @@ class FieldFamily(GObject.Object):
 
     @staticmethod
     def order_changed_cb(order, position, removed, added, config):
-        config.order._set([name.get_string() for name in order])
+        config['order'] = [name.get_string() for name in order]
 
     def register_field(self, field):
         if field.name in self.names:
@@ -94,10 +105,12 @@ class FieldFamily(GObject.Object):
             self.basic_names.append(field.name)
         self.fields[field.name] = field
 
-        field_config = self.config.info[field.name]
+        field_config = self.config['info'][field.name]
         field.connect('notify', config_notify_cb, field_config)
-        field.width = field_config.width._get(default=field.width)
-        field.visible = field_config.visible._get(default=field.visible)
+        if field_config['width'] is not None:
+            field.width = field_config['width']
+        if field_config['visible'] is not None:
+            field.visible = field_config['visible']
         if field.name in list(self.order):
             return
         if field.name not in self.old_order:

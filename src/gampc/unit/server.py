@@ -18,12 +18,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import asyncio
+
 from gi.repository import GObject
 
-import asyncio
 import ampd
 
 from ..util import action
+from ..util import config
 from ..util import unit
 from ..util.logger import logger
 
@@ -44,7 +46,11 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
     server_profile = GObject.Property(type=str)
 
     def __init__(self, manager):
-        super().__init__(manager)
+        super().__init__(manager,
+                         config.ConfigFixedDict({
+                             'server_profile': config.ConfigItem(str, default=''),
+                             'server_profile_previous': config.ConfigItem(str, default=''),
+                         }))
 
         self.ampd_client = ampd.ClientGLib()
         self.connect_clean(self.ampd_client, 'client-connected', self.client_connected_cb)
@@ -58,8 +64,8 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
 
         self.want_to_connect = False
 
-        self.server_profile = self.config.server_profile._get(default='')
-        self.server_profile_previous = self.config.server_profile_previous._get(default=self.server_profile)
+        self.server_profile = self.config['server_profile']
+        self.server_profile_previous = self.config['server_profile_previous'] or self.server_profile
         self.server_profile_backup = self.server_profile
 
         self.profile = Profile(self.server_profile)
@@ -144,9 +150,9 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
     def notify_server_profile_cb(self, param):
         self.profile = Profile(self.server_profile)
         self.set_server_label()
-        self.config.server_profile._set(self.server_profile)
+        self.config['server_profile'] = self.server_profile
         self.ampd_connect()
         if self.server_profile != self.server_profile_backup:
-            self.config.server_profile_previous._set(self.server_profile_backup)
+            self.config['server_profile_previous'] = self.server_profile_backup
             self.server_profile_previous = self.server_profile_backup
             self.server_profile_backup = self.server_profile

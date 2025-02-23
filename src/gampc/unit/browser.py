@@ -18,12 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gio
-
 import os
+
+from gi.repository import Gio
 
 import ampd
 
+from ..util import config
 from ..util import misc
 from ..util import unit
 
@@ -83,13 +84,14 @@ class BrowserTree(lefttree.Tree):
         node.contents = contents[node.name]
 
 
-class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, unit.Unit):
+class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, unit.Unit):
     TITLE = _("Database Browser")
     KEY = '2'
 
     def __init__(self, manager):
-        super().__init__(manager)
-        self.config.pane_separator._get(default=100)
+        super().__init__(manager,
+                         config.ConfigFixedDict({'paned': BrowserWidget.get_paned_config()}))
+
         self.require('database')
         self.require('fields')
         self.require('persistent')
@@ -97,7 +99,7 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, uni
         self.tree = BrowserTree(self.ampd, self.unit_database.update)
 
     def new_widget(self):
-        browser = BrowserWidget(self.unit_fields.fields, self.unit_database.cache, self.config.pane_separator, self.tree)
+        browser = BrowserWidget(self.unit_fields.fields, self.unit_database.cache, self.config['paned'], self.tree)
         view = browser.main
 
         view.add_context_menu_actions(self.generate_foreign_queue_actions(view), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)

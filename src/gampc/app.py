@@ -66,8 +66,6 @@ class App(Gtk.Application):
         self.excepthook_orig, sys.excepthook = sys.excepthook, self.excepthook
 
         self.unit_manager = unit.UnitManager()
-        # self.unit_manager.set_target('config')
-        # self.unit_config = self.unit_manager.get_unit('config')
 
         default_units = [
             'menu', 'help', 'profiles', 'server',
@@ -78,8 +76,6 @@ class App(Gtk.Application):
             'command', 'log'
         ]
 
-        # units = self.unit_manager.get_unit('config').config.access('units', default_units)
-        # self.unit_config.config.units =
         self.unit_manager.set_target(*default_units)
 
         self.unit_server = self.unit_manager.get_unit('server')

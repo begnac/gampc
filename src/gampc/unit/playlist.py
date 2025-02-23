@@ -26,6 +26,7 @@ import ampd
 from ..util import action
 from ..util import cache
 from ..util import cleanup
+from ..util import config
 from ..util import item
 from ..util import misc
 from ..util import unit
@@ -185,7 +186,7 @@ class PlaylistTree(lefttree.Tree):
         return folders, names
 
 
-class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mixins.UnitComponentTandaActionMixin, mixins.UnitComponentPlaylistActionMixin, mixins.UnitConfigMixin, unit.Unit):
+class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mixins.UnitComponentTandaActionMixin, mixins.UnitComponentPlaylistActionMixin, unit.Unit):
     TITLE = _("Playlist")
     KEY = '5'
 
@@ -199,8 +200,9 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
     """
 
     def __init__(self, manager):
-        super().__init__(manager)
-        self.config.pane_separator._get(default=100)
+        super().__init__(manager,
+                         config.ConfigFixedDict({'paned': PlaylistWidget.get_paned_config()}))
+
         self.require('database')
         self.require('fields')
         self.require('persistent')
@@ -212,7 +214,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         self.tree = PlaylistTree(self.playlist_cache, self.unit_database.update)
 
     def new_widget(self):
-        playlist = PlaylistWidget(self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config.pane_separator, self.tree)
+        playlist = PlaylistWidget(self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config['paned'], self.tree)
         view = playlist.main
 
         view.add_context_menu_actions(self.generate_foreign_queue_actions(view), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)

@@ -23,6 +23,7 @@ import functools
 from gi.repository import GLib
 
 from ..util import action
+from ..util import config
 from ..util import db
 from ..util import field
 from ..util import item
@@ -104,18 +105,18 @@ class StreamDatabase(db.Database):
                                                                                                        ':' + ',:'.join(self.fields.basic_names)), stream_)
 
 
-class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, unit.Unit):
+class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, unit.Unit):
     TITLE = _("Internet Streams")
     KEY = '4'
 
     def __init__(self, manager):
-        super().__init__(manager)
-        self.config.edit_dialog_size._get(default=[500, 500])
+        super().__init__(manager,
+                         config.ConfigFixedDict({'fields': field.get_fields_config()}))
 
         self.require('database')
         self.require('persistent')
 
-        self.fields = field.FieldFamily(self.config.fields)
+        self.fields = field.FieldFamily(self.config['fields'])
         self.fields.register_field(field.Field('Name', _("Name")))
         self.fields.register_field(field.Field('file', _("URL"), editable=True))
         self.fields.register_field(field.Field('Comment', _("Comment")))

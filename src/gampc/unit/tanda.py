@@ -33,6 +33,7 @@ import ampd
 
 from ..util import action
 from ..util import cleanup
+from ..util import config
 from ..util import db
 from ..util import field
 from ..util import item
@@ -587,7 +588,7 @@ for p in range(5):
     '''
 
 
-class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mixins.UnitConfigMixin, unit.Unit):
+class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, unit.Unit):
     __gsignals__ = {
         'verify-progress': (GObject.SIGNAL_RUN_LAST, None, (float,)),
     }
@@ -598,16 +599,20 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
     KEY = '6'
 
     def __init__(self, manager):
-        super().__init__(manager)
-        self.config.pane_separator._get(default=100)
+        super().__init__(manager,
+                         config.ConfigFixedDict({
+                             'paned': TandaWidget.get_paned_config(),
+                             'fields': field.get_fields_config(),
+                         }))
 
-        self.css_provider.load_from_string(CSS)
         self.require('fields')
         self.require('database')
         self.require('persistent')
         self.require('search')
 
-        self.fields = field.FieldFamily(self.config.fields)
+        self.css_provider.load_from_string(CSS)
+
+        self.fields = field.FieldFamily(self.config['fields'])
         self.fields.register_field(field.Field('Artist', _("Artist")))
         self.fields.register_field(field.Field('Genre', _("Genre")))
         self.fields.register_field(field.Field('Years_Min', visible=False, get_value=lambda tanda: min(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
@@ -656,7 +661,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mi
         return component
 
     def new_widget(self):
-        tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config.pane_separator, self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
+        tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config['paned'], self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
 
         tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
         tanda.add_context_menu_actions(self.generate_db_actions(), 'db', self.TITLE)

@@ -22,6 +22,7 @@ from gi.repository import GObject
 from gi.repository import Gtk
 
 from ..util import action
+from ..util import config
 from ..util import cleanup
 from ..util import unit
 from ..util.logger import logger
@@ -45,8 +46,8 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.unit = unit
         self.component = None
 
-        self.default_width = self.unit.config.width._get(default=1000)
-        self.default_height = self.unit.config.height._get(default=600)
+        self.default_width = self.unit.config['width']
+        self.default_height = self.unit.config['height']
         self.set_default_size(self.default_width, self.default_height)
         self.connect('notify::default-width', self.__class__.notify_default_size_cb)
         self.connect('notify::default-height', self.__class__.notify_default_size_cb)
@@ -84,7 +85,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::state', self.set_time_scale_sensitive)
         self.connect_clean(self.unit.unit_persistent, 'notify::protect-active', self.set_time_scale_sensitive)
 
-        self.logging_handler = logging.Handler(self.unit.config.message_timeout._get() * 1000)
+        self.logging_handler = logging.Handler(self.unit.config['message_timeout'] * 1000)
         logger.addHandler(self.logging_handler)
         self.main.append(self.logging_handler.box)
 
@@ -130,8 +131,8 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
     def notify_default_size_cb(self, param):
         if not self.is_fullscreen():
             width, height = self.get_default_size()
-            self.unit.config.width._set(width)
-            self.unit.config.height._set(height)
+            self.unit.config['width'] = width
+            self.unit.config['height'] = height
 
     def set_subtitle(self, subtitle=""):
         self.headerbar.subtitle.set_label(subtitle)
@@ -139,11 +140,16 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
 
 class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
     def __init__(self, manager):
-        super().__init__(manager)
+        super().__init__(manager,
+                         config.ConfigFixedDict({
+                             'width': config.ConfigItem(int, default=1000),
+                             'height': config.ConfigItem(int, default=600),
+                             'message_timeout': config.ConfigItem(int, default=5),
+                         }))
+
         self.require('menu')
         self.require('persistent')
         self.require('component')
-        self.config.message_timeout._get(default=1)
 
         self.unit_menu.load_family(self.generate_actions(), _("Window"), Gtk.Application.get_default(), self.unit_menu.menu_window_section, True)
 

@@ -18,10 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import urllib
 import os
-
-from gi.repository import GLib
+import urllib
 
 from ..util import field
 from ..util import misc
@@ -32,9 +30,10 @@ from . import mixins
 
 class __unit__(mixins.UnitConfigMixin, unit.Unit):
     def __init__(self, manager):
-        super().__init__(manager)
+        super().__init__(manager,
+                         field.get_fields_config())
 
-        self.config.music_dir._get(default=GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC))
+        # self.config.music_dir._get(default=GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC))
 
         self.fields = field.FieldFamily(self.config)
         self.fields.register_field(field.Field('Album', _("Album")))

@@ -21,6 +21,7 @@
 from gi.repository import Gtk
 
 from ..util import cleanup
+from ..util import config
 from ..util import misc
 
 from ..ui import contextmenu
@@ -52,20 +53,23 @@ class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalM
         self.left = Gtk.ScrolledWindow(child=self.left_view)
         self.left_view_search = listviewsearch.ListViewSearch(self.left_view, lambda text, row: text.lower() in row.get_item().name.lower())
 
-        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config._get(), start_child=self.left, end_child=main, **kwargs)
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config['position'], start_child=self.left, end_child=main, **kwargs)
 
         self.left_selection_pos = []
         self.connect_clean(self.left_selection, 'selection-changed', self.left_selection_changed_cb)
-        self.connect('notify::position', self.paned_notify_position_cb, config)
+        self.connect('notify::position', self.__class__.notify_position_cb)
 
         self.add_cleanup_below(self.left_view_search)
 
     def left_selection_changed_cb(self, selection, position, n_items):
         self.left_selection_pos = list(misc.get_selection(selection))
 
-    @staticmethod
-    def paned_notify_position_cb(paned, param, config):
-        config._set(paned.get_position())
+    def notify_position_cb(self, param):
+        self.config['position'] = self.get_position()
 
     def grab_focus(self):
         return self.left_view.grab_focus()
+
+    @staticmethod
+    def get_paned_config():
+        return config.ConfigFixedDict({'position': config.ConfigItem(int, default=100)})

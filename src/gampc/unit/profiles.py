@@ -27,6 +27,7 @@ import re
 import asyncio
 
 from ..util import action
+from ..util import config
 from ..util import misc
 from ..util import unit
 
@@ -70,11 +71,8 @@ class ProfileDialogAsync(dialog.DialogAsync):
 
 class __unit__(mixins.UnitConfigMixin, unit.Unit):
     def __init__(self, manager):
-        super().__init__(manager)
-
-        profiles = self.config.profiles._get(default={})
-        if not isinstance(profiles, dict):
-            self.config.profiles._set(dict(profiles))
+        super().__init__(manager,
+                         config.ConfigFixedDict({'profiles': config.ConfigOpenDict(config.ConfigItem(str))}))
 
         self.menu_zeroconf = Gio.Menu()
         self.menu_localhost = Gio.Menu()
@@ -130,9 +128,10 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.menu_from_profiles(self.menu_zeroconf, self.zc_profiles)
 
     def user_profiles_setup(self):
-        self.menu_from_profiles(self.menu_user_hosts, self.config.profiles._get())
+        profiles = self.config['profiles']
+        self.menu_from_profiles(self.menu_user_hosts, profiles)
         edit_action = self.get_edit_action()
-        edit_actions = (edit_action.derive(name, arg=(name, address)) for name, address in self.config.profiles._get().items())
+        edit_actions = (edit_action.derive(name, arg=(name, address)) for name, address in profiles.items())
         edit_family = action.ActionInfoFamily(edit_actions, 'app')
         self.menu_user_edit.remove_all()
         self.menu_user_edit.append_section(None, edit_family.get_menu())
@@ -149,13 +148,13 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
     @misc.create_task
     async def edit_user_profile_cb(self, action_, arg):
         name, address = arg.unpack()
-        used_names = list(self.config.profiles._get())
+        profiles = self.config['profiles']
+        used_names = list(profiles)
         if name in used_names:
             used_names.remove(name)
         new_name, new_address = await ProfileDialogAsync(name, address, used_names).run()
         if new_name is None:
             return
-        profiles = self.config.profiles._get()
         if name != '':
             del profiles[name]
         if new_name != '':

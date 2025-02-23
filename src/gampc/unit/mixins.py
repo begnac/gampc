@@ -25,14 +25,18 @@ import ampd
 
 from ..util import action
 from ..util import cleanup
+from ..util import config
 from ..util import misc
 
 
 class UnitConfigMixin:
-    def __init__(self, manager):
+    def __init__(self, manager, _config):
         super().__init__(manager)
-        self.require('config')
-        self.config = self.unit_config.load_config(self.name)
+        self.config = config.load_json(self.name, _config)
+
+    def cleanup(self):
+        super().cleanup()
+        config.save_json(self.name, self.config)
 
 
 class UnitServerMixin(cleanup.CleanupBaseMixin):
