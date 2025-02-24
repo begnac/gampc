@@ -600,10 +600,10 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
 
     def __init__(self, manager):
         super().__init__(manager,
-                         config.ConfigFixedDict({
-                             'paned': TandaWidget.get_paned_config(),
-                             'fields': field.get_fields_config(),
-                         }))
+                         config.Dict(
+                             paned=TandaWidget.get_paned_config(),
+                             fields=field.get_fields_config(),
+                         ))
 
         self.require('fields')
         self.require('database')

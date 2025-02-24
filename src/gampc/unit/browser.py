@@ -89,8 +89,7 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, uni
     KEY = '2'
 
     def __init__(self, manager):
-        super().__init__(manager,
-                         config.ConfigFixedDict({'paned': BrowserWidget.get_paned_config()}))
+        super().__init__(manager, config.Dict(paned=BrowserWidget.get_paned_config()))
 
         self.require('database')
         self.require('fields')

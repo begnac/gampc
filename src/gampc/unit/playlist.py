@@ -200,8 +200,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
     """
 
     def __init__(self, manager):
-        super().__init__(manager,
-                         config.ConfigFixedDict({'paned': PlaylistWidget.get_paned_config()}))
+        super().__init__(manager, config.Dict(paned=PlaylistWidget.get_paned_config()))
 
         self.require('database')
         self.require('fields')

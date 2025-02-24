@@ -110,8 +110,7 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, uni
     KEY = '4'
 
     def __init__(self, manager):
-        super().__init__(manager,
-                         config.ConfigFixedDict({'fields': field.get_fields_config()}))
+        super().__init__(manager, config.Dict(fields=field.get_fields_config()))
 
         self.require('database')
         self.require('persistent')

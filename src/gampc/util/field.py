@@ -28,13 +28,13 @@ from . import config
 
 
 def get_fields_config():
-    return config.ConfigFixedDict({
-        'info': config.ConfigOpenDict(config.ConfigFixedDict({
-            'visible': config.ConfigItem(bool),
-            'width': config.ConfigItem(int),
-        })),
-        'order': config.ConfigList(config.ConfigItem(str)),
-    })
+    return config.Dict(
+        info=config.Dict(config.Dict(
+            visible=config.Item(bool),
+            width=config.Item(int),
+        )),
+        order=config.List(config.Item(str)),
+    )
 
 
 def config_notify_cb(obj, param, config):

@@ -26,7 +26,7 @@ from gi.repository import GLib
 from .. import __application__
 
 
-class ConfigItem:
+class Item:
     def __init__(self, type_, /, *, default=None, is_valid=lambda value: True):
         self.type_ = type_
         self._is_valid = is_valid
@@ -39,27 +39,21 @@ class ConfigItem:
         return value if self.is_valid(value) else self.default
 
 
-class ConfigFixedDict(ConfigItem):
-    def __init__(self, fields, **kwargs):
-        super().__init__(dict, default={}, **kwargs)
+class Dict(Item):
+    def __init__(self, other=None, /, **fields):
+        super().__init__(dict, default={})
         self.fields = fields
+        self.other = other
 
     def load(self, value):
         value = super().load(value)
-        return {key: definition.load(value.get(key)) for key, definition in self.fields.items()}
+        result = {key: definition.load(value.get(key)) for key, definition in self.fields.items()}
+        if self.other is not None:
+            result.update({key: self.other.load(item) for key, item in value.items() if key not in self.fields and self.other.is_valid(item)})
+        return result
 
 
-class ConfigOpenDict(ConfigItem):
-    def __init__(self, definition, **kwargs):
-        super().__init__(dict, default={}, **kwargs)
-        self.definition = definition
-
-    def load(self, value):
-        value = super().load(value)
-        return {key: self.definition.load(item) for key, item in value.items() if self.definition.is_valid(item)}
-
-
-class ConfigList(ConfigItem):
+class List(Item):
     def __init__(self, definition, **kwargs):
         super().__init__(dict, default=[], **kwargs)
         self.definition = definition

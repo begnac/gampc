@@ -72,4 +72,4 @@ class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalM
 
     @staticmethod
     def get_paned_config():
-        return config.ConfigFixedDict({'position': config.ConfigItem(int, default=100)})
+        return config.Dict(position=config.Item(int, default=100, is_valid=lambda value: value >= 50))

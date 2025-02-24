@@ -71,8 +71,7 @@ class ProfileDialogAsync(dialog.DialogAsync):
 
 class __unit__(mixins.UnitConfigMixin, unit.Unit):
     def __init__(self, manager):
-        super().__init__(manager,
-                         config.ConfigFixedDict({'profiles': config.ConfigOpenDict(config.ConfigItem(str))}))
+        super().__init__(manager, config.Dict(profiles=config.Dict(config.Item(str))))
 
         self.menu_zeroconf = Gio.Menu()
         self.menu_localhost = Gio.Menu()

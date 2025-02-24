@@ -47,10 +47,10 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
 
     def __init__(self, manager):
         super().__init__(manager,
-                         config.ConfigFixedDict({
-                             'server_profile': config.ConfigItem(str, default=''),
-                             'server_profile_previous': config.ConfigItem(str, default=''),
-                         }))
+                         config.Dict(
+                             server_profile=config.Item(str, default=''),
+                             server_profile_previous=config.Item(str, default=''),
+                         ))
 
         self.ampd_client = ampd.ClientGLib()
         self.connect_clean(self.ampd_client, 'client-connected', self.client_connected_cb)

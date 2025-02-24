@@ -141,11 +141,11 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
 class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
     def __init__(self, manager):
         super().__init__(manager,
-                         config.ConfigFixedDict({
-                             'width': config.ConfigItem(int, default=1000),
-                             'height': config.ConfigItem(int, default=600),
-                             'message_timeout': config.ConfigItem(int, default=5),
-                         }))
+                         config.Dict(
+                             width=config.Item(int, default=1000),
+                             height=config.Item(int, default=600),
+                             message_timeout=config.Item(int, default=5),
+                         ))
 
         self.require('menu')
         self.require('persistent')
