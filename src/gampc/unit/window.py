@@ -125,17 +125,17 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
                 title = _("{title} (paused)").format(title=title)
         else:
             title = __application__.upper()
+        self.headerbar.set_title(title)
+
+    def set_subtitle(self, subtitle=None):
         server = self.unit.unit_server.server_label.rsplit('@', 1)[-1].strip()
-        self.headerbar.set_title(f"{title} @ {server}")
+        self.headerbar.subtitle.set_label(f"{subtitle} @ {server}" if subtitle else server)
 
     def notify_default_size_cb(self, param):
         if not self.is_fullscreen():
             width, height = self.get_default_size()
             self.unit.config['width'] = width
             self.unit.config['height'] = height
-
-    def set_subtitle(self, subtitle=""):
-        self.headerbar.subtitle.set_label(subtitle)
 
 
 class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
