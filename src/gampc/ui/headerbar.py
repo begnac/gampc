@@ -32,23 +32,23 @@ class PlaybackButtons(Gtk.Box):
     def __init__(self):
         super().__init__()
 
-        play_or_pause = Gtk.Button(action_name='app.play-or-pause')
+        play_or_pause = Gtk.Button(action_name='app.play-or-pause', focusable=False)
         self.bind_property('playing', play_or_pause, 'icon-name', GObject.BindingFlags.SYNC_CREATE, lambda binding, value: 'media-playback-pause-symbolic' if value else 'media-playback-start-symbolic')
 
-        self.append(Gtk.Button(action_name='app.previous', icon_name='media-skip-backward-symbolic'))
+        self.append(Gtk.Button(action_name='app.previous', icon_name='media-skip-backward-symbolic', focusable=False))
         self.append(play_or_pause)
-        self.append(Gtk.Button(action_name='app.stop', icon_name='media-playback-stop-symbolic'))
-        self.append(Gtk.Button(action_name='app.next', icon_name='media-skip-forward-symbolic'))
+        self.append(Gtk.Button(action_name='app.stop', icon_name='media-playback-stop-symbolic', focusable=False))
+        self.append(Gtk.Button(action_name='app.next', icon_name='media-skip-forward-symbolic', focusable=False))
 
 
 class OptionButtons(Gtk.Box):
     def __init__(self):
         super().__init__()
 
-        self.append(Gtk.ToggleButton(action_name='app.random', icon_name='media-playlist-shuffle-symbolic'))
-        self.append(Gtk.ToggleButton(action_name='app.repeat', icon_name='media-playlist-repeat-symbolic'))
-        # self.append(Gtk.ToggleButton(action_name='app.consume', icon_name='media-skip-backward-symbolic'))
-        self.append(Gtk.ToggleButton(action_name='app.single', icon_name='zoom-original-symbolic'))
+        self.append(Gtk.ToggleButton(action_name='app.random', icon_name='media-playlist-shuffle-symbolic', focusable=False))
+        self.append(Gtk.ToggleButton(action_name='app.repeat', icon_name='media-playlist-repeat-symbolic', focusable=False))
+        # self.append(Gtk.ToggleButton(action_name='app.consume', icon_name='media-skip-backward-symbolic', focusable=False))
+        self.append(Gtk.ToggleButton(action_name='app.single', icon_name='zoom-original-symbolic', focusable=False))
 
 
 class TimeScale(Gtk.Box):
@@ -148,7 +148,8 @@ class HeaderBar(Gtk.HeaderBar):
 
         self.volume_button = Gtk.ScaleButton(orientation=Gtk.Orientation.VERTICAL,
                                              icons=['audio-volume-muted-symbolic', 'audio-volume-high-symbolic', 'audio-volume-low-symbolic', 'audio-volume-medium-symbolic'],
-                                             adjustment=Gtk.Adjustment(upper=100, step_increment=1, page_increment=5))
+                                             adjustment=Gtk.Adjustment(upper=100, step_increment=1, page_increment=5), focusable=False)
+        self.volume_button.get_first_child().set_focusable(False)
         self.playback_buttons = PlaybackButtons()
         self.time_scale = TimeScale()
         self.bitrate_label = Gtk.Label()
