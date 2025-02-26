@@ -55,7 +55,7 @@ class Dict(Item):
 
 class List(Item):
     def __init__(self, definition, **kwargs):
-        super().__init__(dict, default=[], **kwargs)
+        super().__init__(list, default=[], **kwargs)
         self.definition = definition
 
     def load(self, value):
