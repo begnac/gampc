@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import collections
 import json
 import os
 
@@ -35,7 +36,7 @@ class Item:
     def is_valid(self, value):
         return isinstance(value, self.type_) and self._is_valid(value)
 
-    def load(self, value):
+    def load(self, value=None):
         return value if self.is_valid(value) else self.default
 
 
@@ -45,11 +46,14 @@ class Dict(Item):
         self.fields = fields
         self.other = other
 
-    def load(self, value):
+    def load(self, value=None):
         value = super().load(value)
-        result = {key: definition.load(value.get(key)) for key, definition in self.fields.items()}
-        if self.other is not None:
+        if self.other is None:
+            result = dict()
+        else:
+            result = collections.defaultdict(self.other.load)
             result.update({key: self.other.load(item) for key, item in value.items() if key not in self.fields and self.other.is_valid(item)})
+        result.update({key: definition.load(value.get(key)) for key, definition in self.fields.items()})
         return result
 
 
@@ -58,7 +62,7 @@ class List(Item):
         super().__init__(list, default=[], **kwargs)
         self.definition = definition
 
-    def load(self, value):
+    def load(self, value=None):
         value = super().load(value)
         return [self.definition.load(item) for item in value if self.definition.is_valid(item)]
 
