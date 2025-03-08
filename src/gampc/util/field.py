@@ -31,7 +31,7 @@ def get_fields_config():
     return config.Dict(
         info=config.Dict(config.Dict(
             visible=config.Item(bool),
-            width=config.Item(int),
+            width=config.Item(int, default=30, is_valid=lambda w: w >= 30),
         )),
         order=config.List(config.Item(str)),
     )
