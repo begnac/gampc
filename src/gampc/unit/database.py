@@ -18,17 +18,39 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+# import os
+import re
+# import urllib
+
 from gi.repository import GObject
 
 import ampd
 
-from ..util import unit
 from ..util import cache
+from ..util import misc
+from ..util import unit
 from ..util.logger import logger
 
 from ..ui import dialog
 
 from . import mixins
+
+
+def set_song_fields(song):
+    song['Duration'] = misc.format_time(float(song['duration'])) if 'Time' in song else ''
+
+    # title = song.get('Title') or song.get('Name', '')
+    # filename = song.get('file', '')
+    # url = urllib.parse.urlparse(filename)
+    # if url.scheme:
+    #     url_basename = os.path.basename(url.path)
+    #     title = '{0} [{1}]'.format(title, url_basename) if title else url_basename
+    # song['Title'] = title
+    song['Title'] = song.get('Title') or song.get('Name') or ''
+
+    match = re.search('\\.([^/.]*)$', song['file'])
+    if match:
+        song['Extension'] = match[1]
 
 
 class SongCache(cache.AsyncCache):
@@ -47,7 +69,7 @@ class SongCache(cache.AsyncCache):
             song = {'file': key, '_missing': True}
         elif len(songs) == 1:
             song = songs[0]
-            self.fields.set_derived_fields(song)
+            set_song_fields(song)
         else:
             raise ValueError
         return song
@@ -81,7 +103,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
 
     def update(self, songs):
         for song in songs:
-            self.unit_fields.fields.set_derived_fields(song)
+            set_song_fields(song)
             self.cache[song['file']] = song
 
     async def separator_missing(self):

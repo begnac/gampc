@@ -636,7 +636,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         self.fields.register_field(field.Field('Last_Played', _("Last played")))
         self.fields.register_field(field.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=self.get_last_played_weeks, sort_default=float('inf')))
         self.fields.register_field(field.Field('n_songs', _("Number of songs"), min_width=30, get_value=self.get_n_songs))
-        self.fields.register_field(field.Field('Duration', _("Duration"), get_value=lambda tanda: misc.format_time(sum((int(song['Time'])) for song in tanda.get('_songs', [])))))
+        self.fields.register_field(field.Field('Duration', _("Duration"), get_value=lambda tanda: misc.format_time(sum((float(song['duration'])) for song in tanda.get('_songs', [])))))
 
         self.tanda_model = item.ItemListStore(item_type=TandaItem)
         self.tanda_sorter = Gtk.CustomSorter.new(self.tanda_sort_func)

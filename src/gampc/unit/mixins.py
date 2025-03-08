@@ -111,7 +111,7 @@ class UnitComponentTotalsMixin(UnitComponentMixin):
 
     @staticmethod
     def totals_items_changed_cb(store, p, r, a, component, title):
-        time = sum(int(item.get_field('Time', '0')) for item in store)
+        time = sum(float(item.get_field('duration', '0')) for item in store)
         component.subtitle = f'{title} [{store.get_n_items()} / {misc.format_time(time)}]'
 
 
