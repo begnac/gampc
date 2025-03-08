@@ -48,7 +48,7 @@ def set_song_fields(song):
     # song['Title'] = title
     song['Title'] = song.get('Title') or song.get('Name') or ''
 
-    match = re.search('\\.([^/.]*)$', song['file'])
+    match = re.search('\\.(\\w+)$', song['file'])
     if match:
         song['Extension'] = match[1]
 
