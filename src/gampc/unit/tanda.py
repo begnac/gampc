@@ -657,9 +657,8 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         self.tanda_sort_model = Gtk.SortListModel(model=self.tanda_model, sorter=self.tanda_sorter)
         self.queue_model = item.ItemListStore(item_type=item.SongItem)
 
-        special_names = 'Duration', 'First_Song', 'Years', 'Last_Played_Weeks'
-        self.tanda_field_names = [name for name in self.fields.infos if name not in special_names]
-        self.song_field_names = list(self.unit_song.fields.infos) + ['duration']
+        self.tanda_field_names = list(self.fields.infos)[:-4]
+        self.song_field_names = list(self.unit_song.fields.infos)[:-2] + ['duration']
 
         self.db = TandaDatabase(self.tanda_model, self.tanda_field_names, self.song_field_names, self.name, self.unit_database.cache)
         self.update_cache_full(None)
