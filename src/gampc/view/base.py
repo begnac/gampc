@@ -35,10 +35,8 @@ from ..ui import listviewsearch
 
 class FieldItemColumn(Gtk.ColumnViewColumn):
     def __init__(self, field, *, sortable, **kwargs):
-        super().__init__(**kwargs, id=field.name)
+        super().__init__(**kwargs, id=field.name, title=field.title)
 
-        field.bind_property('title', self, 'title', GObject.BindingFlags.SYNC_CREATE)
-        field.bind_property('visible', self, 'visible', GObject.BindingFlags.SYNC_CREATE)
         field.bind_property('width', self, 'fixed-width', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL)
 
         self.set_resizable(True)
@@ -59,35 +57,32 @@ class ItemView(Gtk.ColumnView):
     visible_titles = GObject.Property(type=bool, default=True)
 
     def __init__(self, fields, factory_factory, widget_factory, **kwargs):
-        self.fields = fields
         super().__init__(show_row_separators=True, show_column_separators=True, **kwargs)
         self.add_css_class('data-table')
 
-        self.rows = self.get_last_child()
-        self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name, widget_factory)) for field in fields.fields.values()}
+        self.fields = fields
+        self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name, widget_factory)) for field in fields.infos.values()}
         for name in fields.order:
-            self.append_column(self.columns[name.get_string()])
+            self.append_column(self.columns[name])
+        self.rows = self.get_last_child()
 
         self.bind_property('visible-titles', self.get_first_child(), 'visible', GObject.BindingFlags.SYNC_CREATE)
         self.get_columns().connect('items-changed', self.columns_changed_cb)
-        self.fields.order.connect('items-changed', self.fields_order_changed_cb)
+        self.fields.connect('notify::order', self.fields_notify_order_cb, self.get_columns())
 
     def cleanup(self):
-        self.fields.order.disconnect_by_func(self.fields_order_changed_cb)
+        self.fields.disconnect_by_func(self.fields_notify_order_cb)
         self.get_columns().disconnect_by_func(self.columns_changed_cb)
 
     def columns_changed_cb(self, columns, position, removed, added):
-        self.fields.order.handler_block_by_func(self.fields_order_changed_cb)
-        self.fields.order[position:position + removed] = [Gtk.StringObject.new(col.get_id()) for col in columns[position:position + added]]
-        self.fields.order.handler_unblock_by_func(self.fields_order_changed_cb)
+        self.fields.handler_block_by_func(self.fields_notify_order_cb)
+        self.fields.order = [col.get_id() for col in columns]
+        self.fields.handler_unblock_by_func(self.fields_notify_order_cb)
 
-    def fields_order_changed_cb(self, order, position, removed, added):
-        columns = self.get_columns()
+    def fields_notify_order_cb(self, fields, param, columns):
         columns.handler_block_by_func(self.columns_changed_cb)
-        for col in list(columns[position:position + removed]):
-            self.remove_column(col)
-        for i in range(position, position + added):
-            self.insert_column(i, self.columns[order[i].get_string()])
+        for i, name in enumerate(fields.order):
+            self.insert_column(i, self.columns[name])
         columns.handler_unblock_by_func(self.columns_changed_cb)
 
 

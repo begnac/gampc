@@ -25,7 +25,6 @@ from gi.repository import GLib
 from ..util import action
 from ..util import config
 from ..util import db
-from ..util import field
 from ..util import item
 from ..util import misc
 from ..util import unit
@@ -33,6 +32,7 @@ from ..util import unit
 from ..ui import dialog
 from ..ui import editable
 
+from ..view import field
 from ..view.actions import ViewWithCopyPaste
 from ..view.cache import ItemFilenameTransfer
 
@@ -87,22 +87,22 @@ class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
 
 class StreamDatabase(db.Database):
     def __init__(self, name, fields):
-        self.fields = fields
+        self.fields = list(fields.infos)
         super().__init__(name)
 
     def setup_database(self):
-        self.setup_table('streams', 'streamid INTEGER PRIMARY KEY', self.fields.basic_names)
+        self.setup_table('streams', 'streamid INTEGER PRIMARY KEY', self.fields)
 
     def get_streams(self):
-        query = self.connection.cursor().execute('SELECT streamid,{} FROM streams'.format(','.join(self.fields.basic_names)))
-        return map(lambda s: {name: s[i] for i, name in enumerate(['streamid'] + self.fields.basic_names)}, query)
+        query = self.connection.cursor().execute('SELECT streamid,{} FROM streams'.format(','.join(self.fields)))
+        return map(lambda s: {name: s[i] for i, name in enumerate(['streamid'] + self.fields)}, query)
 
     def save_streams(self, streams):
         with self.connection:
             self.connection.cursor().execute('DELETE FROM streams')
             for stream_ in streams:
-                self.connection.cursor().execute('INSERT OR IGNORE INTO streams({}) VALUES({})'.format(','.join(self.fields.basic_names),
-                                                                                                       ':' + ',:'.join(self.fields.basic_names)), stream_)
+                self.connection.cursor().execute('INSERT OR IGNORE INTO streams({}) VALUES({})'.format(','.join(self.fields),
+                                                                                                       ':' + ',:'.join(self.fields)), stream_)
 
 
 class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, unit.Unit):
@@ -115,15 +115,17 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, uni
         self.require('database')
         self.require('persistent')
 
-        self.fields = field.FieldFamily(self.config['fields'])
-        self.fields.register_field(field.Field('Name', _("Name")))
-        self.fields.register_field(field.Field('file', _("URL"), editable=True))
-        self.fields.register_field(field.Field('Comment', _("Comment")))
+        fields = {
+            'Name': dict(title=_("Name")),
+            'file': dict(title=_("URL")),
+            'Comment': dict(title=_("Comment")),
+        }
+
+        self.fields = field.FieldsInfo(self.config['fields'], fields)
 
         self.db = StreamDatabase(self.name, self.fields)
         streams = list(self.db.get_streams())
         for stream in streams:
-            stream['Title'] = stream['Name']
             self.unit_database.cache[stream['file']] = stream
             for key in stream:
                 if stream[key] is None:

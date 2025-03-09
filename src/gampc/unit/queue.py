@@ -174,7 +174,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         self.cursor_by_profile = {}
         self.set_cursor = False
         self.require('database')
-        self.require('fields')
+        self.require('song')
         self.require('persistent')
 
         self.connect_clean(self.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
@@ -188,7 +188,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         self.transaction = QueueTransaction(self.queue_model, self.ampd)
 
     def new_widget(self):
-        queue = QueueWidget(self.transaction, fields=self.unit_fields.fields, separator_file=self.unit_database.SEPARATOR_FILE, model=self.queue_model)
+        queue = QueueWidget(self.transaction, fields=self.unit_song.fields, separator_file=self.unit_database.SEPARATOR_FILE, model=self.queue_model)
 
         queue.add_context_menu_actions(self.generate_priority_actions(queue), 'priority', _("Priority for random mode"), submenu=True)
         queue.add_context_menu_actions(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)

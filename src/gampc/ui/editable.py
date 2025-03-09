@@ -35,6 +35,11 @@ class EditableLabel(Gtk.EditableLabel):
     def __init__(self, edit_manager, **kwargs):
         super().__init__(**kwargs, focusable=True, css_name='editablelabel')
 
+        for widget in self.get_delegate(), self.get_delegate().get_prev_sibling():
+            for controller in widget.observe_controllers():
+                if isinstance(controller, Gtk.GestureClick):
+                    widget.remove_controller(controller)
+
         self.edit_manager = edit_manager
 
         self.shortcut = Gtk.ShortcutController()

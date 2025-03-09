@@ -203,7 +203,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         super().__init__(manager, config.Dict(paned=PlaylistWidget.get_paned_config()))
 
         self.require('database')
-        self.require('fields')
+        self.require('song')
         self.require('persistent')
 
         self.css_provider.load_from_string(self.CSS)
@@ -213,7 +213,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         self.tree = PlaylistTree(self.playlist_cache, self.unit_database.update)
 
     def new_widget(self):
-        playlist = PlaylistWidget(self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config['paned'], self.tree)
+        playlist = PlaylistWidget(self.unit_song.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config['paned'], self.tree)
         view = playlist.main
 
         view.add_context_menu_actions(self.generate_foreign_queue_actions(view), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)

@@ -54,10 +54,9 @@ def set_song_fields(song):
 
 
 class SongCache(cache.AsyncCache):
-    def __init__(self, ampd, fields):
+    def __init__(self, ampd):
         super().__init__()
         self.ampd = ampd
-        self.fields = fields
 
     async def retrieve(self, key):
         try:
@@ -84,8 +83,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
 
     def __init__(self, manager):
         super().__init__(manager)
-        self.require('fields')
-        self.cache = SongCache(self.ampd, self.unit_fields.fields)
+        self.cache = SongCache(self.ampd)
 
     def cleanup(self):
         super().cleanup()

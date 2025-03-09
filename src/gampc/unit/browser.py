@@ -92,13 +92,13 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, uni
         super().__init__(manager, config.Dict(paned=BrowserWidget.get_paned_config()))
 
         self.require('database')
-        self.require('fields')
+        self.require('song')
         self.require('persistent')
 
         self.tree = BrowserTree(self.ampd, self.unit_database.update)
 
     def new_widget(self):
-        browser = BrowserWidget(self.unit_fields.fields, self.unit_database.cache, self.config['paned'], self.tree)
+        browser = BrowserWidget(self.unit_song.fields, self.unit_database.cache, self.config['paned'], self.tree)
         view = browser.main
 
         view.add_context_menu_actions(self.generate_foreign_queue_actions(view), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)

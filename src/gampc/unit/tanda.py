@@ -35,7 +35,6 @@ from ..util import action
 from ..util import cleanup
 from ..util import config
 from ..util import db
-from ..util import field
 from ..util import item
 from ..util import misc
 from ..util import unit
@@ -44,6 +43,7 @@ from ..util.logger import logger
 from ..ui import dialog
 from ..ui import editable
 
+from ..view import field
 from ..view.actions import ViewWithContextMenu
 from ..view.cache import ViewCacheWithCopy
 from ..view.cache import ViewCacheWithCopyPaste
@@ -52,6 +52,24 @@ from ..control import compound
 from ..control import editstack
 
 from . import mixins
+
+
+def set_tanda_fields(tanda):
+    tanda['Duration'] = misc.format_time(sum((float(song['duration'])) for song in tanda.get('_songs', [])))
+    tanda['First_Song'] = tanda['_songs'][0]['Title'] if '_songs' in tanda else '???'
+
+    years_min = min(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None
+    years_max = max(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None
+    if years_min == years_max:
+        tanda['Years'] = f'\'{years_min[2:]}'
+    else:
+        tanda['Years'] = f'\'{years_min[2:]}-{years_max[2:]}'
+
+    if tanda.get('Last_Played'):
+        try:
+            tanda['Last_Played_Weeks'] = (datetime.date.today() - datetime.date(*map(int, tanda['Last_Played'].split('-')))).days // 7
+        except Exception:
+            pass
 
 
 class TandaItem(item.Item):
@@ -351,33 +369,33 @@ class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
 
 
 class TandaDatabase(db.Database):
-    def __init__(self, tanda_model, tanda_fields, song_fields, name, cache):
+    def __init__(self, tanda_model, tanda_field_names, song_field_names, name, cache):
         self.tanda_model = tanda_model
-        self.tanda_fields = tanda_fields
-        self.song_fields = song_fields
+        self.tanda_field_names = tanda_field_names
+        self.song_field_names = song_field_names
         self.cache = cache
 
-        self.tanda_field_names = ','.join(map(lambda name: f'tandas.{name}', self.tanda_fields.basic_names))
-        self.song_field_names = ','.join(map(lambda name: f'songs.{name}', self.song_fields.basic_names))
+        self.tanda_field_names_joined = ','.join(map(lambda name: f'tandas.{name}', self.tanda_field_names))
+        self.song_field_names_joined = ','.join(map(lambda name: f'songs.{name}', self.song_field_names))
 
         super().__init__(name)
 
         self.load()
 
     def setup_database(self, suffix=''):
-        self.setup_table(f'tandas{suffix}', 'tandaid INTEGER PRIMARY KEY', self.tanda_fields.basic_names)
-        self.setup_table(f'songs{suffix}', 'file TEXT NOT NULL PRIMARY KEY', self.song_fields.basic_names)
+        self.setup_table(f'tandas{suffix}', 'tandaid INTEGER PRIMARY KEY', self.tanda_field_names)
+        self.setup_table(f'songs{suffix}', 'file TEXT NOT NULL PRIMARY KEY', self.song_field_names)
         self.connection.cursor().execute(f'CREATE TABLE IF NOT EXISTS tanda_songs{suffix}(tandaid INTEGER NOT NULL, position INTEGER NOT NULL, file TEXT NOT NULL, PRIMARY KEY(tandaid, position), FOREIGN KEY(tandaid) REFERENCES tandas{suffix}, FOREIGN KEY(file) REFERENCES songs{suffix})')
 
     def clean_database(self):
         with self.connection:
             cursor = self.connection.cursor()
             self.setup_database('_tmp')
-            cursor.execute('INSERT INTO songs_tmp({0}) SELECT {0} FROM songs WHERE file IN (SELECT file FROM tanda_songs) ORDER BY file'.format(','.join(self.song_fields.basic_names)))
-            for tanda in cursor.execute('SELECT {} FROM tandas ORDER BY Artist'.format(','.join(self.tanda_fields.basic_names + ['tandaid']))).fetchall():
+            cursor.execute('INSERT INTO songs_tmp({0}) SELECT {0} FROM songs WHERE file IN (SELECT file FROM tanda_songs) ORDER BY file'.format(','.join(self.song_field_names)))
+            for tanda in cursor.execute('SELECT {} FROM tandas ORDER BY Artist'.format(','.join(self.tanda_field_names + ['tandaid']))).fetchall():
                 old_tandaid = tanda[-1]
                 tanda = tanda[:-1]
-                cursor.execute('INSERT INTO tandas_tmp({}) VALUES({})'.format(','.join(self.tanda_fields.basic_names), ','.join(['?'] * len(tanda))), tanda)
+                cursor.execute('INSERT INTO tandas_tmp({}) VALUES({})'.format(','.join(self.tanda_field_names), ','.join(['?'] * len(tanda))), tanda)
                 tandaid = self.connection.last_insert_rowid()
                 cursor.execute('INSERT INTO tanda_songs_tmp(tandaid,position,file) SELECT ?,position,file FROM tanda_songs WHERE tandaid=? ORDER BY position', (tandaid, old_tandaid))
             cursor.execute('DROP TABLE tanda_songs')
@@ -388,7 +406,7 @@ class TandaDatabase(db.Database):
             cursor.execute('ALTER TABLE songs_tmp RENAME TO songs')
 
     def load(self):
-        query = self.connection.cursor().execute('SELECT tandaid,{} FROM tandas'.format(','.join(self.tanda_fields.basic_names)))
+        query = self.connection.cursor().execute('SELECT tandaid,{} FROM tandas'.format(','.join(self.tanda_field_names)))
         self.tanda_model.set_values(map(self._tanda_from_record, query))
 
     # Song stuff
@@ -397,7 +415,7 @@ class TandaDatabase(db.Database):
         return bool(self.connection.cursor().execute('SELECT ? NOT IN (SELECT file FROM songs)', (key,)).fetchone()[0])
 
     def get_song(self, key):
-        t = self.connection.cursor().execute(f'SELECT {self.song_field_names} FROM songs WHERE file=?', (key,)).fetchone()
+        t = self.connection.cursor().execute(f'SELECT {self.song_field_names_joined} FROM songs WHERE file=?', (key,)).fetchone()
         if t is None:
             return {'file': key}
         else:
@@ -410,7 +428,7 @@ class TandaDatabase(db.Database):
                 self.update_song(song)
 
     def update_song(self, song):
-        values = self._make_value_list(self.song_fields.basic_names, list(song.keys()), exclude='file')
+        values = self._make_value_list(self.song_field_names, list(song.keys()), exclude='file')
         with self.connection as cursor:
             cursor.execute(f'UPDATE songs SET {values} WHERE file=:file', song)
 
@@ -422,12 +440,12 @@ class TandaDatabase(db.Database):
         self.load()
 
     def _song_from_record(self, t):
-        return self._dict_from_record(t, self.song_fields.basic_names)
+        return self._dict_from_record(t, self.song_field_names)
 
     # Tanda stuff
 
     def get_tanda(self, tandaid):
-        t = self.connection.cursor().execute(f'SELECT tandaid, {self.tanda_field_names} FROM tandas WHERE tandaid=?', (tandaid,)).fetchone()
+        t = self.connection.cursor().execute(f'SELECT tandaid, {self.tanda_field_names_joined} FROM tandas WHERE tandaid=?', (tandaid,)).fetchone()
         return t and self._tanda_from_record(t)
 
     def new_tanda(self, songs):
@@ -437,13 +455,13 @@ class TandaDatabase(db.Database):
             tanda['tandaid'] = self.connection.last_insert_rowid()
             tanda['_songs'] = songs
             self.update_tanda(tanda)
-            self.tanda_fields.set_derived_fields(tanda)
+            set_tanda_fields(tanda)
             self.tanda_model.splice_values(0, 0, [tanda])
 
     def update_tanda(self, tanda):
         with self.connection as cursor:
             tandaid = tanda['tandaid']
-            cursor.execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(self._make_value_list(self.tanda_fields.basic_names, list(tanda.keys()), exclude='tandaid')), tanda)
+            cursor.execute('UPDATE tandas SET {} WHERE tandaid=:tandaid'.format(self._make_value_list(self.tanda_field_names, list(tanda.keys()), exclude='tandaid')), tanda)
             self.set_tanda_songs(tandaid, tanda['_songs'])
 
     def delete_tanda(self, tanda):
@@ -468,10 +486,10 @@ class TandaDatabase(db.Database):
             cursor.executemany('DELETE FROM tanda_songs WHERE tandaid=? AND position=?', ((tandaid, position) for position in tanda_songs.keys()))
 
     def _tanda_from_record(self, t):
-        tanda = self._dict_from_record(t, ['tandaid'] + self.tanda_fields.basic_names)
-        query = self.connection.cursor().execute(f'SELECT {self.song_field_names} FROM tanda_songs,songs USING(file) WHERE tanda_songs.tandaid=? ORDER BY tanda_songs.position', (tanda['tandaid'],))
+        tanda = self._dict_from_record(t, ['tandaid'] + self.tanda_field_names)
+        query = self.connection.cursor().execute(f'SELECT {self.song_field_names_joined} FROM tanda_songs,songs USING(file) WHERE tanda_songs.tandaid=? ORDER BY tanda_songs.position', (tanda['tandaid'],))
         tanda['_songs'] = list(map(self._song_from_record, query))
-        self.tanda_fields.set_derived_fields(tanda)
+        set_tanda_fields(tanda)
         return tanda
 
     @staticmethod
@@ -525,8 +543,8 @@ class TandaDatabase(db.Database):
 
     def get_used_songs(self, ignore):
         with self.connection as cursor:
-            query = cursor.execute('SELECT {},file in (SELECT file from tanda_songs) FROM songs'.format(', '.join(self.song_fields.basic_names))).fetchall()
-            songs = [self._dict_from_record(t, self.song_fields.basic_names + ['used']) for t in query]
+            query = cursor.execute('SELECT {},file in (SELECT file from tanda_songs) FROM songs'.format(', '.join(self.song_field_names))).fetchall()
+            songs = [self._dict_from_record(t, self.song_field_names + ['used']) for t in query]
 
             used_songs = []
             n_unused = 0
@@ -605,45 +623,45 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
                              fields=field.get_fields_config(),
                          ))
 
-        self.require('fields')
+        self.require('song')
         self.require('database')
         self.require('persistent')
         self.require('search')
 
         self.css_provider.load_from_string(CSS)
 
-        self.fields = field.FieldFamily(self.config['fields'])
-        self.fields.register_field(field.Field('Artist', _("Artist")))
-        self.fields.register_field(field.Field('Genre', _("Genre")))
-        self.fields.register_field(field.Field('Years_Min', visible=False, get_value=lambda tanda: min(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
-        self.fields.register_field(field.Field('Years_Max', visible=False, get_value=lambda tanda: max(song.get('Date', '').split('-', 1)[0] for song in tanda['_songs']) or '????' if tanda.get('_songs') else None))
-        self.fields.register_field(field.Field('Years', _("Years"), get_value=lambda tanda: ('\'{}'.format(tanda['Years_Min'][2:]) if tanda['Years_Min'] == tanda['Years_Max'] else '\'{}-\'{}'.format(tanda['Years_Min'][2:], tanda['Years_Max'][2:])) if 'Years_Min' in tanda and 'Years_Max' in tanda else '????'))
-        self.fields.register_field(field.Field('First_Song', _("First song"), get_value=lambda tanda: tanda['_songs'][0]['Title'] if '_songs' in tanda else '???'))
-        self.fields.register_field(field.Field('Performer', _("Performer")))
-        self.fields.register_field(field.Field('Comment', _("Comment")))
-        self.fields.register_field(field.Field('Description', _("Description")))
-        self.fields.register_field(field.Field('Note', _("Note"), min_width=30))
-        self.fields.register_field(field.Field('Rhythm', _("Rhythm"), min_width=30))
-        self.fields.register_field(field.Field('Energy', _("Energy"), min_width=30))
-        self.fields.register_field(field.Field('Speed', _("Speed"), min_width=30))
-        self.fields.register_field(field.Field('Emotion', _("Emotion"), min_width=30))
-
-        # self.fields.register_field(field.Field('Drama', _("Drama"), min_width=30))
-        # self.fields.register_field(field.Field('Romance', _("Romance"), min_width=30))
-        self.fields.register_field(field.Field('Level', _("Level"), min_width=30))
-
-        self.fields.register_field(field.Field('Last_Modified', _("Last modified")))
-        self.fields.register_field(field.Field('Last_Played', _("Last played")))
-        self.fields.register_field(field.Field('Last_Played_Weeks', _("Weeks since last played"), min_width=30, get_value=self.get_last_played_weeks, sort_default=float('inf')))
-        self.fields.register_field(field.Field('n_songs', _("Number of songs"), min_width=30, get_value=self.get_n_songs))
-        self.fields.register_field(field.Field('Duration', _("Duration"), get_value=lambda tanda: misc.format_time(sum((float(song['duration'])) for song in tanda.get('_songs', [])))))
+        fields = {
+            'Artist': dict(title=_("Artist")),
+            'Genre': dict(title=_("Genre")),
+            'Performer': dict(title=_("Performer")),
+            'Comment': dict(title=_("Comment")),
+            'Description': dict(title=_("Description")),
+            'Note': dict(title=_("Note"), min_width=30),
+            'Rhythm': dict(title=_("Rhythm"), min_width=30),
+            'Energy': dict(title=_("Energy"), min_width=30),
+            'Speed': dict(title=_("Speed"), min_width=30),
+            'Emotion': dict(title=_("Emotion"), min_width=30),
+            'Level': dict(title=_("Level"), min_width=30),
+            'Last_Modified': dict(title=_("Last modified")),
+            'Last_Played': dict(title=_("Last played")),
+            #XXXXXXX
+            'Duration': dict(title=_("Duration")),
+            'First_Song': dict(title=_("First song")),
+            'Years': dict(title=_("Years")),
+            'Last_Played_Weeks': dict(title=_("Weeks since last played"), min_width=30),
+        }
+        self.fields = field.FieldsInfo(self.config['fields'], fields)
 
         self.tanda_model = item.ItemListStore(item_type=TandaItem)
         self.tanda_sorter = Gtk.CustomSorter.new(self.tanda_sort_func)
         self.tanda_sort_model = Gtk.SortListModel(model=self.tanda_model, sorter=self.tanda_sorter)
         self.queue_model = item.ItemListStore(item_type=item.SongItem)
 
-        self.db = TandaDatabase(self.tanda_model, self.fields, self.unit_fields.fields, self.name, self.unit_database.cache)
+        special_names = 'Duration', 'First_Song', 'Years', 'Last_Played_Weeks'
+        self.tanda_field_names = [name for name in self.fields.infos if name not in special_names]
+        self.song_field_names = list(self.unit_song.fields.infos) + ['duration']
+
+        self.db = TandaDatabase(self.tanda_model, self.tanda_field_names, self.song_field_names, self.name, self.unit_database.cache)
         self.update_cache_full(None)
 
         self.connect_clean(self.unit_database, 'cleared', self.update_cache_full)
@@ -661,7 +679,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         return component
 
     def new_widget(self):
-        tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config['paned'], self.fields, self.unit_fields.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
+        tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config['paned'], self.fields, self.unit_song.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
 
         tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
         tanda.add_context_menu_actions(self.generate_db_actions(), 'db', self.TITLE)
@@ -697,7 +715,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
             return
         tanda = edit.current_tanda
         new_value = dict(tanda.value, _songs=[self.unit_database.cache[filename] for filename in tanda.edit_stack.items])
-        self.fields.set_derived_fields(new_value)
+        set_tanda_fields(new_value)
         self.db.update_tanda(dict(new_value, tandaid=tanda.tandaid))
         tanda.value = new_value
         tanda.edit_stack.rebase()
@@ -732,7 +750,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         real_song = await self.ampd.find('file', song['file'])
         if real_song:
             real_song = real_song[0]
-            changed = [(name, song.get(name), real_song.get(name)) for name in self.unit_fields.fields.basic_names if song.get(name) != real_song.get(name)]
+            changed = [(name, song.get(name), real_song.get(name)) for name in self.song_field_names if song.get(name) != real_song.get(name)]
             if changed:
                 self.db.update_song(real_song)
                 logger.info(_("Updating metadata for '{file}': ").format_map(song) + ", ".join("{0} {1} => {2}".format(*t) for t in changed))
@@ -816,19 +834,3 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         s1 = self.tanda_key_func(tanda1)
         s2 = self.tanda_key_func(tanda2)
         return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
-
-    @staticmethod
-    def get_last_played_weeks(tanda):
-        if 'Last_Played' in tanda and tanda['Last_Played']:
-            try:
-                return (datetime.date.today() - datetime.date(*map(int, tanda['Last_Played'].split('-')))).days // 7
-            except Exception:
-                pass
-
-    @staticmethod
-    def get_n_songs(tanda):
-        n = len(tanda.get('_songs'))
-        if (n == 4 and tanda.get('Genre').startswith('Tango')) or (n == 3 and tanda.get('Genre') in {'Vals', 'Milonga'}):
-            return ''
-        else:
-            return str(n)
