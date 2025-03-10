@@ -42,12 +42,16 @@ class EditableLabel(Gtk.EditableLabel):
 
         self.edit_manager = edit_manager
 
-        self.shortcut = Gtk.ShortcutController()
-        self.add_controller(self.shortcut)
+        shortcut = Gtk.ShortcutController()
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_c, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.copy_cb)))
+        shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.copy_cb)))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_v, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.paste_cb)))
+        shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.paste_cb)))
+        self.add_controller(shortcut)
+
+        click = Gtk.GestureClick(button=1, propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        click.connect('pressed', self.click_pressed_cb)
+        self.add_controller(click)
 
         self.connect('notify::editing', self.__class__.notify_editing_cb)
 
@@ -73,3 +77,11 @@ class EditableLabel(Gtk.EditableLabel):
     def paste_finish_cb(self, clipboard, result):
         if not result.had_error():
             self.edit_manager.emit('edited', self, clipboard.read_value_finish(result).value)
+
+    @staticmethod
+    def click_pressed_cb(click, n_press, x, y):
+        if click.get_current_event_state() & Gdk.ModifierType.CONTROL_MASK:
+            self = click.get_widget()
+            if not self.get_editing():
+                click.set_state(Gtk.EventSequenceState.CLAIMED)
+                self.start_editing()
