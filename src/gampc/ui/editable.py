@@ -42,12 +42,12 @@ class EditableLabel(Gtk.EditableLabel):
 
         self.edit_manager = edit_manager
 
-        shortcut = Gtk.ShortcutController()
+        self.shortcut = Gtk.ShortcutController()
+        self.add_controller(self.shortcut)
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_c, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.copy_cb)))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.copy_cb)))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_v, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.paste_cb)))
-        self.add_controller(shortcut)
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.paste_cb)))
 
         click = Gtk.GestureClick(button=1, propagation_phase=Gtk.PropagationPhase.CAPTURE)
         click.connect('pressed', self.click_pressed_cb)
