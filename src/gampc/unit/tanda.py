@@ -212,7 +212,7 @@ class TandaWidget(compound.WidgetWithPaned):
 
     def generate_actions(self):
         yield action.PropertyActionInfo('genre-filter', self, arg_format='i')
-        yield action.ActionInfo('switch-subwidget', self.action_subwidget_next_cb, _("Switch tanda view mode"), ['<Control>Tab'])
+        yield action.ActionInfo('switch-subwidget', self.action_subwidget_next_cb, _("Switch tanda view mode"), ['<Alt>m'])
 
     def tanda_genre_filter_func(self, tanda):
         if self.problem_button.get_active() and tanda.get_field('Note') == '0':
