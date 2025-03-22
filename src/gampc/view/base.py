@@ -76,7 +76,8 @@ class ItemView(Gtk.ColumnView):
 
     def columns_changed_cb(self, columns, position, removed, added):
         self.fields.handler_block_by_func(self.fields_notify_order_cb)
-        self.fields.order = [col.get_id() for col in columns]
+        self.fields.order[:] = [col.get_id() for col in columns]
+        self.fields.notify('order')
         self.fields.handler_unblock_by_func(self.fields_notify_order_cb)
 
     def fields_notify_order_cb(self, fields, param, columns):

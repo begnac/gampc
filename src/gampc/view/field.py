@@ -68,10 +68,9 @@ class FieldsInfo(GObject.Object):
     def __init__(self, config, fields):
         super().__init__()
         self.config = config
-        order = [name for name in config['order'] if name in fields]
+        self.order = config['order'] = order = [name for name in config['order'] if name in fields]
         self.infos = {}
         for name, kwargs in fields.items():
             self.infos[name] = FieldInfo(config['info'][name], name, **kwargs)
             if name not in order:
                 order.append(name)
-        self.order = config['order'] = order
