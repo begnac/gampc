@@ -59,17 +59,8 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(self.main)
 
-        self.headerbar = headerbar.HeaderBar()
+        self.headerbar = headerbar.HeaderBar(menu_model=unit.unit_menu.menu)
         self.set_titlebar(self.headerbar)
-
-        self.menubar = Gtk.PopoverMenuBar(menu_model=unit.unit_menu.menu)
-        self.bind_property('fullscreened', self.menubar, 'visible', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
-        for child in self.menubar.observe_children():
-            for controller in child.observe_controllers():
-                if isinstance(controller, Gtk.EventControllerMotion):
-                    enter_id = GObject.signal_lookup('enter', Gtk.EventControllerMotion)
-                    GObject.signal_handlers_disconnect_matched(controller, GObject.SignalMatchType.ID, enter_id, 0)
-        self.main.append(self.menubar)
 
         self.unit.unit_persistent.bind_property('protect-active', self.headerbar.option_buttons, 'sensitive', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.INVERT_BOOLEAN)
 
@@ -103,7 +94,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
             self.set_subtitle()
         self.component = component
         if self.component is not None:
-            self.main.insert_child_after(self.component, self.menubar)
+            self.main.prepend(self.component)
             self.component.grab_focus()
 
     def set_time_scale_sensitive(self, *args):

@@ -137,7 +137,7 @@ class TimeScale(Gtk.Box):
 
 
 class HeaderBar(Gtk.HeaderBar):
-    def __init__(self):
+    def __init__(self, *, menu_model):
         self.title = Gtk.Label(css_classes=['title'])
         self.subtitle = Gtk.Label(css_classes=['subtitle'])
         self.titlebox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
@@ -156,9 +156,10 @@ class HeaderBar(Gtk.HeaderBar):
         for widget in self.volume_button, self.playback_buttons, self.time_scale, self.bitrate_label:
             self.pack_start(widget)
 
+        self.menu_button = Gtk.MenuButton(menu_model=menu_model, primary=True, icon_name='open-menu-symbolic')
         self.option_buttons = OptionButtons()
         self.protected_image = Gtk.Image(icon_name='security-high-symbolic', tooltip_text=_("Protected mode"))
-        for widget in self.option_buttons, self.protected_image:
+        for widget in self.menu_button, self.option_buttons, self.protected_image:
             self.pack_end(widget)
 
     def set_title(self, title):
