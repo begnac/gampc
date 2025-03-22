@@ -103,7 +103,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         self.item_view = ItemView(fields, factory_factory, widget_factory, sortable=sortable, model=self.item_selection_model, enable_rubberband=False, hexpand=True, vexpand=True, tab_behavior=Gtk.ListTabBehavior.CELL)
         self.item_view.add_css_class('items')
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view)
-        self.view_search = listviewsearch.ListViewSearch(self.item_view.rows, lambda text, item: any(text.lower() in str(item.get_field(name, '')).lower() for name in fields.fields))
+        self.view_search = listviewsearch.ListViewSearch(self.item_view.rows, self.search_func, list(fields.infos))
         self.append(self.scrolled_item_view)
         self.add_cleanup_below(self.item_view, self.view_search)
 
@@ -129,6 +129,10 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
                 next_model = Gtk.SortListModel(model=next_model, sorter=self.item_view.get_sorter())
 
         self.item_selection_model.set_model(next_model)
+
+    @staticmethod
+    def search_func(text, item, fields):
+        return any(text.lower() in str(item.get_field(name, '')).lower() for name in fields)
 
     def grab_focus(self):
         return self.item_view.grab_focus()

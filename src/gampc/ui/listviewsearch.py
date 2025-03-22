@@ -23,10 +23,10 @@ from gi.repository import Gtk
 
 
 class ListViewSearch(Gtk.SearchEntry):
-    def __init__(self, widget, test_func):
+    def __init__(self, widget, *args):
         super().__init__()
         self.widget = widget
-        self.test_func = test_func
+        self.args = args
 
         search_action = Gtk.CallbackAction.new(self.search_action_cb)
         search_trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_f, modifiers=Gdk.ModifierType.CONTROL_MASK)
@@ -43,10 +43,10 @@ class ListViewSearch(Gtk.SearchEntry):
         self.popover = Gtk.Popover(has_arrow=False, halign=Gtk.Align.START)
         self.popover.set_child(self)
 
-        # self.connect('activate', self.search_cb, widget, True, True, test_func)
-        self.connect('next-match', self.__class__.search_cb, widget, True, False, test_func)
-        self.connect('previous-match', self.__class__.search_cb, widget, False, False, test_func)
-        self.connect('search-changed', self.__class__.search_cb, widget, None, True, test_func)
+        # self.connect('activate', self.search_cb, widget, True, True, *args)
+        self.connect('next-match', self.__class__.search_cb, widget, True, False, *args)
+        self.connect('previous-match', self.__class__.search_cb, widget, False, False, *args)
+        self.connect('search-changed', self.__class__.search_cb, widget, None, True, *args)
         self.connect('stop-search', self.__class__.stop_search_cb)
         self.connect('activate', self.__class__.stop_search_cb)
 
@@ -64,7 +64,7 @@ class ListViewSearch(Gtk.SearchEntry):
         self.pos = self.base
         self.up = True
 
-    def search_cb(self, widget, up, from_base, test_func):
+    def search_cb(self, widget, up, from_base, test_func, *args):
         if up is None:
             up = self.up
         else:
@@ -83,7 +83,7 @@ class ListViewSearch(Gtk.SearchEntry):
 
         for i in range(n):
             j = (pos + i if up else pos - i) % n
-            if test_func(text, model[j]):
+            if test_func(text, model[j], *args):
                 widget.scroll_to(j, Gtk.ListScrollFlags.SELECT, None)
                 self.remove_css_class('error')
                 self.grab_focus()
