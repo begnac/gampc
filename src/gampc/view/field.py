@@ -42,7 +42,7 @@ def config_notify_cb(obj, param, config):
 class FieldInfo(GObject.Object):
     width = GObject.Property(type=int)
 
-    def __init__(self, config, name, *, title=None, min_width=50):
+    def __init__(self, config, name, *, title=None, sort_default='', min_width=50):
         super().__init__()
         self.config = config
         self.name = name
@@ -50,6 +50,7 @@ class FieldInfo(GObject.Object):
         self.min_width = min_width
         self.connect('notify::width', self.__class__.notify_width_cb)
         self.width = self.config['width']
+        self.sort_default = sort_default
 
     def notify_width_cb(self, param):
         if self.width < self.min_width:

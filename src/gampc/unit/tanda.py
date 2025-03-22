@@ -644,11 +644,11 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
             'Level': dict(title=_("Level"), min_width=30),
             'Last_Modified': dict(title=_("Last modified")),
             'Last_Played': dict(title=_("Last played")),
-            #XXXXXXX
+            # XXXXXXX
             'Duration': dict(title=_("Duration")),
             'First_Song': dict(title=_("First song")),
             'Years': dict(title=_("Years")),
-            'Last_Played_Weeks': dict(title=_("Weeks since last played"), min_width=30),
+            'Last_Played_Weeks': dict(title=_("Weeks since last played"), min_width=30, sort_default=float('inf')),
         }
         self.fields = field.FieldsInfo(self.config['fields'], fields)
 
