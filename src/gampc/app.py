@@ -88,9 +88,7 @@ class App(Gtk.Application):
         self.notification = Gio.Notification.new(_("MPD status"))
         self.notification_task = None
 
-        self.session_inhibit_cookie = None
-        self.systemd_inhibit_fd = None
-        self.unit_server.ampd_server_properties.connect('notify::state', self.set_inhibit)
+        self.unit_server.ampd_server_properties.connect('notify::state', self.set_inhibit, [None])
 
         self.unit_server.ampd_connect()
 
@@ -104,7 +102,6 @@ class App(Gtk.Application):
 
         misc.get_clipboard().set_content(None)
 
-        self.unit_server.ampd_server_properties.disconnect_by_func(self.set_inhibit)
         self.unit_manager.set_target()
         del self.unit_manager
 
@@ -200,15 +197,14 @@ class App(Gtk.Application):
         self.withdraw_notification('status')
         self.notification_task = None
 
-    def set_inhibit(self, *args):
-        if self.unit_server.ampd_server_properties.state == 'play':
-            self.session_inhibit_cookie = self.session_inhibit_cookie or self.inhibit(None, Gtk.ApplicationInhibitFlags.SUSPEND | Gtk.ApplicationInhibitFlags.IDLE, __program_name__)
+    @staticmethod
+    def set_inhibit(server_properties, param, fd):
+        if server_properties.state == 'play':
             bus = dbus.SystemBus()
             obj = bus.get_object('org.freedesktop.login1', '/org/freedesktop/login1')
-            self.systemd_inhibit_fd = self.systemd_inhibit_fd or obj.Inhibit('handle-lid-switch', __program_name__, _("Playing"), 'block', dbus_interface='org.freedesktop.login1.Manager')
+            fd[0] = obj.Inhibit('sleep:idle:handle-lid-switch', __program_name__, _("Playing"), 'block', dbus_interface='org.freedesktop.login1.Manager')
         else:
-            self.session_inhibit_cookie = self.session_inhibit_cookie and self.uninhibit(self.session_inhibit_cookie)
-            self.systemd_inhibit_fd = None
+            fd[0] = None
 
     def follow_action_group(self, action_group):
         for name in action_group.list_actions():
