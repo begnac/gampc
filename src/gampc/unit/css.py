@@ -29,11 +29,6 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
 
     css = ''
 
-    if dark:
-        css += '@define-color drop-color rgb(38,162,105);'
-    else:
-        css += '@define-color drop-color rgb(46,194,126);'
-
     css += '''
     scale > trough > fill {
       background-color: @theme_selected_bg_color;
@@ -60,10 +55,11 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
     }
     '''
 
-    css += '''
-      columnview > listview:drop(active) > row.drop-row {
-      border-bottom-color: @drop-color;
-    }
+    drop_color = 'rgb(38,162,105)' if dark else 'rgb(46,194,126)'
+    css += f'''
+      columnview > listview:drop(active) > row.drop-row {{
+      border-bottom-color: {drop_color};
+    }}
     '''
 
     N = 4
