@@ -20,7 +20,8 @@
 
 from gi.repository import GLib
 from gi.repository import GObject
-from gi.repository import GdkPixbuf
+from gi.repository import Graphene
+from gi.repository import Gdk
 from gi.repository import Pango
 from gi.repository import Gtk
 
@@ -34,18 +35,18 @@ from .. import __application__
 from . import mixins
 
 
-class PixbufCache(dict):
+class PaintableCache(dict):
     def __missing__(self, key):
-        pixbuf = self.find_image(key)
-        if pixbuf is not None:
-            self[key] = pixbuf
-        return pixbuf
+        paintable = self.find_image(key)
+        if paintable is not None:
+            self[key] = paintable
+        return paintable
 
     def find_image(self, key):
         for extension in ('.jpg', '.png', '.gif'):
             path = os.path.join(GLib.get_user_data_dir(), __application__, 'photos', key + extension)
             if os.path.isfile(path):
-                return GdkPixbuf.Pixbuf.new_from_file(path)
+                return Gdk.Texture.new_from_filename(path)
 
         for sep in (', ', ' y '):
             if sep in key:
@@ -54,23 +55,20 @@ class PixbufCache(dict):
         return None
 
     def find_images(self, names):
-        pixbufs = [self[name] for name in names]
-        if not all(pixbufs):
+        paintables = [self[name] for name in names]
+        if not all(paintables):
             return None
-        width = height = 0
-        for p in pixbufs:
-            p.w = p.get_width()
-            p.h = p.get_height()
-            p.r = p.w / p.h
-            height = max(height, 2 * p.h)
-        for p in pixbufs:
-            p.nw = height * p.r
-            p.x = width
-            width += p.nw
-        pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, False, 8, width, height)
-        for p in pixbufs:
-            p.composite(pixbuf, p.x, 0, p.nw, height, p.x, 0, height / p.h, height / p.h, GdkPixbuf.InterpType.BILINEAR, 255)
-        return pixbuf
+        height = 0
+        for p in paintables:
+            height = max(height, 2 * p.get_height())
+        snapshot = Gtk.Snapshot()
+        x = 0
+        for p in paintables:
+            rect = Graphene.Rect()
+            rect.init(x, 0, height * p.get_width() / p.get_height(), height)
+            snapshot.append_texture(p, rect)
+            x += rect.get_width()
+        return snapshot.to_paintable()
 
 
 class Welcome(Gtk.Box):
@@ -115,13 +113,13 @@ class Person(Gtk.Box):
         self.image.clear()
         self.set_visible(True)
 
-        self.pixbuf = self.image_cache[name]
-        if self.pixbuf:
+        self.paintable = self.image_cache[name]
+        if self.paintable:
             self.label.set_visible(False)
             self.image.set_visible(True)
             self.image_label.set_visible(True)
             self.image_label.set_label(name)
-            self.image.set_from_pixbuf(self.pixbuf)
+            self.image.set_from_paintable(self.paintable)
         else:
             self.label.set_label(name)
             self.label.set_visible(True)
@@ -134,12 +132,12 @@ class Info(Gtk.Box):
 
     def __init__(self):
         super().__init__(hexpand=True, orientation=Gtk.Orientation.VERTICAL, homogeneous=True)
-        self.pixbufs = PixbufCache()
+        self.paintables = PaintableCache()
 
-        self.artist = Person(self.pixbufs)
+        self.artist = Person(self.paintables)
         self.artist.label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Serif Bold", 0 -1 scale 2'))
 
-        self.performer = Person(self.pixbufs, lambda name: name != 'Instrumental')
+        self.performer = Person(self.paintables, lambda name: name != 'Instrumental')
         self.performer.label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans", 0 -1 scale 2'))
 
         artist_performer_box = Gtk.Box(vexpand=True, homogeneous=True, spacing=50)
