@@ -59,7 +59,7 @@ class QueueSongItem(item.SongItem):
         misc.add_unique_css_class(widget.get_parent(), 'Id', self.Id)
 
     def prio_binder(self, widget):
-        if widget.get_name() == 'FormattedTime':
+        if widget.get_name() == 'Duration':
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if self.Prio is not None else None)
 
 
