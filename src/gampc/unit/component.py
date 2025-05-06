@@ -117,10 +117,7 @@ class __unit__(unit.Unit):
         if window is None:
             active.change_component(component)
         elif window != active:
-            window.set_visible(False)
             window.present()
-            focus = window.get_focus()
-            logger.info(f"{focus}, {focus.is_focus()}, {focus.has_focus()}")
 
     def component_stop_cb(self, action, parameter):
         window = Gtk.Application.get_default().get_active_window()

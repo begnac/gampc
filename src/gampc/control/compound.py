@@ -70,3 +70,6 @@ class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalM
     @staticmethod
     def get_paned_config():
         return config.Dict(position=config.Item(int, default=100, is_valid=lambda value: value >= 50))
+
+    def grab_focus(self):
+        return self.left_view.grab_focus()
