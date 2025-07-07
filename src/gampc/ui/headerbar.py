@@ -20,6 +20,7 @@
 
 from gi.repository import GObject
 from gi.repository import GLib
+from gi.repository import Pango
 from gi.repository import Gdk
 from gi.repository import Gtk
 
@@ -138,7 +139,7 @@ class TimeScale(Gtk.Box):
 
 class HeaderBar(Gtk.HeaderBar):
     def __init__(self, *, menu_model):
-        self.title = Gtk.Label(css_classes=['title'])
+        self.title = Gtk.Label(css_classes=['title'], ellipsize=Pango.EllipsizeMode.MIDDLE)
         self.subtitle = Gtk.Label(css_classes=['subtitle'])
         self.titlebox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
         self.titlebox.append(self.title)
