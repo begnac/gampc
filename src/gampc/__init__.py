@@ -33,10 +33,10 @@ __application__ = 'gampc'
 __author__ = "Itaï BEN YAACOV"
 __author_email__ = "candeb@free.fr"
 __copyright__ = f"Copyright (C) 2015-2023 {__author__} <{__author_email__}>"
-__website__ = 'https://github.com/begnac/gampc/tree/gtk4'
+__website__ = 'https://github.com/begnac/gampc'
 
 __license_type__ = Gtk.License.GPL_3_0
-__program_name__ = "Graphical Asyncronous Music Player Client"
+__program_name__ = "Graphical Asynchronous Music Player Client"
 __version__ = '0.4.0'
 
 gettext.install(__application__)
