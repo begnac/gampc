@@ -18,17 +18,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import asyncio
+import logging
+import signal
+import sys
+
+import gasyncio
+import ampd
+
 from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import Gtk
-
-import sys
-import logging
-import dbus
-import signal
-import asyncio
-import gasyncio
-import ampd
 
 from .util import misc
 from .util import unit
@@ -87,8 +87,6 @@ class App(Gtk.Application):
 
         self.notification = Gio.Notification.new(_("MPD status"))
         self.notification_task = None
-
-        self.unit_server.ampd_server_properties.connect('notify::state', self.set_inhibit, [None])
 
         self.unit_server.ampd_connect()
 
@@ -196,15 +194,6 @@ class App(Gtk.Application):
         await asyncio.sleep(5)
         self.withdraw_notification('status')
         self.notification_task = None
-
-    @staticmethod
-    def set_inhibit(server_properties, param, fd):
-        if server_properties.state == 'play':
-            bus = dbus.SystemBus()
-            obj = bus.get_object('org.freedesktop.login1', '/org/freedesktop/login1')
-            fd[0] = obj.Inhibit('sleep:idle:handle-lid-switch', __program_name__, _("Playing"), 'block', dbus_interface='org.freedesktop.login1.Manager')
-        else:
-            fd[0] = None
 
     def follow_action_group(self, action_group):
         for name in action_group.list_actions():
