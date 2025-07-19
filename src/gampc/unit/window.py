@@ -39,8 +39,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
     def __init__(self, unit, **kwargs):
         super().__init__(**kwargs)
 
-        self.action_info_families = list(unit.unit_menu.action_info_families)
-        for family in self.action_info_families:
+        for family in unit.unit_menu.action_info_families:
             self.add_controller(family.get_shortcut_controller())
 
         self.unit = unit
@@ -142,7 +141,7 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
         self.require('persistent')
         self.require('component')
 
-        self.unit_menu.load_family(self.generate_actions(), _("Window"), Gtk.Application.get_default(), self.unit_menu.menu_window_section, True)
+        self.unit_menu.load_family(self.generate_actions(), _("Window"), self.unit_menu.menu_window_section, True)
 
     def generate_actions(self):
         yield action.ActionInfo('new-window', self.new_window_cb, _("New window"), ['<Control>n'])

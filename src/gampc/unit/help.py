@@ -24,7 +24,6 @@ from ..util import action
 from ..util import unit
 from ..util.logger import logger
 
-
 from .. import __program_name__, __version__, __program_description__, __copyright__, __license_type__, __website__
 
 

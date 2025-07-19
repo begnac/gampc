@@ -195,7 +195,7 @@ class App(Gtk.Application):
         self.withdraw_notification('status')
         self.notification_task = None
 
-    def follow_action_group(self, action_group):
+    def register_action_group(self, action_group):
         for name in action_group.list_actions():
             self.add_action(action_group.lookup_action(name))
         action_group.connect('action-added', self.follow_action_added_cb)
