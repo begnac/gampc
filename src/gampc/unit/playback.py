@@ -47,7 +47,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
         self.fading = False
 
     def generate_actions(self):
-        yield action.ActionInfo('play-or-pause', self.play_or_pause_cb, _("_Play/pause"), ['<Alt>Up', 'AudioPlay', 'space'], dangerous=True)
+        yield action.ActionInfo('play-or-pause', self.play_or_pause_cb, _("_Play/pause"), ['<Alt>Up', '<Alt>space', 'AudioPlay'], dangerous=True)
         yield action.ActionInfo('play', self.mpd_command_cb, dangerous=True)
         yield action.ActionInfo('stop', self.mpd_command_cb, _("_Stop"), ['<Alt>Down', 'AudioStop'], dangerous=True)
         yield action.ActionInfo('next', self.mpd_command_cb, _("_Next"), ['<Alt>Right', 'AudioNext'], dangerous=True)
