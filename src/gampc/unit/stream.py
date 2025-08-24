@@ -94,15 +94,16 @@ class StreamDatabase(db.Database):
         self.setup_table('streams', 'streamid INTEGER PRIMARY KEY', self.fields)
 
     def get_streams(self):
-        query = self.connection.cursor().execute('SELECT streamid,{} FROM streams'.format(','.join(self.fields)))
-        return map(lambda s: {name: s[i] for i, name in enumerate(['streamid'] + self.fields)}, query)
+        query = self.connection.cursor().execute('SELECT {} FROM streams'.format(','.join(self.fields)))
+        return map(lambda s: {name: s[i] for i, name in enumerate(self.fields)}, query)
 
     def save_streams(self, streams):
         with self.connection:
             self.connection.cursor().execute('DELETE FROM streams')
             for stream_ in streams:
-                self.connection.cursor().execute('INSERT OR IGNORE INTO streams({}) VALUES({})'.format(','.join(self.fields),
-                                                                                                       ':' + ',:'.join(self.fields)), stream_)
+                fields = list(stream_.keys())
+                self.connection.cursor().execute('INSERT OR IGNORE INTO streams({}) VALUES({})'.format(','.join(fields),
+                                                                                                       ':' + ',:'.join(fields)), stream_)
 
 
 class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, unit.Unit):
