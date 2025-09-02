@@ -26,7 +26,6 @@ class ListViewSearch(Gtk.SearchEntry):
     def __init__(self, widget, *args):
         super().__init__()
         self.widget = widget
-        self.args = args
 
         search_action = Gtk.CallbackAction.new(self.search_action_cb)
         search_trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_f, modifiers=Gdk.ModifierType.CONTROL_MASK)
@@ -43,7 +42,6 @@ class ListViewSearch(Gtk.SearchEntry):
         self.popover = Gtk.Popover(has_arrow=False, halign=Gtk.Align.START)
         self.popover.set_child(self)
 
-        # self.connect('activate', self.search_cb, widget, True, True, *args)
         self.connect('next-match', self.__class__.search_cb, widget, True, False, *args)
         self.connect('previous-match', self.__class__.search_cb, widget, False, False, *args)
         self.connect('search-changed', self.__class__.search_cb, widget, None, True, *args)

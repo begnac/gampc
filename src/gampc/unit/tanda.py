@@ -248,6 +248,10 @@ class TandaWidget(compound.WidgetWithPaned):
         self.subwidget_index = (self.subwidget_index + 1) % len(self.subwidgets)
         self.stack.set_visible_child(self.subwidgets[self.subwidget_index])
 
+    @staticmethod
+    def left_view_search_test(text, item):
+        return text.lower() in item.get_string().lower()
+
 
 class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
     def __init__(self, *args, separator_file, **kwargs):

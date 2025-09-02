@@ -132,3 +132,7 @@ class WidgetWithPanedTreeList(compound.WidgetWithPaned):
         row = view.get_model()[position]
         if row.is_expandable():
             row.set_expanded(not row.get_expanded())
+
+    @staticmethod
+    def left_view_search_test(text, row):
+        return text.lower() in row.get_item().name.lower()
