@@ -18,11 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from gi.repository import Gdk
-from gi.repository import Gtk
-
 import asyncio
 import decorator
+
+from gi.repository import Gdk
+from gi.repository import Gtk
 
 
 class Rectangle(Gdk.Rectangle):
@@ -117,3 +117,21 @@ class FactoryBase(Gtk.SignalListItemFactory):
 
     def teardown_cb(self, listitem):
         pass
+
+
+# class DebugTime:
+#     import sys
+#     import time as time
+
+#     def __init__(self):
+#         self.last_time = self.time.time()
+#         self.n_last_time = 0
+
+#     def run(self):
+#         self.n_last_time += 1
+#         now = self.time.time()
+#         print(f"{self.sys._getframe().f_back.f_code.co_name}: {self.n_last_time}, {now - self.last_time}")
+#         self.last_time = now
+
+
+# debug_time = DebugTime()
