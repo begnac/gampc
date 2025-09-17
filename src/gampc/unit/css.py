@@ -25,7 +25,8 @@ from ..util import unit
 
 
 def load_theme_css(dark, theme_css_provider, app_css_provider):
-    theme_css_provider.load_named('Adwaita', 'dark' if dark else None)
+    theme_css_provider.set_property('prefers-color-scheme', Gtk.InterfaceColorScheme.DARK if dark else Gtk.InterfaceColorScheme.LIGHT)
+    theme_css_provider.load_named(Gtk.Settings.get_for_display(Gdk.Display.get_default()).get_property('gtk-theme-name'))
 
     css = ''
 
