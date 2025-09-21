@@ -227,7 +227,26 @@ class __unit__(mixins.UnitComponentMixin, mixins.UnitServerMixin, unit.Unit):
     TITLE = _("Current Song")
     KEY = '0'
 
+    current_song = GObject.Property()
+
+    def __init__(self, manager):
+        super().__init__(manager)
+        self.unit_server.ampd_server_properties.connect('notify::current-song', self.notify_current_song_cb)
+
     def new_widget(self):
         current = CurrentWidget()
-        self.unit_server.ampd_server_properties.bind_property('current-song', current, 'current-song', GObject.BindingFlags.SYNC_CREATE)
+        self.bind_property('current-song', current, 'current-song', GObject.BindingFlags.SYNC_CREATE)
         return current
+
+    def notify_current_song_cb(self, properties, pspec):
+        TITLE_SEP = ' - '
+        PERFORMER_SEP = ' con '
+
+        song = properties.current_song.copy()
+        if 'Title' in song:
+            if song['file'].startswith('http://') or song['file'].startswith('https://'):
+                if TITLE_SEP in song['Title'] and 'Artist' not in song:
+                    song['Artist'], song['Title'] = song['Title'].split(TITLE_SEP, 1)
+                    if PERFORMER_SEP in song['Artist'] and 'Performer' not in song:
+                        song['Artist'], song['Performer'] = song['Artist'].split(PERFORMER_SEP, 1)
+        self.current_song = song
