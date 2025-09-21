@@ -35,14 +35,14 @@ from .. import __application__
 from . import mixins
 
 
-class PaintableCache(dict):
+class PhotoCache(dict):
     def __missing__(self, key):
-        paintable = self.find_image(key)
-        if paintable is not None:
-            self[key] = paintable
-        return paintable
+        photo = self.find_photo(key)
+        if photo is not None:
+            self[key] = photo
+        return photo
 
-    def find_image(self, key):
+    def find_photo(self, key):
         for extension in ('.jpg', '.png', '.gif'):
             path = os.path.join(GLib.get_user_data_dir(), __application__, 'photos', key + extension)
             if os.path.isfile(path):
@@ -50,20 +50,21 @@ class PaintableCache(dict):
 
         for sep in (', ', ' y '):
             if sep in key:
-                return self.find_images(key.split(sep))
+                return self.find_photos(key.split(sep))
 
         return None
 
-    def find_images(self, names):
-        paintables = [self[name] for name in names]
-        if not all(paintables):
+    def find_photos(self, names):
+        photos = [self[name] for name in names]
+        photos = [photo for photo in photos if photo is not None]
+        if not photos:
             return None
         height = 0
-        for p in paintables:
+        for p in photos:
             height = max(height, 2 * p.get_height())
         snapshot = Gtk.Snapshot()
         x = 0
-        for p in paintables:
+        for p in photos:
             rect = Graphene.Rect()
             rect.init(x, 0, height * p.get_width() / p.get_height(), height)
             snapshot.append_texture(p, rect)
@@ -90,41 +91,33 @@ class Welcome(Gtk.Box):
 
 
 class Person(Gtk.Box):
-    def __init__(self, image_cache, condition=None):
+    def __init__(self, photo_cache, condition=None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
-        self.image_cache = image_cache
+        self.photo_cache = photo_cache
         self.condition = condition
 
+        self.picture = Gtk.Picture(vexpand=True)
         self.label = Gtk.Label(vexpand=True, ellipsize=Pango.EllipsizeMode.MIDDLE, wrap=True, lines=3)
 
-        self.image = Gtk.Image(vexpand=True)
-        self.image_label = Gtk.Label()
-
+        self.append(self.picture)
         self.append(self.label)
-        self.append(self.image)
-        self.append(self.image_label)
 
     def set_name(self, name):
         if not name or (self.condition and not self.condition(name)):
             self.set_visible(False)
             return
 
-        self.image.clear()
         self.set_visible(True)
 
-        self.paintable = self.image_cache[name]
-        if self.paintable:
-            self.label.set_visible(False)
-            self.image.set_visible(True)
-            self.image_label.set_visible(True)
-            self.image_label.set_label(name)
-            self.image.set_from_paintable(self.paintable)
-        else:
+        self.photo = self.photo_cache[name]
+        if self.photo:
+            self.picture.set_paintable(self.photo)
+            self.picture.set_visible(True)
             self.label.set_label(name)
-            self.label.set_visible(True)
-            self.image.set_visible(False)
-            self.image_label.set_visible(False)
+        else:
+            self.picture.set_visible(False)
+            self.label.set_label(name)
 
 
 class Info(Gtk.Box):
@@ -132,12 +125,12 @@ class Info(Gtk.Box):
 
     def __init__(self):
         super().__init__(hexpand=True, orientation=Gtk.Orientation.VERTICAL, homogeneous=True)
-        self.paintables = PaintableCache()
+        self.photos = PhotoCache()
 
-        self.artist = Person(self.paintables)
+        self.artist = Person(self.photos)
         self.artist.label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Serif Bold", 0 -1 scale 2'))
 
-        self.performer = Person(self.paintables, lambda name: name != 'Instrumental')
+        self.performer = Person(self.photos, lambda name: name != 'Instrumental')
         self.performer.label.set_attributes(Pango.AttrList.from_string('0 -1 font-desc "Sans", 0 -1 scale 2'))
 
         artist_performer_box = Gtk.Box(vexpand=True, homogeneous=True, spacing=50)
@@ -179,7 +172,7 @@ class CurrentWidget(cleanup.CleanupCssMixin, cleanup.CleanupSignalMixin, Gtk.Sta
 
     def __init__(self):
         self.layout = MyLayout()
-        super().__init__(margin_bottom=20, margin_start=20, margin_end=20, margin_top=20, layout_manager=self.layout)
+        super().__init__(margin_bottom=20, margin_start=20, margin_end=20, margin_top=20, layout_manager=self.layout, css_name='current')
 
         self.welcome = Welcome()
         self.info = Info()
@@ -205,8 +198,8 @@ class CurrentWidget(cleanup.CleanupCssMixin, cleanup.CleanupSignalMixin, Gtk.Sta
         if song:
             scale += 3 * max(len(song.get('Artist', '')) - 20, len(song.get('Title', '')) - 20, 0)
         self.size = self.layout.size / scale
-        css = f'box.current label {{ font-size: {self.size}px; }}'
-        self.css_provider.load_from_string(css)
+        CSS = f'current label {{ font-size: {self.size}px; }}'
+        self.css_provider.load_from_string(CSS)
 
     def notify_size_cb(self, layout, pspec):
         self.set_size()
