@@ -20,7 +20,6 @@
 
 from gi.repository import GLib
 from gi.repository import GObject
-from gi.repository import Graphene
 from gi.repository import Gdk
 from gi.repository import Pango
 from gi.repository import Gtk
@@ -48,29 +47,6 @@ class PhotoCache(dict):
             if os.path.isfile(path):
                 return Gdk.Texture.new_from_filename(path)
 
-        for sep in (', ', ' y '):
-            if sep in key:
-                return self.find_photos(key.split(sep))
-
-        return None
-
-    def find_photos(self, names):
-        photos = [self[name] for name in names]
-        photos = [photo for photo in photos if photo is not None]
-        if not photos:
-            return None
-        height = 0
-        for p in photos:
-            height = max(height, 2 * p.get_height())
-        snapshot = Gtk.Snapshot()
-        x = 0
-        for p in photos:
-            rect = Graphene.Rect()
-            rect.init(x, 0, height * p.get_width() / p.get_height(), height)
-            snapshot.append_texture(p, rect)
-            x += rect.get_width()
-        return snapshot.to_paintable()
-
 
 class Welcome(Gtk.Box):
     size = GObject.Property(type=int)
@@ -97,27 +73,40 @@ class Person(Gtk.Box):
         self.photo_cache = photo_cache
         self.condition = condition
 
-        self.picture = Gtk.Picture(vexpand=True)
+        self.picture_box = None
         self.label = Gtk.Label(vexpand=True, ellipsize=Pango.EllipsizeMode.MIDDLE, wrap=True, lines=3)
 
-        self.append(self.picture)
         self.append(self.label)
 
     def set_name(self, name):
+        if self.picture_box is not None:
+            self.remove(self.picture_box)
+            self.picture_box = None
+
         if not name or (self.condition and not self.condition(name)):
             self.set_visible(False)
             return
 
+        self.label.set_label(name)
+
+        for component in get_names(name):
+            photo = self.photo_cache[component]
+            if photo:
+                picture = Gtk.Picture(paintable=photo)
+                if self.picture_box is None:
+                    self.picture_box = Gtk.Box(halign=Gtk.Align.CENTER)
+                    self.prepend(self.picture_box)
+                self.picture_box.append(picture)
         self.set_visible(True)
 
-        self.photo = self.photo_cache[name]
-        if self.photo:
-            self.picture.set_paintable(self.photo)
-            self.picture.set_visible(True)
-            self.label.set_label(name)
-        else:
-            self.picture.set_visible(False)
-            self.label.set_label(name)
+
+def get_names(name):
+    for sep in (', ', ' y '):
+        if sep in name:
+            for component in name.split(sep):
+                yield from get_names(component)
+            return
+    yield name
 
 
 class Info(Gtk.Box):
