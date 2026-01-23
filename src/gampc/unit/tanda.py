@@ -133,7 +133,7 @@ class TandaEditableLabel(editable.EditableLabel):
     def fill_cb(self, args):
         name = self.get_name()
         alt_tanda = TandaDatabase._tanda_from_songs(self._item.value['_songs'])
-        if name in alt_tanda and alt_tanda[name] != self.label.get_label():
+        if name in alt_tanda and alt_tanda[name] != self.get_text():
             self.edit_manager.emit('edited', self, {name: alt_tanda[name]})
 
 
