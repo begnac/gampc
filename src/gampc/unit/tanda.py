@@ -786,10 +786,8 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         search.entry.emit('activate')
         dialog_ = dialog.DialogAsync(transient_for=Gio.Application.get_default().get_active_window(), title=_("Replace {}").format(' / '.join(fields)))
         dialog_.main_box.prepend(search)
-        dialog_.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
-        dialog_.add_button(_("_OK"), Gtk.ResponseType.OK)
         model = search.main.item_selection_filter_model
-        if await dialog_.run() == Gtk.ResponseType.OK and len(model) == 1:
+        if await dialog_.run() and len(model) == 1:
             self.db.replace_song(song_file, model[0].value)
         search.cleanup()
 
