@@ -52,7 +52,7 @@ class ViewFilenameMixin:
                 return
             for filename in deleted:
                 gfile = Gio.File.new_for_path(GLib.build_filenamev([GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC), filename]))
-                print(gfile.trash())
+                gfile.trash()
                 # continue
                 # if song._gfile is not None:
                 #     song._gfile.trash()
