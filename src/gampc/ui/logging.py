@@ -29,7 +29,7 @@ class Handler(logging.Handler):
 
     def __init__(self, timeout):
         super().__init__(logging.INFO)
-        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, can_focus=False)
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.timeout = timeout
         self.messages = []
 
