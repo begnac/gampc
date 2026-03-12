@@ -50,6 +50,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         self.set_default_size(self.default_width, self.default_height)
         self.connect('notify::default-width', self.__class__.notify_default_size_cb)
         self.connect('notify::default-height', self.__class__.notify_default_size_cb)
+        self.unit.unit_server.connect('notify::server-label', self.notify_server_label_cb)
 
         self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::current-song', self.notify_current_song_cb)
         self.connect_clean(self.unit.unit_server.ampd_server_properties, 'notify::state', self.update_title)
@@ -86,6 +87,7 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
         logger.removeHandler(self.logging_handler)
         self.logging_handler.cleanup()
         super().cleanup()
+        self.unit.unit_server.disconnect_by_func(self.notify_server_label_cb)
 
     def change_component(self, component):
         if self.component is not None:
@@ -119,13 +121,16 @@ class Window(cleanup.CleanupSignalMixin, Gtk.ApplicationWindow):
 
     def set_subtitle(self, subtitle=None):
         server = self.unit.unit_server.server_label.rsplit('@', 1)[-1].strip()
-        self.headerbar.subtitle.set_label(f"{subtitle} @ {server}" if subtitle else server)
+        self.headerbar.set_subtitle(f"{subtitle} @ {server}" if subtitle else server)
 
     def notify_default_size_cb(self, param):
         if not self.is_fullscreen():
             width, height = self.get_default_size()
             self.unit.config['width'] = width
             self.unit.config['height'] = height
+
+    def notify_server_label_cb(self, unit_server, param):
+        self.set_subtitle()
 
 
 class __unit__(mixins.UnitConfigMixin, mixins.UnitServerMixin, unit.Unit):
