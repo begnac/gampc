@@ -162,9 +162,9 @@ class App(Gtk.Application):
     @staticmethod
     def excepthook(*args):
         if args[0] == ampd.errors.ReplyError:
-            logger.error(args[1])
+            logger.error(str(args[1]))
         else:
-            logger.error(args[1], exc_info=args)
+            logger.error(str(args[1]), exc_info=args)
         try:
             del sys.last_type, sys.last_value, sys.last_traceback
         except AttributeError:
