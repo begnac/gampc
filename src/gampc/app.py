@@ -23,8 +23,10 @@ import logging
 import signal
 import sys
 
-import gasyncio
+import dbus
+
 import ampd
+import gasyncio
 
 from gi.repository import GLib
 from gi.repository import Gio
@@ -53,6 +55,9 @@ class App(Gtk.Application):
         self.connect('handle-local-options', self.__class__.handle_local_options_cb)
         self.connect('command-line', self.__class__.command_line_cb)
         self.connect('activate', self.__class__.activate_cb)
+
+        self.inhibit_cookie = 0
+        self.inhibit_fd = None
 
     def __del__(self):
         logger.debug(f'Deleting {self}')
@@ -88,6 +93,7 @@ class App(Gtk.Application):
         self.notification = Gio.Notification.new(_("MPD status"))
         self.notification_task = None
 
+        self.unit_server.ampd_server_properties.connect('notify::state', self.set_inhibit)
         self.unit_server.ampd_connect()
 
         self.connect('window-removed', lambda self, window: window.cleanup())
@@ -194,6 +200,19 @@ class App(Gtk.Application):
         await asyncio.sleep(5)
         self.withdraw_notification('status')
         self.notification_task = None
+
+    def set_inhibit(self, server_properties, param):
+        if server_properties.state == 'play':
+            if not self.inhibit_cookie:
+                self.inhibit_cookie = self.inhibit(None, Gtk.ApplicationInhibitFlags.SUSPEND, _("Playing"))
+            bus = dbus.SystemBus()
+            obj = bus.get_object('org.freedesktop.login1', '/org/freedesktop/login1')
+            self.inhibit_fd = obj.Inhibit('handle-lid-switch', __program_name__, _("Playing"), 'block', dbus_interface='org.freedesktop.login1.Manager')
+        else:
+            if self.inhibit_cookie:
+                self.uninhibit(self.inhibit_cookie)
+                self.inhibit_cookie = 0
+            self.inhibit_fd = None
 
     def register_action_group(self, action_group):
         for name in action_group.list_actions():
