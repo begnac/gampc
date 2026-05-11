@@ -168,10 +168,11 @@ class ViewWithCopyPaste(ViewWithCopy):
         if parameter.unpack():
             self.copy_items(self.get_items(selection))
         pos = selection[0]
-        if pos > 0 and pos + len(selection) >= self.item_selection_model.get_n_items():
+        if pos + len(selection) >= self.item_selection_model.get_n_items():
             pos -= 1
         self.remove_positions(selection)
-        self.item_selection_model.select_item(pos, True)
+        if pos >= 0:
+            self.item_selection_model.select_item(pos, True)
 
     def action_paste_cb(self, action, parameter):
         self.get_clipboard().read_value_async(self.transfer_type, 0, None, self.action_paste_finish_cb, parameter.unpack())
