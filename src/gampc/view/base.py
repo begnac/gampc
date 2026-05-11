@@ -146,7 +146,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
             self.filter_item = item.Item(value={})
             self.filter_store = Gio.ListStore()
             self.filter_store_selection = Gtk.NoSelection(model=self.filter_store)
-            self.filter_view = ItemView(fields, edit_manager=self.filter_manager, force_editable=True,  sortable=False, model=self.filter_store_selection)
+            self.filter_view = ItemView(fields, edit_manager=self.filter_manager, force_editable=True, sortable=False, model=self.filter_store_selection)
             self.filter_view.add_css_class('filter')
             self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, vscrollbar_policy=Gtk.PolicyType.NEVER)
             self.scrolled_filter_view.get_hscrollbar().set_visible(False)
@@ -171,7 +171,9 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
         return self.item_view.grab_focus()
 
     def filter_edited_cb(self, manager, widget, changes):
-        self.filter_item.value.update(changes)
+        value = dict(self.filter_item.value)
+        value.update(changes)
+        self.filter_item.new_value(value)
         self.filter_filter.changed(Gtk.FilterChange.DIFFERENT)
 
     def notify_filtering_cb(self, param):
