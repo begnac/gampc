@@ -125,7 +125,7 @@ class EditStack(GObject.Object):
         self.reset()
         self.items = items or []
         if item is not None:
-            self.item = weakref.ref(item)
+            self.item_weakref = weakref.ref(item)
 
     def reset(self):
         assert self.hold_counter == 0
@@ -144,7 +144,7 @@ class EditStack(GObject.Object):
             self.step(self.index < self.base)
 
     def get_item(self):
-        return self.item()
+        return self.item_weakref()
 
     def splice(self, p, r, a):
         assert self.hold_counter == 0

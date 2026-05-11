@@ -116,7 +116,7 @@ class ViewWithCopy(ViewWithContextMenu):
         del self.drag_selection
 
     def get_row_position(self, row):
-        return list(self.item_selection_model).index(row.get_first_child().get_first_child()._item)
+        return row.get_first_child().get_first_child().item_position
 
 
 class ViewWithCopyPaste(ViewWithCopy):

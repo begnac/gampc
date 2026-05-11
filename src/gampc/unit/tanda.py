@@ -131,9 +131,10 @@ class TandaEditableLabel(editable.EditableLabel):
         self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.fill_cb)))
 
     def fill_cb(self, args):
+        self = self.get_first_child()
         name = self.get_name()
         alt_tanda = TandaDatabase._tanda_from_songs(self._item.value['_songs'])
-        if name in alt_tanda and alt_tanda[name] != self.get_text():
+        if name in alt_tanda and alt_tanda[name] != self.get_label():
             self.edit_manager.emit('edited', self, {name: alt_tanda[name]})
 
 
@@ -279,7 +280,7 @@ class TandaEditTandaView(ViewWithContextMenu):
     def __init__(self, *args, separator_file, **kwargs):
         self.separator_file = separator_file
         self.edit_manager = editable.EditManager()
-        super().__init__(*args, factory_factory=item.ListItemFactory, widget_factory=functools.partial(TandaEditableLabel, self.edit_manager), selection_model=Gtk.SingleSelection, sortable=True, **kwargs)
+        super().__init__(*args, widget_factory=functools.partial(TandaEditableLabel, self.edit_manager), selection_model=Gtk.SingleSelection, sortable=True, **kwargs)
 
     def get_filenames(self, selection):
         if self.item_selection_filter_model:

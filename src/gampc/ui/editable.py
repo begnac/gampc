@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
@@ -31,46 +32,99 @@ class EditManager(GObject.Object):
     }
 
 
-class EditableLabel(Gtk.EditableLabel):
-    def __init__(self, edit_manager, **kwargs):
-        super().__init__(**kwargs, focusable=True, css_name='editablelabel')
+class EditableLabel(Gtk.Box):
+    item_position = GObject.Property(type=int)
 
-        for widget in self.get_delegate(), self.get_delegate().get_prev_sibling():
-            for controller in widget.observe_controllers():
-                if isinstance(controller, Gtk.GestureClick):
-                    widget.remove_controller(controller)
+    def __init__(self, edit_manager, **kwargs):
+        super().__init__(**kwargs, focusable=True, can_focus=True, css_name='editablelabel')
 
         self.edit_manager = edit_manager
 
+        self.text = None
+        self.label = Gtk.Label(focusable=True, can_focus=True)
+        self.append(self.label)
+
         self.shortcut = Gtk.ShortcutController()
-        self.add_controller(self.shortcut)
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_c, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.copy_cb)))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.copy_cb)))
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_v, modifiers=Gdk.ModifierType.CONTROL_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.paste_cb)))
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.paste_cb)))
+        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_Return, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK)
+        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.start_editing_cb)))
 
-        click = Gtk.GestureClick(button=1, propagation_phase=Gtk.PropagationPhase.CAPTURE)
-        click.connect('pressed', self.click_pressed_cb)
-        self.add_controller(click)
+        self.click = Gtk.GestureClick(button=1, propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        self.click.connect('pressed', self.click_pressed_cb)
 
-        self.connect('notify::editing', self.__class__.notify_editing_cb)
+        self.connect('map', self.__class__.map_cb)
+        self.connect('unmap', self.__class__.unmap_cb)
+
+    def get_label(self):
+        return self.label.get_label()
 
     def set_label(self, label):
-        self.set_text(label)
+        self.label.set_label(label)
 
-    def notify_editing_cb(self, param):
-        if self.get_editing():
-            self.old_text = self.get_text()
-        else:
-            if self.get_text() != self.old_text:
-                self.edit_manager.emit('edited', self, {self.get_name(): self.get_text()})
-            del self.old_text
+    def map_cb(self):
+        parent = self.get_parent()
+        parent.add_controller(self.shortcut)
+        parent.add_controller(self.click)
 
-    def copy_cb(self, args):
-        self.get_clipboard().set_content(item.PartialTransfer({self.get_name(): self.get_text()}).get_content())
+    def unmap_cb(self):
+        parent = self.get_parent()
+        parent.remove_controller(self.shortcut)
+        parent.remove_controller(self.click)
+
+    def start_editing(self):
+        assert self.text is None
+        self.remove(self.label)
+        self.text = Gtk.Text(text=self.label.get_label(), hexpand=True)
+        self.append(self.text)
+
+        self.text.connect('activate', self.finish_editing_cb, 987987)
+
+        shortcut = Gtk.ShortcutController()
+        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_Escape, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK)
+        shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.abort_editing_cb)))
+        self.text.add_controller(shortcut)
+
+        self.text_focus = Gtk.EventControllerFocus()
+        self.text_focus.connect('leave', self.finish_editing_cb, 77777)
+        self.text.add_controller(self.text_focus)
+
+        self.text.grab_focus()
+
+    def stop_editing(self, keep):
+        if keep and self.text.get_text() != self.get_label():
+            self.edit_manager.emit('edited', self, {self.get_name(): self.text.get_text()})
+        self.text.remove_controller(self.text_focus)
+        del self.text_focus
+        self.remove(self.text)
+        self.text = None
+        self.append(self.label)
+        self.get_parent().grab_focus()
+        return False
+
+    @staticmethod
+    def start_editing_cb(parent, data):
+        parent.get_first_child().start_editing()
+
+    def finish_editing_cb(self, *args):
+        assert self.text is not None
+        GLib.timeout_add(0, self.stop_editing, True)
+
+    def abort_editing_cb(self, *args):
+        assert self.text is not None
+        GLib.timeout_add(0, self.stop_editing, False)
+
+    @staticmethod
+    def copy_cb(parent, data):
+        self = parent.get_first_child()
+        self.get_clipboard().set_content(item.PartialTransfer({self.get_name(): self.get_label()}).get_content())
         return True
 
-    def paste_cb(self, args):
+    @staticmethod
+    def paste_cb(parent, data):
+        self = parent.get_first_child()
         self.get_clipboard().read_value_async(item.PartialTransfer, 0, None, self.paste_finish_cb)
         return False
 
@@ -81,7 +135,7 @@ class EditableLabel(Gtk.EditableLabel):
     @staticmethod
     def click_pressed_cb(click, n_press, x, y):
         if click.get_current_event_state() & Gdk.ModifierType.CONTROL_MASK:
-            self = click.get_widget()
-            if not self.get_editing():
+            self = click.get_widget().get_first_child()
+            if self.text is None:
                 click.set_state(Gtk.EventSequenceState.CLAIMED)
                 self.start_editing()

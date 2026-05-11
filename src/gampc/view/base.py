@@ -21,8 +21,8 @@
 import re
 import functools
 
-from gi.repository import Gio
 from gi.repository import GObject
+from gi.repository import Gio
 from gi.repository import Gtk
 
 from ..util import cleanup
@@ -33,9 +33,17 @@ from ..ui import editable
 from ..ui import listviewsearch
 
 
+class ViewLabel(Gtk.Label):
+    item_position = GObject.Property(type=int)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs, halign=Gtk.Align.START)
+
+
 class FieldItemColumn(Gtk.ColumnViewColumn):
     def __init__(self, field, *, sortable, **kwargs):
         super().__init__(**kwargs, id=field.name, title=field.title)
+        self.factory = self.get_factory()  # This is a GObject introspection bug.
 
         field.bind_property('width', self, 'fixed-width', GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL)
 
@@ -90,7 +98,7 @@ class ItemView(Gtk.ColumnView):
 class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, *, model=None, item_type=item.SongItem, factory_factory=item.ListItemFactory, widget_factory=functools.partial(Gtk.Label, halign=Gtk.Align.START), sortable, filterable=True, selection_model=Gtk.MultiSelection, **kwargs):
+    def __init__(self, fields, *, model=None, item_type=item.SongItem, factory_factory=item.ListItemFactory, widget_factory=ViewLabel, sortable, filterable=True, selection_model=Gtk.MultiSelection, **kwargs):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, **kwargs)
 
         self.sortable = sortable

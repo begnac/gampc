@@ -45,7 +45,7 @@ def load_theme_css(dark, theme_css_provider, app_css_provider):
     '''
 
     css += '''
-    columnview > listview > row > cell > :focus {
+    columnview > listview > row > cell:focus-within > editablelabel {
       border-style: solid;
       border-width: 1px;
       border-radius: 5px;

@@ -51,7 +51,7 @@ class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
 
     def __init__(self, separator_file, edit_stack, *args, **kwargs):
         edit_manager = editable.EditManager()
-        super().__init__(*args, **kwargs, factory_factory=item.ListItemFactory, widget_factory=functools.partial(editable.EditableLabel, edit_manager))
+        super().__init__(*args, **kwargs, widget_factory=functools.partial(editable.EditableLabel, edit_manager))
         self.item_view.add_css_class('song-by-key')
         self.connect_clean(edit_manager, 'edited', self.item_edited_cb)
         self.context_menu.append_section(None, self.edit_stack_menu)
@@ -68,8 +68,8 @@ class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
         GLib.idle_add(self.item_edited, widget, changes)
 
     def item_edited(self, widget, changes):
-        item_ = widget._item
-        i = self.item_model.find(item_).position
+        i = widget.item_position
+        item_ = self.item_selection_model[i]
         old = item_.value
         new = dict(old)
         new.update(changes)

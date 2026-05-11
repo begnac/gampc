@@ -106,7 +106,10 @@ class ListItemFactory(misc.FactoryBase):
         self.edit_manager = edit_manager
 
     def setup_cb(self, listitem):
-        listitem.set_child(self.widget_factory(name=self.name))
+        listitem.set_focusable(True)
+        widget = self.widget_factory(name=self.name)
+        listitem.set_child(widget)
+        listitem.bind_property('position', widget, 'item-position', GObject.BindingFlags.SYNC_CREATE)
 
     def bind_cb(self, listitem):
         listitem.get_item().bind(listitem.get_child())
@@ -115,25 +118,77 @@ class ListItemFactory(misc.FactoryBase):
         listitem.get_item().unbind(listitem.get_child())
 
 
-class ItemListStore(Gio.ListStore):
+# class ItemListStore(Gio.ListStore):
+#     def __init__(self, *, item_type, values=None):
+#         super().__init__(item_type=item_type)
+#         if values is not None:
+#             self.set_values(values)
+
+#     def remove_all(self):
+#         self.set_values([])
+
+#     def set_values(self, values):
+#         self.splice_values(0, None, values)
+
+#     def splice_values(self, pos, remove, values):
+#         if remove is None:
+#             remove = self.get_n_items() - pos
+#         values = list(values)
+#         add = len(values)
+#         for i in range(min(add, remove)):
+#             self[pos + i].new_value(values[i])
+#         if remove >= add:
+#             self[pos + add: pos + remove] = []
+#         else:
+#             self[pos + remove:pos + remove] = [self.get_item_type().pytype(value=values[remove + i]) for i in range(add - remove)]
+
+#     def index(self, value):
+#         found, position = self.find(value)
+#         if found:
+#             return position
+#         else:
+#             raise ValueError
+
+
+class ItemListStore(GObject.Object, Gio.ListModel):
     def __init__(self, *, item_type, values=None):
-        super().__init__(item_type=item_type)
+        super().__init__()
+        self.item_type = item_type
+        self.items = []
         if values is not None:
             self.set_values(values)
+
+    def do_get_item(self, position):
+        return self.items[position]
+
+    def do_get_item_type(self):
+        return self.items_type
+
+    def do_get_n_items(self):
+        return len(self.items)
+
+    def index(self, item):
+        return self.items.index(item)
+
+    def remove_all(self):
+        self.set_values([])
 
     def set_values(self, values):
         self.splice_values(0, None, values)
 
     def splice_values(self, pos, remove, values):
         if remove is None:
-            remove = self.get_n_items()
+            remove = self.get_n_items() - pos
         values = list(values)
-        n = len(values)
-        new_items = [] if remove >= n else [self.get_item_type().pytype() for i in range(n - remove)]
-        items = self[pos:pos + remove] + new_items
-        for i in range(n):
-            items[i].new_value(values[i])
-        self[pos:pos + remove] = items[:n]
+        add = len(values)
+        for i in range(min(add, remove)):
+            self.items[pos + i].new_value(values[i])
+        if remove >= add:
+            self.items[pos + add: pos + remove] = []
+            self.items_changed(pos + add, remove - add, 0)
+        else:
+            self.items[pos + remove:pos + remove] = [self.item_type(value=values[remove + i]) for i in range(add - remove)]
+            self.items_changed(pos + remove, 0, add - remove)
 
 
 class TransferBase(GObject.Object):
