@@ -163,12 +163,13 @@ class EditStack(GObject.Object):
         modified = self.index != self.base
         if modified != self.modified:
             self.modified = modified
-        if focus >= len(self.items):
-            focus -= 1
-        if focus == -1:
-            focus = None
-        elif selection == []:
-            selection = [focus]
+        if focus is not None:
+            if focus >= len(self.items):
+                focus -= 1
+            if focus == -1:
+                focus = None
+            elif selection == []:
+                selection = [focus]
         self.emit('step', focus, selection)
 
     def hold_transaction(self):
