@@ -36,12 +36,12 @@ class EditableLabel(Gtk.Box):
     item_position = GObject.Property(type=int)
 
     def __init__(self, edit_manager, **kwargs):
-        super().__init__(**kwargs, focusable=True, can_focus=True, css_name='editablelabel')
+        super().__init__(**kwargs, css_name='editablelabel')
 
         self.edit_manager = edit_manager
 
         self.text = None
-        self.label = Gtk.Label(focusable=True, can_focus=True)
+        self.label = Gtk.Label()
         self.append(self.label)
 
         self.shortcut = Gtk.ShortcutController()

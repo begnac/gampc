@@ -51,7 +51,7 @@ class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
 
     def __init__(self, separator_file, edit_stack, *args, **kwargs):
         edit_manager = editable.EditManager()
-        super().__init__(*args, **kwargs, widget_factory=functools.partial(editable.EditableLabel, edit_manager))
+        super().__init__(*args, **kwargs, edit_manager=edit_manager)
         self.item_view.add_css_class('song-by-key')
         self.connect_clean(edit_manager, 'edited', self.item_edited_cb)
         self.context_menu.append_section(None, self.edit_stack_menu)
@@ -117,9 +117,9 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, uni
         self.require('persistent')
 
         fields = {
-            'Name': dict(title=_("Name")),
-            'file': dict(title=_("URL")),
-            'Comment': dict(title=_("Comment")),
+            'Name': dict(title=_("Name"), editable=True),
+            'file': dict(title=_("URL"), editable=True),
+            'Comment': dict(title=_("Comment"), editable=True),
         }
 
         self.fields = field.FieldsInfo(self.config['fields'], fields)

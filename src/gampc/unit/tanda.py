@@ -78,11 +78,34 @@ class TandaItem(item.Item):
     edit_stack = GObject.Property()
     modified = GObject.Property(type=bool, default=False)
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_f, modifiers=Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK)
+        self.fill_shortcut = Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.fill_cb))
+
     def new_value(self, value):
         self.tandaid = value.pop('tandaid')
         self.edit_stack = editstack.EditStack([song['file'] for song in value['_songs']], self)
         self.edit_stack.bind_property('modified', self, 'modified')
         super().new_value(value)
+
+    def bind(self, widget):
+        super().bind(widget)
+        if isinstance(widget, editable.EditableLabel):
+            widget.shortcut.add_shortcut(self.fill_shortcut)
+
+    def unbind(self, widget):
+        if isinstance(widget, editable.EditableLabel):
+            widget.shortcut.remove_shortcut(self.fill_shortcut)
+        super().unbind(widget)
+
+    @staticmethod
+    def fill_cb(cell, args):
+        editable = cell.get_first_child()
+        name = editable.get_name()
+        alt_tanda = TandaDatabase._tanda_from_songs(editable._item.value['_songs'])
+        if name in alt_tanda and alt_tanda[name] != editable.get_label():
+            editable.edit_manager.emit('edited', editable, {name: alt_tanda[name]})
 
     def get_binders(self):
         yield from super().get_binders()
@@ -118,24 +141,6 @@ class TandaSongItem(item.SongItem):
     def new_value(self, value):
         self.tandaid = value.pop('tandaid')
         super().new_value(value)
-
-
-class TandaEditableLabel(editable.EditableLabel):
-    __gsignals__ = {
-        'action-fill': (GObject.SIGNAL_RUN_FIRST, None, ()),
-    }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_f, modifiers=Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK)
-        self.shortcut.add_shortcut(Gtk.Shortcut(trigger=trigger, action=Gtk.CallbackAction.new(self.__class__.fill_cb)))
-
-    def fill_cb(self, args):
-        self = self.get_first_child()
-        name = self.get_name()
-        alt_tanda = TandaDatabase._tanda_from_songs(self._item.value['_songs'])
-        if name in alt_tanda and alt_tanda[name] != self.get_label():
-            self.edit_manager.emit('edited', self, {name: alt_tanda[name]})
 
 
 class StringListItemFactory(misc.FactoryBase):
@@ -280,7 +285,7 @@ class TandaEditTandaView(ViewWithContextMenu):
     def __init__(self, *args, separator_file, **kwargs):
         self.separator_file = separator_file
         self.edit_manager = editable.EditManager()
-        super().__init__(*args, widget_factory=functools.partial(TandaEditableLabel, self.edit_manager), selection_model=Gtk.SingleSelection, sortable=True, **kwargs)
+        super().__init__(*args, edit_manager=self.edit_manager, selection_model=Gtk.SingleSelection, sortable=True, **kwargs)
 
     def get_filenames(self, selection):
         if self.item_selection_filter_model:
@@ -636,19 +641,19 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         self.css_provider.load_from_string(CSS)
 
         fields = {
-            'Artist': dict(title=_("Artist")),
-            'Genre': dict(title=_("Genre")),
-            'Performer': dict(title=_("Performer")),
-            'Comment': dict(title=_("Comment")),
-            'Description': dict(title=_("Description")),
-            'Note': dict(title=_("Note"), min_width=30),
-            'Rhythm': dict(title=_("Rhythm"), min_width=30),
-            'Energy': dict(title=_("Energy"), min_width=30),
-            'Speed': dict(title=_("Speed"), min_width=30),
-            'Emotion': dict(title=_("Emotion"), min_width=30),
-            'Level': dict(title=_("Level"), min_width=30),
-            'Last_Modified': dict(title=_("Last modified")),
-            'Last_Played': dict(title=_("Last played")),
+            'Artist': dict(title=_("Artist"), editable=True),
+            'Genre': dict(title=_("Genre"), editable=True),
+            'Performer': dict(title=_("Performer"), editable=True),
+            'Comment': dict(title=_("Comment"), editable=True),
+            'Description': dict(title=_("Description"), editable=True),
+            'Note': dict(title=_("Note"), min_width=30, editable=True),
+            'Rhythm': dict(title=_("Rhythm"), min_width=30, editable=True),
+            'Energy': dict(title=_("Energy"), min_width=30, editable=True),
+            'Speed': dict(title=_("Speed"), min_width=30, editable=True),
+            'Emotion': dict(title=_("Emotion"), min_width=30, editable=True),
+            'Level': dict(title=_("Level"), min_width=30, editable=True),
+            'Last_Modified': dict(title=_("Last modified"), editable=True),
+            'Last_Played': dict(title=_("Last played"), editable=True),
             # XXXXXXX
             'Duration': dict(title=_("Duration")),
             'First_Song': dict(title=_("First song")),

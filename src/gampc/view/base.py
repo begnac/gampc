@@ -60,18 +60,43 @@ class FieldItemColumn(Gtk.ColumnViewColumn):
         return Gtk.Ordering.LARGER if s1 > s2 else Gtk.Ordering.SMALLER if s1 < s2 else Gtk.Ordering.EQUAL
 
 
+class ListItemFactory(misc.FactoryBase):
+    def __init__(self, name, edit_manager):
+        super().__init__()
+        self.name = name
+        self.edit_manager = edit_manager
+
+    def setup_cb(self, listitem):
+        if self.edit_manager:
+            listitem.set_focusable(True)
+            widget = editable.EditableLabel(name=self.name, edit_manager=self.edit_manager)
+        else:
+            widget = ViewLabel(name=self.name)
+        listitem.set_child(widget)
+        listitem.bind_property('position', widget, 'item-position', GObject.BindingFlags.SYNC_CREATE)
+
+    def bind_cb(self, listitem):
+        listitem.get_item().bind(listitem.get_child())
+
+    def unbind_cb(self, listitem):
+        listitem.get_item().unbind(listitem.get_child())
+
+
 class ItemView(Gtk.ColumnView):
     sortable = GObject.Property(type=bool, default=False)
     visible_titles = GObject.Property(type=bool, default=True)
 
-    def __init__(self, fields, factory_factory, widget_factory, **kwargs):
+    def __init__(self, fields, force_editable=False, edit_manager=None, **kwargs):
         super().__init__(show_row_separators=True, show_column_separators=True, **kwargs)
         self.add_css_class('data-table')
 
         self.fields = fields
-        self.columns = {field.name: FieldItemColumn(field, sortable=self.sortable, factory=factory_factory(field.name, widget_factory)) for field in fields.infos.values()}
+        self.columns = {}
         for name in fields.order:
-            self.append_column(self.columns[name])
+            field = fields.infos[name]
+            editable = force_editable or field.editable
+            column = self.columns[name] = FieldItemColumn(field, sortable=self.sortable, factory=ListItemFactory(field.name, edit_manager if editable else None))
+            self.append_column(column)
         self.rows = self.get_last_child()
 
         self.bind_property('visible-titles', self.get_first_child(), 'visible', GObject.BindingFlags.SYNC_CREATE)
@@ -98,7 +123,7 @@ class ItemView(Gtk.ColumnView):
 class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, *, model=None, item_type=item.SongItem, factory_factory=item.ListItemFactory, widget_factory=ViewLabel, sortable, filterable=True, selection_model=Gtk.MultiSelection, **kwargs):
+    def __init__(self, fields, *, model=None, item_type=item.SongItem, sortable, edit_manager=None, filterable=True, selection_model=Gtk.MultiSelection, **kwargs):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, **kwargs)
 
         self.sortable = sortable
@@ -108,7 +133,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
 
         self.item_selection_model = selection_model()
         self.item_selection_filter_model = Gtk.SelectionFilterModel(model=self.item_selection_model)
-        self.item_view = ItemView(fields, factory_factory, widget_factory, sortable=sortable, model=self.item_selection_model, enable_rubberband=False, hexpand=True, vexpand=True, tab_behavior=Gtk.ListTabBehavior.CELL)
+        self.item_view = ItemView(fields, edit_manager=edit_manager, sortable=sortable, model=self.item_selection_model, enable_rubberband=False, hexpand=True, vexpand=True, tab_behavior=Gtk.ListTabBehavior.CELL)
         self.item_view.add_css_class('items')
         self.scrolled_item_view = Gtk.ScrolledWindow(child=self.item_view)
         self.view_search = listviewsearch.ListViewSearch(self.item_view.rows, self.search_func, list(fields.infos))
@@ -121,7 +146,7 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
             self.filter_item = item.Item(value={})
             self.filter_store = Gio.ListStore()
             self.filter_store_selection = Gtk.NoSelection(model=self.filter_store)
-            self.filter_view = ItemView(fields, item.ListItemFactory, functools.partial(editable.EditableLabel, self.filter_manager), sortable=False, model=self.filter_store_selection)
+            self.filter_view = ItemView(fields, edit_manager=self.filter_manager, force_editable=True,  sortable=False, model=self.filter_store_selection)
             self.filter_view.add_css_class('filter')
             self.scrolled_filter_view = Gtk.ScrolledWindow(child=self.filter_view, vscrollbar_policy=Gtk.PolicyType.NEVER)
             self.scrolled_filter_view.get_hscrollbar().set_visible(False)

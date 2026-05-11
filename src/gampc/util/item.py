@@ -98,26 +98,6 @@ class SongItem(Item):
         misc.add_unique_css_class(widget.get_parent(), 'duplicate', suffix)
 
 
-class ListItemFactory(misc.FactoryBase):
-    def __init__(self, name, widget_factory, edit_manager=None):
-        super().__init__()
-        self.name = name
-        self.widget_factory = widget_factory
-        self.edit_manager = edit_manager
-
-    def setup_cb(self, listitem):
-        listitem.set_focusable(True)
-        widget = self.widget_factory(name=self.name)
-        listitem.set_child(widget)
-        listitem.bind_property('position', widget, 'item-position', GObject.BindingFlags.SYNC_CREATE)
-
-    def bind_cb(self, listitem):
-        listitem.get_item().bind(listitem.get_child())
-
-    def unbind_cb(self, listitem):
-        listitem.get_item().unbind(listitem.get_child())
-
-
 # class ItemListStore(Gio.ListStore):
 #     def __init__(self, *, item_type, values=None):
 #         super().__init__(item_type=item_type)
