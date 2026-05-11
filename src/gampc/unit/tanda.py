@@ -20,7 +20,6 @@
 
 import asyncio
 import datetime
-import functools
 import re
 
 from gi.repository import GLib
@@ -475,8 +474,7 @@ class TandaDatabase(db.Database):
             self.set_tanda_songs(tandaid, tanda['_songs'])
 
     def delete_tanda(self, tanda):
-        found, pos = self.tanda_model.find(tanda)
-        assert found
+        pos = self.tanda_model.index(tanda)
         with self.connection:
             self.connection.cursor().execute('DELETE FROM tanda_songs WHERE tandaid=?; DELETE FROM tandas WHERE tandaid=?', (tanda.tandaid, tanda.tandaid))
         self.tanda_model.remove(pos)

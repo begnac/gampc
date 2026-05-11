@@ -27,32 +27,26 @@ from ..util import misc
 
 
 class DeltaSplicer:
-    def __init__(self, position, items, advance):
+    def __init__(self, position, old, new):
         self.position = position
-        self.items = items
-        self.advance = advance
+        self.old = old
+        self.new = new
 
     def apply(self, advance, edit_stack):
-        if not self.advance:
-            advance = not advance
-        if advance:
-            edit_stack.splice(self.position, 0, self.items)
-            return self.position, list(range(self.position, self.position + len(self.items)))
-        else:
-            edit_stack.splice(self.position, len(self.items), [])
-            return self.position, []
+        old, new = self.old, self.new
+        if not advance:
+            old, new = new, old
+        edit_stack.splice(self.position, len(old), new)
+        return self.position, list(range(self.position, self.position + len(new)))
 
     def transpose_position_after(self, position, advance=True):
         if position < self.position:
             return position
-        if not self.advance:
-            advance = not advance
-        n = len(self.items)
-        if advance:
-            return position + n
-        else:
-            assert position >= self.position + n
-            return position - n
+        nold, nnew = len(self.old), len(self.new)
+        if not advance:
+            nold, nnew = nnew, nold
+        assert position >= self.position + nold
+        return position - nold + nnew
 
     def transpose_self_after(self, deltas):
         for delta in deltas:
@@ -290,14 +284,14 @@ class WidgetEditStackMixin:
             j += 1
             if j != k:
                 values = self.edit_stack.items[i:j]
-                self.edit_stack.append_delta(DeltaSplicer(i, values, False))
+                self.edit_stack.append_delta(DeltaSplicer(i, values, []))
                 i = j = k
         self.unlock()
 
     def add_items(self, position, values):
         if not values:
             return
-        self.edit_stack.append_delta(DeltaSplicer(position, values, True))
+        self.edit_stack.append_delta(DeltaSplicer(position, [], values))
 
     def lock(self):
         self.edit_stack.hold_transaction()

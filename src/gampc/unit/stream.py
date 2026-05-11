@@ -18,8 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import functools
-
 from gi.repository import GLib
 
 from ..util import action
@@ -74,8 +72,7 @@ class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
         new = dict(old)
         new.update(changes)
         self.edit_stack.hold_transaction()
-        self.edit_stack.append_delta(editstack.DeltaSplicer(i, [new], True))
-        self.edit_stack.append_delta(editstack.DeltaSplicer(i, [old], False))
+        self.edit_stack.append_delta(editstack.DeltaSplicer(i, [old], [new]))
         self.edit_stack.release_transaction()
 
     def action_save_cb(self, action, parameter):

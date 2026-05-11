@@ -19,7 +19,6 @@
 
 
 import re
-import functools
 
 from gi.repository import GObject
 from gi.repository import Gio

@@ -150,6 +150,9 @@ class ItemListStore(GObject.Object, Gio.ListModel):
     def index(self, item):
         return self.items.index(item)
 
+    def remove(self, pos):
+        self.splice_values(pos, 1, ())
+
     def remove_all(self):
         self.set_values([])
 
