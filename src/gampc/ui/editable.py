@@ -80,7 +80,7 @@ class EditableLabel(Gtk.Box):
         self.text = Gtk.Text(text=self.label.get_label(), hexpand=True)
         self.append(self.text)
 
-        self.text.connect('activate', self.finish_editing_cb, 987987)
+        self.text.connect('activate', self.finish_editing_cb)
 
         shortcut = Gtk.ShortcutController()
         trigger = Gtk.KeyvalTrigger(keyval=Gdk.KEY_Escape, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK)
@@ -88,7 +88,7 @@ class EditableLabel(Gtk.Box):
         self.text.add_controller(shortcut)
 
         self.text_focus = Gtk.EventControllerFocus()
-        self.text_focus.connect('leave', self.finish_editing_cb, 77777)
+        self.text_focus.connect('leave', self.finish_editing_cb)
         self.text.add_controller(self.text_focus)
 
         self.text.grab_focus()
@@ -98,10 +98,10 @@ class EditableLabel(Gtk.Box):
             self.edit_manager.emit('edited', self, {self.get_name(): self.text.get_text()})
         self.text.remove_controller(self.text_focus)
         del self.text_focus
+        self.get_parent().grab_focus()
         self.remove(self.text)
         self.text = None
         self.append(self.label)
-        self.get_parent().grab_focus()
         return False
 
     @staticmethod
