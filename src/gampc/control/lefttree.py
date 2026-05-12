@@ -72,15 +72,19 @@ class Tree:
         store[n:] = []
 
 
+class TreeExpander(Gtk.TreeExpander):
+    def __init__(self):
+        box = Gtk.Box(spacing=4)
+        self.icon = Gtk.Image()
+        self.label = Gtk.Label()
+        box.append(self.icon)
+        box.append(self.label)
+        super().__init__(child=box)
+
+
 class TreeListItemFactory(FactoryBase):
     def setup_cb(self, listitem):
-        box = Gtk.Box(spacing=4)
-        child = Gtk.TreeExpander(child=box, focusable=False)
-        child.icon = Gtk.Image()
-        child.label = Gtk.Label()
-        box.append(child.icon)
-        box.append(child.label)
-        listitem.set_child(child)
+        listitem.set_child(TreeExpander())
 
     def bind_cb(self, listitem):
         child = listitem.get_child()
