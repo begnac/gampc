@@ -24,9 +24,8 @@ from gi.repository import Gtk
 from ..util import unit
 
 
-def load_theme_css(dark, theme_css_provider, app_css_provider):
-    theme_css_provider.set_property('prefers-color-scheme', Gtk.InterfaceColorScheme.DARK if dark else Gtk.InterfaceColorScheme.LIGHT)
-    theme_css_provider.load_named(Gtk.Settings.get_for_display(Gdk.Display.get_default()).get_property('gtk-theme-name'))
+def load_theme_css(dark, app_css_provider):
+    Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', dark)
 
     css = ''
 
@@ -99,14 +98,11 @@ class __unit__(unit.Unit):
         self.require('persistent')
         self.require('server')
 
-        self.theme_css_provider = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.theme_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_SETTINGS)
-
         self.app_theme_css_provider = Gtk.CssProvider()
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.app_theme_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-        self.unit_persistent.connect('notify::dark', self.notify_dark_cb, self.theme_css_provider, self.app_theme_css_provider)
-        load_theme_css(self.unit_persistent.dark, self.theme_css_provider, self.app_theme_css_provider)
+        self.unit_persistent.connect('notify::dark', self.notify_dark_cb, self.app_theme_css_provider)
+        load_theme_css(self.unit_persistent.dark, self.app_theme_css_provider)
 
         self.playing_css_provider = Gtk.CssProvider()
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.playing_css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
@@ -115,8 +111,8 @@ class __unit__(unit.Unit):
         load_playing_css(self.unit_server.ampd_server_properties.current_song, self.playing_css_provider)
 
     @staticmethod
-    def notify_dark_cb(persistent, pspec, theme_css_provider, app_css_provider):
-        load_theme_css(persistent.dark, theme_css_provider, app_css_provider)
+    def notify_dark_cb(persistent, pspec, app_css_provider):
+        load_theme_css(persistent.dark, app_css_provider)
 
     @staticmethod
     def notify_current_song_cb(server_properties, pspec, playing_css_provider):
