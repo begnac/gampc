@@ -56,7 +56,7 @@ class SearchWidget(compound.WidgetWithEntry):
     #     self.entry.activate()
 
 
-class __unit__(mixins.UnitComponentQueueActionMixin, unit.Unit):
+class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitComponentPlaylistActionMixin, unit.Unit):
     TITLE = _("Search")
     KEY = '3'
 
@@ -71,6 +71,7 @@ class __unit__(mixins.UnitComponentQueueActionMixin, unit.Unit):
         search.connect_clean(self.unit_server.ampd_client, 'client-connected', self.search_client_connected_cb, search)
 
         search.main.add_context_menu_actions(self.generate_foreign_queue_actions(search.main), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
+        search.main.add_context_menu_actions(self.generate_foreign_playlist_actions(search.main), 'foreign-playlist', self.TITLE)
         search.connect_clean(search.main.item_view, 'activate', self.view_activate_cb)
         return search
 
