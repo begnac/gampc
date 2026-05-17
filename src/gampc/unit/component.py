@@ -24,7 +24,6 @@ from gi.repository import Gtk
 
 from ..util import action
 from ..util import unit
-from ..util.logger import logger
 
 
 class Component:
