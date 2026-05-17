@@ -35,8 +35,8 @@ class ListViewSearch(Gtk.SearchEntry):
         widget.add_controller(self.search_controller)
 
         controller = Gtk.ShortcutController()
-        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Up, modifiers=Gdk.ModifierType(0)), action=Gtk.SignalAction(signal_name='previous-match')))
-        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Down, modifiers=Gdk.ModifierType(0)), action=Gtk.SignalAction(signal_name='next-match')))
+        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Up, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK), action=Gtk.SignalAction(signal_name='previous-match')))
+        controller.add_shortcut(Gtk.Shortcut(trigger=Gtk.KeyvalTrigger(keyval=Gdk.KEY_Down, modifiers=Gdk.ModifierType.NO_MODIFIER_MASK), action=Gtk.SignalAction(signal_name='next-match')))
         self.add_controller(controller)
 
         self.popover = Gtk.Popover(has_arrow=False, halign=Gtk.Align.START)
