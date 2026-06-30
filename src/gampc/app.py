@@ -39,7 +39,7 @@ from .util.logger import logger
 from . import __application__, __program_name__, __version__, __copyright__, __license_type__
 
 
-class App(Gtk.Application):
+class App(gasyncio.GAsyncIOApplicationMixin, Gtk.Application):
     def __init__(self):
         super().__init__(application_id=f'begnac.{__application__}', flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE | Gio.ApplicationFlags.ALLOW_REPLACEMENT)
 
@@ -64,8 +64,6 @@ class App(Gtk.Application):
 
     def startup_cb(self):
         logger.debug("Starting")
-
-        gasyncio.start_slave_loop()
 
         self.sigint_source = GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda: self.quit() or True)
         self.excepthook_orig, sys.excepthook = sys.excepthook, self.excepthook
@@ -113,8 +111,6 @@ class App(Gtk.Application):
             self.remove_action(name)
         sys.excepthook = self.excepthook_orig
         del self.excepthook_orig
-
-        gasyncio.stop_slave_loop()
 
         GLib.source_remove(self.sigint_source)
 
