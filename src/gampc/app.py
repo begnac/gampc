@@ -29,6 +29,7 @@ import ampd
 import gasyncio
 
 from gi.repository import GLib
+from gi.repository import GLibUnix
 from gi.repository import Gio
 from gi.repository import Gtk
 
@@ -65,7 +66,7 @@ class App(gasyncio.GAsyncIOApplicationMixin, Gtk.Application):
     def startup_cb(self):
         logger.debug("Starting")
 
-        self.sigint_source = GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda: self.quit() or True)
+        self.sigint_source = GLibUnix.signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda: self.quit() or True)
         self.excepthook_orig, sys.excepthook = sys.excepthook, self.excepthook
 
         self.unit_manager = unit.UnitManager()

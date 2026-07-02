@@ -89,13 +89,7 @@ def add_unique_css_class(widget, prefix, suffix):
 
 @decorator.decorator
 def create_task(coro, *args, **kwargs):
-    return asyncio.create_task(coro(*args, **kwargs), name=coro.__name__)
-
-
-def prepend_mixin(mixin, extra={}):
-    def prepender(cls):
-        return type(cls.__name__, (mixin, cls,), extra)
-    return prepender
+    return asyncio.create_task(coro(*args, **kwargs))
 
 
 class FactoryBase(Gtk.SignalListItemFactory):
