@@ -92,11 +92,12 @@ class PlaylistCache(cache.AsyncCache):
         return await self.ampd.listplaylistinfo(name), self.playlists[name]
 
 
-class ChoosePathDialog(dialog.TextDialogAsync):
+class ChoosePathDialog(dialog.TextDialog):
     def __init__(self, *args, paths, init=None, path_ok=False, **kwargs):
-        super().__init__(*args, text=init, **kwargs)
         self.paths = list(paths)
         self.path_ok = path_ok
+
+        super().__init__(*args, text=init, **kwargs)
 
         self.entry.connect('activate', self.entry_activate_cb)
 
@@ -284,7 +285,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
     async def save_playlist(self, window, playlist_path, filenames):
         playlist_name = playlist_path.replace('/', PSEUDO_SEPARATOR)
 
-        if playlist_name in self.playlists and not await dialog.MessageDialogAsync(transient_for=window, message=_("Replace existing playlist {name}?").format(name=playlist_path)).run():
+        if playlist_name in self.playlists and not await dialog.QuestionDialog(transient_for=window, message=_("Replace existing playlist {name}?").format(name=playlist_path)).run():
             return False
 
         try:
@@ -323,7 +324,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
             await self.ampd.rename(old_real, new_real)
 
     async def delete_playlist(self, window, path):
-        if not await dialog.MessageDialogAsync(transient_for=window, message=_("Delete playlist {name}?").format(name=path)).run():
+        if not await dialog.QuestionDialog(transient_for=window, message=_("Delete playlist {name}?").format(name=path)).run():
             return
         await self.ampd.rm(path.replace('/', PSEUDO_SEPARATOR))
 
@@ -331,7 +332,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
     async def action_playlist_saveas_cb(self, action, parameter, view):
         filenames = view.get_filenames(parameter.unpack())
         if not filenames:
-            await dialog.MessageDialogAsync(message=_("Nothing to save!"), transient_for=view.get_root(), title="", cancel_button=False).run()
+            await dialog.MessageDialog(message=_("Nothing to save!"), transient_for=view.get_root(), title="").run()
             return
 
         playlist_path = await ChoosePathDialog(transient_for=view.get_root(), title=_("Save as playlist"), paths=self.playlist_paths()).run()

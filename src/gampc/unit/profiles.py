@@ -40,21 +40,22 @@ ZEROCONF_MPD_TYPE = '_mpd._tcp.local.'
 ZEROCONF_NAME_REGEXP = f'^(?P<name>[^\\[]*)(\\[[0-9]+\\])?\\.{ZEROCONF_MPD_TYPE}$'
 
 
-class ProfileDialogAsync(dialog.DialogAsync):
+class ProfileDialog(dialog.DialogWithButtons):
     def __init__(self, name, address, used_names, **kwargs):
-        super().__init__(**kwargs)
-
         self.name_entry = Gtk.Entry(text=name)
         self.address_entry = Gtk.Entry(text=address)
         # port_adjustment = Gtk.adjustment(value=port, lower=1024, upper=49150)
         # self.port_spin_button = Gtk.SpingButton(adjustment=port_adjustment)
+
+        # self.name_entry.connect('notify::text', self.entry_notify_text_cb)
+        # self.address_entry.connect('notify::text', self.entry_notify_text_cb)
+
         box = Gtk.Box()
         box.append(self.name_entry)
         box.append(self.address_entry)
         # box.append(self.port_spin_button)
-        self.main_box.prepend(box)
-        # self.name_entry.connect('notify::text', self.entry_notify_text_cb)
-        # self.address_entry.connect('notify::text', self.entry_notify_text_cb)
+
+        super().__init__(widget=box, **kwargs)
 
     async def run(self):
         result = await super().run()
@@ -151,7 +152,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         used_names = list(profiles)
         if name in used_names:
             used_names.remove(name)
-        new_name, new_address = await ProfileDialogAsync(name, address, used_names).run()
+        new_name, new_address = await ProfileDialog(name, address, used_names).run()
         if new_name is None:
             return
         if name != '':

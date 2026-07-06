@@ -714,7 +714,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
             return
         tanda = edit.current_tanda
         name = ' / '.join(filter(lambda x: x, map(tanda.get_field, ('Artist', 'Years', 'Performer'))))
-        if await dialog.MessageDialogAsync(transient_for=edit.get_root(), title=_("Delete tanda"), message=_("Delete {tanda}?").format(tanda=name)).run():
+        if await dialog.QuestionDialog(transient_for=edit.get_root(), title=_("Delete tanda"), message=_("Delete {tanda}?").format(tanda=name)).run():
             self.db.delete_tanda(tanda)
 
     def action_tanda_save_cb(self, action, parameter, edit):
@@ -788,8 +788,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         search = self.unit_search.new_widget()
         search.entry.set_text(' '.join(f'{name}="{value}"' for name, value in zip(self.MISSING_SONG_FIELDS, fields)))
         search.entry.emit('activate')
-        dialog_ = dialog.DialogAsync(transient_for=Gio.Application.get_default().get_active_window(), title=_("Replace {}").format(' / '.join(fields)))
-        dialog_.main_box.prepend(search)
+        dialog_ = dialog.DialogWithButtons(widget=search, transient_for=Gio.Application.get_default().get_active_window(), title=_("Replace {}").format(' / '.join(fields)))
         model = search.main.item_selection_filter_model
         if await dialog_.run() and len(model) == 1:
             self.db.replace_song(song_file, model[0].value)

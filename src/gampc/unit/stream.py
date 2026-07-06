@@ -152,7 +152,7 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, uni
 
     @misc.create_task
     async def action_save_cb(self, action, parameter, widget):
-        if widget.edit_stack.transactions and await dialog.MessageDialogAsync(transient_for=widget.get_root(), message=_("Save stream database?")).run():
+        if widget.edit_stack.transactions and await dialog.QuestionDialog(transient_for=widget.get_root(), message=_("Save stream database?")).run():
             self.db.save_streams(map(lambda item: item.value, widget.item_model))
             widget.edit_stack.reset()
             widget.edit_stack_changed()

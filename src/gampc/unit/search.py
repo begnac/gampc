@@ -78,7 +78,7 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitComponentPlaylis
     @ampd.task
     async def search_client_connected_cb(self, client, search):
         while True:
-            search.entry.activate()
+            search.entry.emit('activate')
             await self.ampd.idle(ampd.DATABASE)
 
     @ampd.task

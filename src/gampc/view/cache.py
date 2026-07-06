@@ -48,7 +48,7 @@ class ViewFilenameMixin:
         deleted = self.get_filenames(True)
         if deleted:
             message = '\n\t'.join([_("Move these files to the trash bin?")] + deleted)
-            if not await dialog.MessageDialogAsync(transient_for=self.get_root(), title=_("Move to trash"), message=message).run():
+            if not await dialog.QuestionDialog(transient_for=self.get_root(), title=_("Move to trash"), message=message).run():
                 return
             for filename in deleted:
                 gfile = Gio.File.new_for_path(GLib.build_filenamev([GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC), filename]))

@@ -204,10 +204,10 @@ class ViewWithCopyPaste(ViewWithCopy):
             pos = selection[0]
         else:
             return
-        dialog_ = dialog.TextDialogAsync(transient_for=self.get_root(), decorated=False, text='http://')
+        dialog_ = dialog.TextDialog(transient_for=self.get_root(), decorated=False, text='http://')
         url = await dialog_.run()
         if url:
-            item_ = item.Item(value=dict(file=url))
+            item_ = item.SongItem(value=dict(file=url))
             transfer = self.transfer_type([item_])
             self.add_items(pos, transfer.value)
 

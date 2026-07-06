@@ -220,7 +220,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         priority = parameter.unpack()
         if priority == -1:
             priority = sum(int(item_.Prio or '0') for item_ in items) // len(items)
-            priority = await dialog.SpinButtonDialogAsync(transient_for=queue.get_root(), value=priority, max_value=255).run()
+            priority = await dialog.SpinButtonDialog(transient_for=queue.get_root(), value=priority, max_value=255).run()
             if priority is None:
                 return
             priority = int(priority)
