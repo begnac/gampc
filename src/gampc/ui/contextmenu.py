@@ -70,7 +70,12 @@ class ContextMenuMixin:
             return
         popover = Gtk.PopoverMenu(menu_model=self.context_menu, flags=Gtk.PopoverMenuFlags.NESTED, has_arrow=False, pointing_to=misc.Rectangle(x, y), halign=Gtk.Align.START)
         popover.set_parent(self)
+        popover.connect('closed', self.popover_closed_cb)
         popover.popup()
+
+    @staticmethod
+    def popover_closed_cb(popover):
+        popover.get_parent().grab_focus()
 
 
 class ContextMenuActionMixin(ContextMenuMixin, MenuActionMixin):
