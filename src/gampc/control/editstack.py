@@ -213,6 +213,7 @@ class WidgetEditStackMixin:
         self.edit_stack_changed()
 
     def cleanup(self):
+        self.set_edit_stack(None)
         self.insert_action_group('edit-stack', None)
         del self.edit_stack_actions
         if self.edit_stack_view is self:
@@ -222,7 +223,6 @@ class WidgetEditStackMixin:
             del self.edit_stack_view.add_items
             del self.edit_stack_view.lock
             del self.edit_stack_view.unlock
-        del self.edit_stack
         super().cleanup()
 
     def generate_edit_stack_actions(self):
