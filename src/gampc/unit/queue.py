@@ -63,7 +63,7 @@ class QueueSongItem(item.SongItem):
             misc.add_unique_css_class(widget.get_parent(), QUEUE_PRIORITY_CSS_PREFIX, '' if self.Prio is not None else None)
 
 
-class QueueTransaction:
+class QueueTransactionManager:
     def __init__(self, model, ampd):
         self.model = model
         self.ampd = ampd
@@ -128,11 +128,11 @@ class QueueTransaction:
 class QueueWidget(ViewWithCopyPasteSong):
     current_Id = GObject.Property()
 
-    def __init__(self, transaction, **kwargs):
-        self.lock = transaction.lock
-        self.unlock = transaction.unlock
-        self.add_items = transaction.add_items
-        self.remove_positions = transaction.remove_positions
+    def __init__(self, transaction_manager, **kwargs):
+        self.lock = transaction_manager.lock
+        self.unlock = transaction_manager.unlock
+        self.add_items = transaction_manager.add_items
+        self.remove_positions = transaction_manager.remove_positions
 
         super().__init__(**kwargs)
         self.item_view.add_css_class('queue')
@@ -185,10 +185,10 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         self.queue_model = item.ItemListStore(item_type=QueueSongItem)
         item.setup_find_duplicate_items(self.queue_model, ['Title'], [self.unit_database.SEPARATOR_FILE])
 
-        self.transaction = QueueTransaction(self.queue_model, self.ampd)
+        self.transaction_manager = QueueTransactionManager(self.queue_model, self.ampd)
 
     def new_widget(self):
-        queue = QueueWidget(self.transaction, fields=self.unit_song.fields, separator_file=self.unit_database.SEPARATOR_FILE, model=self.queue_model)
+        queue = QueueWidget(transaction_manager=self.transaction_manager, fields=self.unit_song.fields, separator_file=self.unit_database.SEPARATOR_FILE, model=self.queue_model)
 
         queue.add_context_menu_actions(self.generate_priority_actions(queue), 'priority', _("Priority for random mode"), submenu=True)
         queue.add_context_menu_actions(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
