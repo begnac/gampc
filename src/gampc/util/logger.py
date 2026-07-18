@@ -1,7 +1,5 @@
-# coding: utf-8
-#
-# Graphical Asynchronous Music Player Client
-#
+"""Graphical Asynchronous Music Player Client."""
+
 # Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify

@@ -1,7 +1,5 @@
-# coding: utf-8
-#
-# Generic Gtk application launcher script
-#
+"""Generic Gtk application launcher script."""
+
 # Copyright (C) Itaï BEN YAACOV
 #
 # This program is free software: you can redistribute it and/or modify
