@@ -747,6 +747,10 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
 
         n_songs = len(used_songs)
         await asyncio.wait([self.verify_song(window, song, n_songs, done, updated, replaced, problem) for song in used_songs])
+        for song in problem:
+            logger.info(_("Not sure about '{file}'").format_map(song))
+            await self.missing_song(window, song['file'], *(song.get(field, '') for field in self.MISSING_SONG_FIELDS))
+
         logger.info(_("Tanda database checked: {unused} songs unused, {updated} updated, {replaced} replaced, {problem} problematic").format(unused=n_unused, updated=len(updated), replaced=len(replaced), problem=len(problem)))
         self.db.load()
 
@@ -769,8 +773,6 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
                 self.db.replace_song(song['file'], maybe_song[0])
                 replaced.append((song['file'], maybe_song[0]))
             else:
-                logger.info(_("Not sure about '{file}'").format_map(song))
-                self.missing_song(window, song['file'], *(song.get(field, '') for field in self.MISSING_SONG_FIELDS))
                 problem.append(song)
         done[0] += 1
         self.emit('verify-progress', done[0] / total)
@@ -781,7 +783,6 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
             parts.append(_("verifying tandas: {progress}%").format(progress=int(progress * 100)))
         component.subtitle = ' '.join(parts)
 
-    @misc.create_task
     async def missing_song(self, window, song_file, *fields):
         search = self.unit_search.new_widget()
         search.entry.set_text(' '.join(f'{name}="{value}"' for name, value in zip(self.MISSING_SONG_FIELDS, fields)))
