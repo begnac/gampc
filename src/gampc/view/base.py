@@ -122,9 +122,10 @@ class ItemView(Gtk.ColumnView):
     @staticmethod
     def _HACK_titles_items_changed_cb(titles, p, r, a):
         for title in titles[p:p + a]:
-            for controller in list(title.observe_controllers()):
-                if isinstance(controller, Gtk.GestureClick):
-                    title.remove_controller(controller)
+            if title is not None:
+                for controller in list(title.observe_controllers()):
+                    if isinstance(controller, Gtk.GestureClick):
+                        title.remove_controller(controller)
 
 
 class ViewBase(item.WithItemModelMixin, cleanup.CleanupSignalMixin, Gtk.Box):
