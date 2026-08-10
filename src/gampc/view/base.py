@@ -87,6 +87,9 @@ class ItemView(Gtk.ColumnView):
         super().__init__(show_row_separators=True, show_column_separators=True, **kwargs)
         self.add_css_class('data-table')
 
+        self.titles = self.get_first_child().observe_children()
+        self.titles.connect('items-changed', self._HACK_titles_items_changed_cb)
+
         self.fields = fields
         self.columns = {}
         for name in fields.order:
@@ -115,6 +118,13 @@ class ItemView(Gtk.ColumnView):
         for i, name in enumerate(fields.order):
             self.insert_column(i, self.columns[name])
         columns.handler_unblock_by_func(self.columns_changed_cb)
+
+    @staticmethod
+    def _HACK_titles_items_changed_cb(titles, p, r, a):
+        for title in titles[p:p + a]:
+            for controller in list(title.observe_controllers()):
+                if isinstance(controller, Gtk.GestureClick):
+                    title.remove_controller(controller)
 
 
 class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
