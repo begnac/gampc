@@ -20,9 +20,10 @@ import ampd
 
 from ..util import action
 from ..util import item
+from ..util import misc
 from ..util import unit
 
-from ..view.cache import ViewCacheWithCopy
+from ..view.actions import ViewWithCopy
 
 from ..control import compound
 
@@ -30,11 +31,11 @@ from . import mixins
 
 
 class SearchWidget(compound.WidgetWithEntry):
-    def __init__(self, fields, cache, separator_file, activate_cb, **kwargs):
-        view = ViewCacheWithCopy(fields=fields, cache=cache, sortable=True)
+    def __init__(self, fields, activate_cb, **kwargs):
+        view = ViewWithCopy(fields=fields, sortable=True, item_type=item.SongItem)
         super().__init__(view, activate_cb, **kwargs)
         view.add_context_menu_actions(self.generate_actions(), 'search', _("Search"))
-        item.setup_find_duplicate_items(view.item_model, ['Title', 'Artist', 'Performer', 'Date'], [separator_file])
+        item.setup_find_duplicate_items(view.item_selection_model, ['Title', 'Artist', 'Performer', 'Date'])
         self.add_cleanup_below(view)
 
         # self.field_choice = Gtk.ComboBoxText()
@@ -60,12 +61,11 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitComponentPlaylis
 
     def __init__(self, manager):
         super().__init__(manager)
-        self.require('database')
         self.require('song')
         self.require('persistent')
 
     def new_widget(self):
-        search = SearchWidget(self.unit_song.fields, self.unit_database.cache, self.unit_database.SEPARATOR_FILE, self.entry_activate_cb)
+        search = SearchWidget(self.unit_song.fields, self.entry_activate_cb)
         search.connect_clean(self.unit_server.ampd_client, 'client-connected', self.search_client_connected_cb, search)
 
         search.main.add_context_menu_actions(self.generate_foreign_queue_actions(search.main), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
@@ -92,7 +92,7 @@ class __unit__(mixins.UnitComponentQueueActionMixin, mixins.UnitComponentPlaylis
         condition = sum((['any', s] if '=' not in s else s.split('=', 1) for s in self.parse(query)), [])
         if condition:
             songs = await (self.ampd.find if find else self.ampd.search)(*condition)
-            self.unit_database.update(songs)
+            misc.songs_set_fields(songs)
             view.item_model.set_values(songs)
 
     @staticmethod

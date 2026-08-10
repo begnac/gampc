@@ -16,15 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# import os
-import re
-# import urllib
-
 from gi.repository import GObject
 
 import ampd
 
-from ..util import cache
 from ..util import misc
 from ..util import unit
 from ..util.logger import logger
@@ -34,29 +29,27 @@ from ..ui import dialog
 from . import mixins
 
 
-def set_song_fields(song):
-    song['Duration'] = misc.format_time(float(song['duration'])) if 'Time' in song else ''
+class __unit__(mixins.UnitServerMixin, unit.Unit):
+    __gsignals__ = {
+        'cleared': (GObject.SIGNAL_RUN_FIRST, None, ()),
+    }
 
-    # title = song.get('Title') or song.get('Name', '')
-    # filename = song.get('file', '')
-    # url = urllib.parse.urlparse(filename)
-    # if url.scheme:
-    #     url_basename = os.path.basename(url.path)
-    #     title = '{0} [{1}]'.format(title, url_basename) if title else url_basename
-    # song['Title'] = title
-    song['Title'] = song.get('Title') or song.get('Name') or ''
+    def __init__(self, manager):
+        super().__init__(manager)
+        self.separator = dict(file=misc.SEPARATOR_FILE)
 
-    match = re.search('\\.(\\w+)$', song['file'])
-    if match:
-        song['Extension'] = match[1]
+    @ampd.task
+    async def client_connected_cb(self, client):
+        while True:
+            separator = await self.find_song(misc.SEPARATOR_FILE)
+            if '_missing' in self.separator:
+                await self.separator_missing()
+            else:
+                self.separator.update(separator)
+            await self.ampd.idle(ampd.DATABASE)
+            logger.info(_("Database changed"))
 
-
-class SongCache(cache.AsyncCache):
-    def __init__(self, ampd):
-        super().__init__()
-        self.ampd = ampd
-
-    async def retrieve(self, key):
+    async def find_song(self, key):
         try:
             songs = await self.ampd.find('file', key)
         except Exception as e:
@@ -66,41 +59,10 @@ class SongCache(cache.AsyncCache):
             song = {'file': key, '_missing': True}
         elif len(songs) == 1:
             song = songs[0]
-            set_song_fields(song)
+            misc.song_set_fields(song)
         else:
             raise ValueError
         return song
 
-
-class __unit__(mixins.UnitServerMixin, unit.Unit):
-    __gsignals__ = {
-        'cleared': (GObject.SIGNAL_RUN_FIRST, None, ()),
-    }
-
-    SEPARATOR_FILE = 'separator.mp3'
-
-    def __init__(self, manager):
-        super().__init__(manager)
-        self.cache = SongCache(self.ampd)
-
-    def cleanup(self):
-        super().cleanup()
-        del self.cache
-
-    @ampd.task
-    async def client_connected_cb(self, client):
-        while True:
-            self.cache.clear()
-            self.emit('cleared')
-            if '_missing' in await self.cache.get_async(self.SEPARATOR_FILE):
-                await self.separator_missing()
-            await self.ampd.idle(ampd.DATABASE)
-            logger.info(_("Database changed"))
-
-    def update(self, songs):
-        for song in songs:
-            set_song_fields(song)
-            self.cache[song['file']] = song
-
     async def separator_missing(self):
-        await dialog.MessageDialog(title=_("Separator file missing"), message=_("Some features require a file named '{separator}' at the music root directory.  Such a file, consisting of a three second silence, is provided.").format(separator=self.SEPARATOR_FILE)).run()
+        await dialog.MessageDialog(title=_("Separator file missing"), message=_("Some features require a file named '{separator}' at the music root directory.  Such a file, consisting of a three second silence, is provided.").format(separator=misc.SEPARATOR_FILE)).run()

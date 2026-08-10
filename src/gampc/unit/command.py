@@ -32,9 +32,9 @@ class __unit__(mixins.UnitComponentMixin, mixins.UnitServerMixin, unit.Unit):
     KEY = '7'
 
     def new_widget(self):
-        return compound.WidgetWithEntry(Gtk.Label(max_width_chars=50, wrap=True, selectable=True, vexpand=True), self.entry_activate_cb)
+        return compound.WidgetWithEntry(Gtk.ScrolledWindow(child=Gtk.Label(max_width_chars=50, wrap=True, selectable=True, vexpand=True)), self.entry_activate_cb)
 
     @ampd.task
-    async def entry_activate_cb(self, entry, label):
+    async def entry_activate_cb(self, entry, widget):
         reply = await self.ampd._raw(entry.get_text())
-        label.set_label('\n'.join(str(x) for x in reply) if reply else _("Empty reply"))
+        widget.get_child().get_child().set_label('\n'.join(str(x) for x in reply) if reply else _("Empty reply"))

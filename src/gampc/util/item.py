@@ -96,6 +96,12 @@ class SongItem(Item):
         misc.add_unique_css_class(widget.get_parent(), 'duplicate', suffix)
 
 
+class WithItemModelMixin:
+    def __init__(self, *args, item_model=None, item_type=None, **kwargs):
+        self.item_model = item_model if item_type is None else ItemListStore(item_type=item_type)
+        super().__init__(*args, **kwargs)
+
+
 # class ItemListStore(Gio.ListStore):
 #     def __init__(self, *, item_type, values=None):
 #         super().__init__(item_type=item_type)
@@ -172,34 +178,21 @@ class ItemListStore(GObject.Object, Gio.ListModel):
             self.items_changed(pos + remove, 0, add - remove)
 
 
-class TransferBase(GObject.Object):
-    value = GObject.Property()
-
-    def get_content(self):
-        return Gdk.ContentProvider.new_for_value(self)
-
-
-class PartialTransfer(TransferBase):
-    def __init__(self, changes):
-        super().__init__(value=changes)
-
-
-class PartialStringTransfer(PartialTransfer):
-    def get_content(self):
-        return Gdk.ContentProvider.new_for_value(repr(self.value))
-
-
-class ItemValueTransfer(TransferBase):
+class ItemValueTransfer(misc.TransferBase):
     def __init__(self, items):
         super().__init__(value=[item.value for item in items])
 
 
-class ItemKeyTransfer(TransferBase):
+class SongItemTransfer(ItemValueTransfer):
+    pass
+
+
+class ItemFileTransfer(misc.TransferBase):
     def __init__(self, items):
-        super().__init__(value=[item.get_key() for item in items])
+        super().__init__(value=[item.value['file'] for item in items])
 
 
-class ItemStringTransfer(ItemKeyTransfer):
+class ItemStringTransfer(ItemFileTransfer):
     def get_content(self):
         return Gdk.ContentProvider.new_for_value(repr(self.value))
 
@@ -208,15 +201,15 @@ def transfer_union(value, *transfers):
     return Gdk.ContentProvider.new_union([transfer(value).get_content() for transfer in transfers])
 
 
-def setup_find_duplicate_items(model, test_fields, ignore):
-    model.connect('items-changed', lambda m, p, r, a, t, i: find_duplicate_items(m, t, i), test_fields, ignore)
+def setup_find_duplicate_items(model, test_fields):
+    model.connect('items-changed', lambda m, p, r, a, t: find_duplicate_items(m, t), test_fields)
 
 
-def find_duplicate_items(items, test_fields, ignore):
+def find_duplicate_items(items, test_fields):
     marker = 0
     firsts = {}
     for i, item in enumerate(items):
-        if item.get_key() in ignore:
+        if item.get_key() == misc.SEPARATOR_FILE:
             continue
         test = tuple(item.get_field(name) for name in test_fields)
         first = firsts.get(test)

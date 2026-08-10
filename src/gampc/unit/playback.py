@@ -22,6 +22,7 @@ import asyncio
 import ampd
 
 from ..util import action
+from ..util import misc
 from ..util import unit
 
 from . import mixins
@@ -41,7 +42,6 @@ def hold_app(f):
 class __unit__(mixins.UnitServerMixin, unit.Unit):
     def __init__(self, manager):
         super().__init__(manager)
-        self.require('database')
         self.fading = False
 
     def generate_actions(self):
@@ -106,10 +106,10 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
                     self.unit_server.ampd_server_properties.volume = volume
                     return
             nextsong = await self.ampd.playlistid(self.unit_server.ampd_server_properties.nextsongid)
-            if nextsong[0]['file'] == self.unit_database.SEPARATOR_FILE:
+            if nextsong[0]['file'] == misc.SEPARATOR_FILE:
                 sep_id = None
             else:
-                sep_id = await self.ampd.addid(self.unit_database.SEPARATOR_FILE, '+0')
+                sep_id = await self.ampd.addid(misc.SEPARATOR_FILE, '+0')
             await self.ampd.next()
             await self.ampd.idle(ampd.PLAYER)
             await self.ampd.idle(0, timeout=0.1)  # Something needs to stabilise after the 'next' command.

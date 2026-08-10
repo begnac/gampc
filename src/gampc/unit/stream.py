@@ -29,36 +29,29 @@ from ..ui import dialog
 from ..ui import editable
 
 from ..view import field
-from ..view.actions import ViewWithCopyPaste
-from ..view.cache import ItemFilenameTransfer
+from ..view.actions import ViewWithCopyPasteUrl
 
 from ..control import editstack
 
 from . import mixins
 
 
-class ItemStreamTransfer(item.ItemValueTransfer):
+class StreamItemTransfer(item.SongItemTransfer):
     pass
 
 
-class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPaste):
-    transfer_type = ItemStreamTransfer
-    extra_transfer_types = (ItemFilenameTransfer, item.ItemStringTransfer)
+class StreamWidget(editstack.WidgetEditStackMixin, ViewWithCopyPasteUrl):
+    transfer_type = StreamItemTransfer
 
     def __init__(self, separator_file, edit_stack, *args, **kwargs):
         edit_manager = editable.EditManager()
-        super().__init__(*args, **kwargs, edit_manager=edit_manager)
+        super().__init__(*args, **kwargs, edit_manager=edit_manager, item_model=edit_stack.item_model)
         self.item_view.add_css_class('song-by-key')
         self.connect_clean(edit_manager, 'edited', self.item_edited_cb)
         self.context_menu.append_section(None, self.edit_stack_menu)
         self.item_view.add_css_class('stream')
-        item.setup_find_duplicate_items(self.item_model, ['file'], [separator_file])
 
         self.set_edit_stack(edit_stack)
-
-    def generate_editing_actions(self):
-        yield from super().generate_editing_actions()
-        yield from self.generate_url_actions()
 
     def item_edited_cb(self, manager, widget, changes):
         GLib.idle_add(self.item_edited, widget, changes)
@@ -108,7 +101,6 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, uni
     def __init__(self, manager):
         super().__init__(manager, config.Dict(fields=field.get_fields_config()))
 
-        self.require('database')
         self.require('persistent')
 
         fields = {
@@ -121,12 +113,12 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, uni
 
         self.db = StreamDatabase(self.name, self.fields)
         streams = list(self.db.get_streams())
-        for stream in streams:
-            self.unit_database.cache[stream['file']] = stream
-            for key in stream:
-                if stream[key] is None:
-                    stream[key] = ''
-        self.edit_stack = editstack.EditStack(streams)
+        # for stream in streams:
+        #     for key in stream:
+        #         if stream[key] is None:
+        #             stream[key] = ''
+        self.edit_stack = editstack.EditStack(streams, item_type=item.SongItem)
+        item.setup_find_duplicate_items(self.edit_stack.item_model, ['file'])
 
     def factory(self):
         component = super().factory()
@@ -140,7 +132,7 @@ class __unit__(mixins.UnitConfigMixin, mixins.UnitComponentQueueActionMixin, uni
         component.subtitle = ' '.join(parts)
 
     def new_widget(self):
-        stream = StreamWidget(self.unit_database.SEPARATOR_FILE, self.edit_stack, self.fields)
+        stream = StreamWidget(misc.SEPARATOR_FILE, self.edit_stack, self.fields)
         stream.connect_clean(stream.item_view, 'activate', self.view_activate_cb)
         stream.add_context_menu_actions(self.generate_stream_actions(stream), 'stream', self.TITLE)
         return stream

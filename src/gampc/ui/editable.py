@@ -21,7 +21,12 @@ from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
 
-from ..util import item
+from ..util.misc import TransferBase
+
+
+class PartialTransfer(TransferBase):
+    def __init__(self, changes):
+        super().__init__(value=changes)
 
 
 class EditManager(GObject.Object):
@@ -117,13 +122,13 @@ class EditableLabel(Gtk.Box):
     @staticmethod
     def copy_cb(parent, data):
         self = parent.get_first_child()
-        self.get_clipboard().set_content(item.PartialTransfer({self.get_name(): self.get_label()}).get_content())
+        self.get_clipboard().set_content(PartialTransfer({self.get_name(): self.get_label()}).get_content())
         return True
 
     @staticmethod
     def paste_cb(parent, data):
         self = parent.get_first_child()
-        self.get_clipboard().read_value_async(item.PartialTransfer, 0, None, self.paste_finish_cb)
+        self.get_clipboard().read_value_async(PartialTransfer, 0, None, self.paste_finish_cb)
         return False
 
     def paste_finish_cb(self, clipboard, result):

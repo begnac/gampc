@@ -29,7 +29,7 @@ from ..util import unit
 
 from ..ui import dialog
 
-from ..view.cache import ViewWithCopyPasteSong
+from ..view.actions import ViewWithCopyPasteSong
 
 from . import mixins
 
@@ -67,11 +67,11 @@ class QueueTransactionManager:
         self.ampd = ampd
         self.hold_count = 0
 
-    def add_items(self, position, keys):
+    def add_items(self, position, items):
         self.lock()
         if self.valid:
             if self.add is None:
-                self.add = position, keys
+                self.add = position, items
             else:
                 self.valid = False
         self.unlock()
@@ -100,9 +100,10 @@ class QueueTransactionManager:
     def run(self):
         commands = []
         if self.add is not None:
-            p, keys = self.add
+            p, items = self.add
             p0 = p
-            for key in keys:
+            for item_ in items:
+                key = item_['file']
                 if key in self.remove:
                     q, Id = self.remove[key].pop(0)
                     if not self.remove[key]:
@@ -181,12 +182,12 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         self.css_provider.load_from_string(self.CSS)
 
         self.queue_model = item.ItemListStore(item_type=QueueSongItem)
-        item.setup_find_duplicate_items(self.queue_model, ['Title'], [self.unit_database.SEPARATOR_FILE])
+        item.setup_find_duplicate_items(self.queue_model, ['Title'])
 
         self.transaction_manager = QueueTransactionManager(self.queue_model, self.ampd)
 
     def new_widget(self):
-        queue = QueueWidget(transaction_manager=self.transaction_manager, fields=self.unit_song.fields, separator_file=self.unit_database.SEPARATOR_FILE, model=self.queue_model)
+        queue = QueueWidget(transaction_manager=self.transaction_manager, fields=self.unit_song.fields, separator=self.unit_database.separator, item_model=self.queue_model)
 
         queue.add_context_menu_actions(self.generate_priority_actions(queue), 'priority', _("Priority for random mode"), submenu=True)
         queue.add_context_menu_actions(self.generate_queue_actions(), 'queue-general', _("General queue operations"), protect=self.unit_persistent.protect)
@@ -238,7 +239,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         try:
             while True:
                 songs = await self.ampd.playlistinfo()
-                self.unit_database.update(songs)
+                misc.songs_set_fields(songs)
                 self.queue_model.set_values(songs)
                 if self.set_cursor:
                     self.queue_position = self.cursor_by_profile.get(self.unit_server.server_profile)
@@ -254,7 +255,7 @@ class __unit__(cleanup.CleanupCssMixin, mixins.UnitServerMixin, mixins.UnitCompo
         queue.set_position(self.queue_position)
 
     def selection_changed_cb(self, selection, *args):
-        selection = list(misc.get_selection(selection))
+        selection = list(misc.get_selected_positions(selection))
         if len(selection) == 1:
             self.cursor_by_profile[self.unit_server.server_profile] = selection[0]
 

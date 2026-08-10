@@ -21,6 +21,7 @@ from gi.repository import GObject
 import ampd
 
 from ..util import action
+from ..util import misc
 from ..util import unit
 from ..util.logger import logger
 
@@ -36,8 +37,6 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
 
     def __init__(self, manager):
         super().__init__(manager)
-
-        self.require('database')
 
         self.connect_clean(self.unit_server.ampd_server_properties, 'notify::state', lambda obj, param: self.notify_protect_requested_cb(param))
         self.connect('notify::protect-requested', self.__class__.notify_protect_requested_cb)
@@ -74,7 +73,7 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
     async def read_sticker_properties(self):
         self.handler_block_by_func(self.__class__.notify_sticker_cb)
         try:
-            stickers = await self.ampd.sticker_list('song', self.unit_database.SEPARATOR_FILE)
+            stickers = await self.ampd.sticker_list('song', misc.SEPARATOR_FILE)
         except (ampd.errors.ReplyError, ampd.errors.ConnectionError):
             stickers = []
         pdict = dict(sticker.split('=', 1) for sticker in stickers)
@@ -96,4 +95,4 @@ class __unit__(mixins.UnitServerMixin, unit.Unit):
     @ampd.task
     async def notify_sticker_cb(self, param):
         if param.name in self.STICKER_PROPERTIES:
-            await self.ampd.sticker_set('song', self.unit_database.SEPARATOR_FILE, param.name, str(self.get_property(param.name)))
+            await self.ampd.sticker_set('song', misc.SEPARATOR_FILE, param.name, str(self.get_property(param.name)))

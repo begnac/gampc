@@ -17,23 +17,22 @@
 
 
 from gi.repository import GObject
-from gi.repository import Gio
 from gi.repository import Gtk
 
+from ..util.item import WithItemModelMixin
 from ..util.misc import FactoryBase
 
 from . import compound
 
 
-class Node(GObject.Object):
-    expanded = GObject.Property(type=bool, default=True)
-
-    def __init__(self, name=None, path=None, *, model_factory=Gio.ListStore, expanded=False, **kwargs):
-        super().__init__(expanded=expanded)
+class Node(WithItemModelMixin, GObject.Object):
+    def __init__(self, name=None, path=None, *, icon=None, children=None, **kwargs):
+        super().__init__(**kwargs)
         self.name = name
         self.path = [] if path is None else path + [name]
-        self.__dict__.update(kwargs)
-        self.model = model_factory and model_factory()
+        self.children = children
+        self.icon = icon
+        self.rows = []
         self.ready = False
 
     def __repr__(self):
@@ -51,23 +50,22 @@ class Tree:
         if not node.ready:
             node.ready = True
             self.fill_node(node)
-        return node.model
+        return node.children
 
     def merge(self, store, names, fill, create_node, update_node=None):
-        n = len(names)
-        for pos in range(n):
-            while pos < len(store) and store[pos].name < names[pos]:
-                store.remove(pos)
-            if pos < len(store) and store[pos].name == names[pos]:
+        for i, name in enumerate(names):
+            while i < len(store) and store[i].name < name:
+                store.remove(i)
+            if i < len(store) and store[i].name == name:
                 if update_node:
-                    update_node(store[pos])
+                    update_node(store[i])
                 if fill:
-                    self.fill_node(store[pos])
+                    self.fill_node(store[i])
                 else:
-                    store[pos].ready = False
+                    store[i].ready = False
             else:
-                store.insert(pos, create_node(names[pos]))
-        store[n:] = []
+                store.insert(i, create_node(name))
+        store[len(names):] = []
 
 
 class TreeExpander(Gtk.TreeExpander):
@@ -88,7 +86,7 @@ class TreeListItemFactory(FactoryBase):
         child = listitem.get_child()
         row = listitem.get_item()
         node = row.get_item()
-        row.bind_property('expanded', node, 'expanded')
+        node.rows.append(row)
         if hasattr(node, 'edit_stack'):
             node.edit_stack.connect('notify::modified', self.notify_modified_cb, child.label, node.name)
             self.notify_modified_cb(node.edit_stack, None, child.label, node.name)
@@ -96,6 +94,11 @@ class TreeListItemFactory(FactoryBase):
             child.label.set_label(node.name)
         child.icon.set_from_icon_name(node.icon)
         child.set_list_row(row)
+
+    def unbind_cb(self, listitem):
+        row = listitem.get_item()
+        node = row.get_item()
+        node.rows.remove(row)
 
     @staticmethod
     def notify_modified_cb(edit_stack, pspec, label, name):
@@ -109,23 +112,28 @@ class TreeListItemFactory(FactoryBase):
 
 class WidgetWithPanedTreeList(compound.WidgetWithPaned):
     def __init__(self, main, config, tree, **kwargs):
-        self.left_store = Gtk.TreeListModel.new(tree.root.model, False, False, tree.expose)
-        model = Gtk.MultiSelection(model=self.left_store)
-        model.select_item(0, True)
-        self.left_selected_item = None
+        left_store = Gtk.TreeListModel.new(tree.root.children, False, False, tree.expose)
+        super().__init__(main, config, Gtk.MultiSelection(model=left_store), TreeListItemFactory(), **kwargs)
 
-        super().__init__(main, config, model, TreeListItemFactory(), **kwargs)
+        selection_filter_model = Gtk.SelectionFilterModel(model=self.left_selection_model)
+        map_model = Gtk.MapListModel.new(selection_filter_model, lambda row: row.get_item().item_model)
+        flatten_model = Gtk.FlattenListModel(model=map_model)
+        main.set_model(flatten_model)
 
+        self.left_selection_model.select_item(0, True)
         self.left_view.connect('activate', self.left_view_activate_cb)
+        self.left_selected_item = None
 
     def cleanup(self):
         del self.left_selected_item
         super().cleanup()
+        # del self.left_store
+        # self.left_selection_model.set_model(None)
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
-        if len(self.left_selection_pos) == 1:
-            self.left_selected_item = selection[self.left_selection_pos[0]].get_item()
+        if len(self.left_selected_positions) == 1:
+            self.left_selected_item = selection[self.left_selected_positions[0]].get_item()
         else:
             self.left_selected_item = None
 
