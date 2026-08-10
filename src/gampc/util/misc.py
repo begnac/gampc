@@ -18,9 +18,14 @@
 
 import asyncio
 import decorator
+import re
 
+from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import Gtk
+
+
+SEPARATOR_FILE = 'separator.mp3'
 
 
 class Rectangle(Gdk.Rectangle):
@@ -70,7 +75,7 @@ def find_descendant_at_xy(widget, x, y, levels):
     return widget, x, y
 
 
-def get_selection(selection):
+def get_selected_positions(selection):
     found, i, pos = Gtk.BitsetIter.init_first(selection.get_selection())
     while found:
         yield pos
@@ -127,3 +132,32 @@ class FactoryBase(Gtk.SignalListItemFactory):
 
 
 # debug_time = DebugTime()
+
+
+class TransferBase(GObject.Object):
+    value = GObject.Property()
+
+    def get_content(self):
+        return Gdk.ContentProvider.new_for_value(self)
+
+
+def song_set_fields(song):
+    song['Duration'] = format_time(float(song['duration'])) if 'duration' in song else ''
+
+    # title = song.get('Title') or song.get('Name', '')
+    # filename = song.get('file', '')
+    # url = urllib.parse.urlparse(filename)
+    # if url.scheme:
+    #     url_basename = os.path.basename(url.path)
+    #     title = '{0} [{1}]'.format(title, url_basename) if title else url_basename
+    # song['Title'] = title
+    song['Title'] = song.get('Title') or song.get('Name') or ''
+
+    match = re.search('\\.(\\w+)$', song['file'])
+    if match:
+        song['Extension'] = match[1]
+
+
+def songs_set_fields(songs):
+    for song in songs:
+        song_set_fields(song)

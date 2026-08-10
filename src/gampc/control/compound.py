@@ -45,22 +45,22 @@ class WidgetWithPaned(contextmenu.ContextMenuActionMixin, cleanup.CleanupSignalM
     def __init__(self, main, config, model, factory, **kwargs):
         self.main = main
         self.config = config
-        self.left_selection = model
+        self.left_selection_model = model
 
-        self.left_view = Gtk.ListView(model=self.left_selection, factory=factory, tab_behavior=Gtk.ListTabBehavior.ITEM)
+        self.left_view = Gtk.ListView(model=self.left_selection_model, factory=factory, tab_behavior=Gtk.ListTabBehavior.ITEM)
         self.left = Gtk.ScrolledWindow(child=self.left_view)
         self.left_view_search = listviewsearch.ListViewSearch(self.left_view, self.left_view_search_test)
 
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, position=config['position'], start_child=self.left, end_child=main, focusable=False, **kwargs)
 
-        self.left_selection_pos = []
-        self.connect_clean(self.left_selection, 'selection-changed', self.left_selection_changed_cb)
+        self.left_selected_positions = []
+        self.connect_clean(self.left_selection_model, 'selection-changed', self.left_selection_changed_cb)
         self.connect('notify::position', self.__class__.notify_position_cb)
 
         self.add_cleanup_below(self.left_view_search)
 
     def left_selection_changed_cb(self, selection, position, n_items):
-        self.left_selection_pos = list(misc.get_selection(selection))
+        self.left_selected_positions = list(misc.get_selected_positions(selection))
 
     def notify_position_cb(self, param):
         self.config['position'] = self.get_position()

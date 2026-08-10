@@ -16,13 +16,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import asyncio
+
 from gi.repository import Gio
 from gi.repository import Gtk
 
 import ampd
 
 from ..util import action
-from ..util import cache
 from ..util import cleanup
 from ..util import config
 from ..util import item
@@ -31,7 +32,7 @@ from ..util import unit
 
 from ..ui import dialog
 
-from ..view.cache import ViewCacheWithCopyPasteSong
+from ..view.actions import ViewWithCopyPasteSong
 
 from ..control import lefttree
 from ..control import editstack
@@ -42,52 +43,43 @@ from . import mixins
 PSEUDO_SEPARATOR = ' % '
 
 
-class PlaylistWidget(editstack.WidgetCacheEditStackMixin, lefttree.WidgetWithPanedTreeList):
-    def __init__(self, fields, separator_file, cache, config, root_model):
-        main = ViewCacheWithCopyPasteSong(fields=fields, separator_file=separator_file, cache=cache)
+class PlaylistWidget(editstack.WidgetEditStackMixin, lefttree.WidgetWithPanedTreeList):
+    def __init__(self, fields, separator, config, root_model, listplaylistinfo):
+        main = ViewWithCopyPasteSong(fields=fields, separator=separator)
         super().__init__(main, config, root_model, edit_stack_view=main)
         self.add_cleanup_below(main)
+        self.listplaylistinfo = listplaylistinfo
 
         self.main.context_menu.append_section(None, self.edit_stack_menu)
         self.context_menu.append_section(None, self.edit_stack_menu)
-        self.edit_stack_splicer = self.main.splice_keys
 
-        item.setup_find_duplicate_items(main.item_model, ['file'], [separator_file])
+        item.setup_find_duplicate_items(main.item_selection_model, ['file'])
 
     def action_save_cb(self, action, parameter):
         self.activate_action('playlist.save')
 
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
-        if self.left_selected_item and self.left_selected_item.model is None:
+        if self.left_selected_item and isinstance(self.left_selected_item, PlaylistNode):
             self.main.set_editable(True)
             self.set_edit_stack(self.left_selected_item.edit_stack)
+            self.left_selected_item.playlist.update(self.listplaylistinfo)
         else:
             self.main.set_editable(False)
             self.set_edit_stack(None)
-            self.main.set_keys(sum(map(lambda node: list(node.edit_stack.items),
-                                       filter(lambda node: node.model is None,
-                                              map(lambda pos: selection[pos].get_item(),
-                                                  self.left_selection_pos))), []))
+            for pos in self.left_selected_positions:
+                node = selection[pos].get_item()
+                if isinstance(node, PlaylistNode):
+                    node.playlist.update(self.listplaylistinfo)
 
     @staticmethod
     def left_view_activate_cb(left_view, position):
         row = left_view.get_model()[position]
         node = row.get_item()
-        if node.model is None:
+        if isinstance(node, PlaylistNode):
             left_view.activate_action('playlist-global.rename')
         else:
             lefttree.WidgetWithPanedTreeList.left_view_activate_cb(left_view, position)
-
-
-class PlaylistCache(cache.AsyncCache):
-    def __init__(self, ampd, playlists):
-        super().__init__()
-        self.ampd = ampd
-        self.playlists = playlists
-
-    async def retrieve(self, name):
-        return await self.ampd.listplaylistinfo(name), self.playlists[name]
 
 
 class ChoosePathDialog(dialog.TextDialog):
@@ -134,34 +126,43 @@ class ChoosePathDialog(dialog.TextDialog):
 
 
 class FolderNode(lefttree.Node):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, model_factory=Gtk.FlattenListModel, icon='folder-symbolic', **kwargs)
-        self.model_model = Gio.ListStore()
-        self.model_model.splice(0, 0, [Gio.ListStore(), Gio.ListStore()])
-        self.model.set_model(self.model_model)
+    def __init__(self, *args):
+        super().__init__(*args, children=Gtk.FlattenListModel(), icon='folder-symbolic', item_model=Gio.ListStore())
+        self.children_model = Gio.ListStore()
+        for i in range(2):
+            self.children_model.append(Gio.ListStore())
+        self.children.set_model(self.children_model)
+
+
+class PlaylistNode(lefttree.Node):
+    def __init__(self, *args, playlist):
+        self.playlist = playlist
+        if playlist.edit_stack is None:
+            playlist.edit_stack = editstack.EditStack(item_type=item.SongItem)
+        self.edit_stack = playlist.edit_stack
+
+        super().__init__(*args, icon='view-list-symbolic', item_model=self.edit_stack.item_model)
 
 
 class PlaylistTree(lefttree.Tree):
-    def __init__(self, cache, update_song_cache):
+    def __init__(self, playlists):
         super().__init__()
-        self.cache = cache
-        self.update_song_cache = update_song_cache
+        self.playlists = playlists
 
     @staticmethod
     def get_root():
-        return FolderNode(expanded=True)
+        return FolderNode()
 
     @misc.create_task
     async def fill_node(self, node):
-        if node.model is None:
-            playlist, last_modified = await self.cache.get_async(PSEUDO_SEPARATOR.join(node.path))
-            self.update_song_cache(playlist)
-            node.edit_stack.reset()
-            node.edit_stack.splice(0, len(node.edit_stack.items), [song['file'] for song in playlist])
-        else:
+        if isinstance(node, FolderNode):
             folders, playlists = self.get_pseudo_folder_contents(node.path)
-            self.merge(node.model_model[0], folders, node.expanded, lambda name: FolderNode(name, node.path))
-            self.merge(node.model_model[1], playlists, node.expanded, lambda name: lefttree.Node(name, node.path, model_factory=None, icon='view-list-symbolic', edit_stack=editstack.EditStack()))
+            expanded = any(row.get_expanded() for row in node.rows)
+            self.merge(node.children_model[0], folders, expanded, lambda name: FolderNode(name, node.path))
+            self.merge(node.children_model[1], playlists, False, lambda name: self.get_playlist_node(name, node.path))
+
+    def get_playlist_node(self, name, path):
+        return PlaylistNode(name, path, playlist=self.playlists[PSEUDO_SEPARATOR.join(path + [name])])
 
     def get_pseudo_folder_contents(self, path):
         prefix = PSEUDO_SEPARATOR.join(path + [''])
@@ -170,7 +171,7 @@ class PlaylistTree(lefttree.Tree):
 
         last_folder = None
 
-        for name in sorted(self.cache.playlists):
+        for name in sorted(self.playlists):
             if not name.startswith(prefix):
                 continue
             name = name[len(prefix):]
@@ -183,6 +184,32 @@ class PlaylistTree(lefttree.Tree):
                 names.append(name)
 
         return folders, names
+
+
+class Playlist:
+    def __init__(self, name, last_modified):
+        self.name = name
+        self.last_modified = last_modified
+        self.clean = False
+        self.edit_stack = None
+
+    def update(self, listplaylistinfo):
+        if self.clean is not True:
+            if self.clean is not False:
+                self.clean.cancel()
+            self.clean = asyncio.create_task(self._update(listplaylistinfo))
+
+    async def _update(self, listplaylistinfo):
+        try:
+            if not self.edit_stack.transactions:
+                self.edit_stack.item_model.set_values([])
+                songs = await listplaylistinfo(self.name)
+                misc.songs_set_fields(songs)
+                self.edit_stack.item_model.set_values(songs)
+        except Exception:
+            self.clean = False
+            raise
+        self.clean = True
 
 
 class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitComponentQueueActionMixin, mixins.UnitComponentTandaActionMixin, mixins.UnitComponentPlaylistActionMixin, unit.Unit):
@@ -208,11 +235,10 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         self.css_provider.load_from_string(self.CSS)
 
         self.playlists = {}
-        self.playlist_cache = PlaylistCache(self.ampd, self.playlists)
-        self.tree = PlaylistTree(self.playlist_cache, self.unit_database.update)
+        self.tree = PlaylistTree(self.playlists)
 
     def new_widget(self):
-        playlist = PlaylistWidget(self.unit_song.fields, self.unit_database.SEPARATOR_FILE, self.unit_database.cache, self.config['paned'], self.tree)
+        playlist = PlaylistWidget(self.unit_song.fields, self.unit_database.separator, self.config['paned'], self.tree, self.ampd.listplaylistinfo)
         view = playlist.main
 
         view.add_context_menu_actions(self.generate_foreign_queue_actions(view), 'foreign-queue', self.TITLE, protect=self.unit_persistent.protect, prepend=True)
@@ -228,17 +254,23 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
 
     @ampd.task
     async def client_connected_cb(self, client):
-        try:
-            while True:
-                self.playlists.clear()
-                self.playlists.update((entry['playlist'], entry['Last_Modified']) for entry in await self.ampd.listplaylists() if entry['playlist'] != self.TEMPNAME)
-                for name, (files, last_modified) in list(self.playlist_cache.items()):
-                    if last_modified != self.playlists.get(name):
-                        self.playlist_cache.pop(name)
-                self.tree.start()
-                await self.ampd.idle(ampd.STORED_PLAYLIST)
-        finally:
-            self.playlists = {}
+        while True:
+            playlists = {entry['playlist']: entry['Last_Modified'] for entry in await self.ampd.listplaylists() if entry['playlist'] != self.TEMPNAME}
+            self.update_playlists(playlists)
+            await self.ampd.idle(ampd.STORED_PLAYLIST)
+
+    def update_playlists(self, playlists={}):
+        for name, playlist in list(self.playlists.items()):
+            last_modified = playlists.pop(name, None)
+            if last_modified is None:
+                if playlist.edit_stack is None or not playlist.edit_stack.transactions:
+                    del self.playlists[name]
+            elif last_modified != playlist.last_modified:
+                playlist.last_modified = last_modified
+                playlist.clean = False
+        for name in playlists:
+            self.playlists[name] = Playlist(name, playlists[name])
+        self.tree.start()
 
     def playlist_paths(self):
         last_path = []

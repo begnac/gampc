@@ -49,6 +49,9 @@ class Unit(cleanup.CleanupSignalMixin, GObject.Object):
         self.loaded_required.append(name)
         return unit
 
+    def __del__(self):
+        logger.debug(f"Deleting {self}")
+
 
 class UnitManager(GObject.Object):
     def __init__(self):
@@ -107,4 +110,4 @@ class UnitManager(GObject.Object):
             aggregator.unlink(unit)
 
     def __del__(self):
-        logger.debug("Deleting {self}".format(self=self))
+        logger.debug(f"Deleting {self}")

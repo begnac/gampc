@@ -127,16 +127,14 @@ class ItemView(Gtk.ColumnView):
                     title.remove_controller(controller)
 
 
-class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
+class ViewBase(item.WithItemModelMixin, cleanup.CleanupSignalMixin, Gtk.Box):
     filtering = GObject.Property(type=bool, default=False)
 
-    def __init__(self, fields, *, model=None, item_type=item.SongItem, sortable, edit_manager=None, filterable=True, selection_model=Gtk.MultiSelection, **kwargs):
+    def __init__(self, fields, *, sortable, edit_manager=None, filterable=True, selection_model=Gtk.MultiSelection, **kwargs):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, **kwargs)
 
         self.sortable = sortable
         self.filterable = filterable
-
-        next_model = self.item_model = item.ItemListStore(item_type=item_type) if model is None else model
 
         self.item_selection_model = selection_model()
         self.item_selection_filter_model = Gtk.SelectionFilterModel(model=self.item_selection_model)
@@ -163,12 +161,21 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
             self.connect('notify::filtering', self.__class__.notify_filtering_cb)
 
             self.filter_filter = Gtk.CustomFilter()
-            next_model = Gtk.FilterListModel(model=next_model, filter=self.filter_filter)
+            self.first_model = filter_model = Gtk.FilterListModel(filter=self.filter_filter)
 
             if sortable:
-                next_model = Gtk.SortListModel(model=next_model, sorter=self.item_view.get_sorter())
+                sort_model = Gtk.SortListModel(model=filter_model, sorter=self.item_view.get_sorter())
+                self.item_selection_model.set_model(sort_model)
+            else:
+                self.item_selection_model.set_model(filter_model)
+        else:
+            self.first_model = self.item_selection_model
 
-        self.item_selection_model.set_model(next_model)
+        self.first_model.set_model(self.item_model)
+
+    def set_model(self, model):
+        self.item_model = model
+        self.first_model.set_model(model)
 
     @staticmethod
     def search_func(text, item, fields):
@@ -205,14 +212,14 @@ class ViewBase(cleanup.CleanupSignalMixin, Gtk.Box):
                 return False
         return True
 
-    def _get_selection(self):
-        return misc.get_selection(self.item_selection_model)
+    def get_selected_items(self):
+        return list(self.item_selection_filter_model)
 
-    def get_selection(self):
-        return list(self._get_selection())
+    def get_selected_positions(self):
+        return list(misc.get_selected_positions(self.item_selection_model))
 
-    def get_items(self, positions):
-        return list(map(lambda i: self.item_selection_model[i], positions))
+    # def get_items(self, positions):
+    #     return list(map(lambda i: self.item_selection_model[i], positions))
 
     def get_filenames(self, selection):
         return list(map(lambda item: item.get_key(), self.item_selection_filter_model if selection else self.item_selection_model))

@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
+from gi.repository import Gio
 from gi.repository import Gdk
 from gi.repository import Gtk
 
@@ -66,7 +68,7 @@ class ViewWithCopy(ViewWithContextMenu):
         yield action.ActionInfo('copy', self.action_copy_cb, _("Copy"), ['<Control>c'])
 
     def action_copy_cb(self, action, parameter):
-        self.copy_items(self.get_items(self.get_selection()))
+        self.copy_items(self.get_selected_items())
 
     def copy_items(self, items):
         self.get_clipboard().set_content(self.content_from_items(items))
@@ -81,8 +83,8 @@ class ViewWithCopy(ViewWithContextMenu):
     def unlock():
         pass
 
-    transfer_type = NotImplemented
-    extra_transfer_types = NotImplemented
+    transfer_type = item.SongItemTransfer
+    extra_transfer_types = (item.ItemStringTransfer,)
 
     @classmethod
     def content_from_items(cls, items):
@@ -93,13 +95,13 @@ class ViewWithCopy(ViewWithContextMenu):
         if row is None:
             return
 
-        self.drag_selection = self.get_selection()
+        self.drag_positions = self.get_selected_positions()
         pos = self.get_row_position(row)
-        if pos not in self.drag_selection:
+        if pos not in self.drag_positions:
             self.item_selection_model.select_item(pos, True)
-            self.drag_selection = [pos]
+            self.drag_positions = [pos]
         self.lock()
-        return self.content_from_items(self.item_selection_filter_model)
+        return self.content_from_items(self.get_selected_items())
 
     # def drag_begin_cb(self, drag_source, drag):
     #     pass
@@ -109,9 +111,9 @@ class ViewWithCopy(ViewWithContextMenu):
 
     def drag_end_cb(self, drag_source, drag, delete):
         if delete:
-            self.remove_positions(self.drag_selection)
+            self.remove_positions(self.drag_positions)
         self.unlock()
-        del self.drag_selection
+        del self.drag_positions
 
     def get_row_position(self, row):
         return row.get_first_child().get_first_child().item_position
@@ -160,15 +162,15 @@ class ViewWithCopyPaste(ViewWithCopy):
         yield cut.derive(_("Delete"), ['Delete'], False)
 
     def action_cut_cb(self, action, parameter):
-        selection = self.get_selection()
-        if not selection:
+        positions = self.get_selected_positions()
+        if not positions:
             return
         if parameter.unpack():
-            self.copy_items(self.get_items(selection))
-        pos = selection[0]
-        if pos + len(selection) >= self.item_selection_model.get_n_items():
+            self.copy_items(self.get_selected_items())
+        pos = positions[0]
+        if pos + len(positions) >= self.item_selection_model.get_n_items():
             pos -= 1
-        self.remove_positions(selection)
+        self.remove_positions(positions)
         if pos >= 0:
             self.item_selection_model.select_item(pos, True)
 
@@ -191,23 +193,6 @@ class ViewWithCopyPaste(ViewWithCopy):
                 pos += 1
         if values is not None:
             self.add_items(pos, values)
-
-    def generate_url_actions(self):
-        yield action.ActionInfo('add-url', self.action_add_url_cb, _("Add URL or filename"))
-
-    @misc.create_task
-    async def action_add_url_cb(self, action, parameter):
-        selection = self.get_selection()
-        if selection:
-            pos = selection[0]
-        else:
-            return
-        dialog_ = dialog.TextDialog(transient_for=self.get_root(), decorated=False, text='http://')
-        url = await dialog_.run()
-        if url:
-            item_ = item.SongItem(value=dict(file=url))
-            transfer = self.transfer_type([item_])
-            self.add_items(pos, transfer.value)
 
     def set_drop_row(self, drop_row=None):
         if drop_row != self.drop_row:
@@ -236,3 +221,66 @@ class ViewWithCopyPaste(ViewWithCopy):
         return True
 
     add_items = remove_positions = NotImplemented
+
+
+class ViewWithFiles(ViewWithContextMenu):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_context_menu_actions(self.generate_file_actions(), 'view-file', _("Files"))
+
+    def generate_file_actions(self):
+        yield action.ActionInfo('delete-file', self.action_delete_file_cb, _("Move files to trash"), ['<Control>Delete'])
+
+    @misc.create_task
+    async def action_delete_file_cb(self, action, parameter):
+        deleted = self.get_filenames(True)
+        if deleted:
+            message = '\n\t'.join([_("Move these files to the trash bin?")] + deleted)
+            if not await dialog.QuestionDialog(transient_for=self.get_root(), title=_("Move to trash"), message=message).run():
+                return
+            for filename in deleted:
+                gfile = Gio.File.new_for_path(GLib.build_filenamev([GLib.get_user_special_dir(GLib.USER_DIRECTORY_MUSIC), filename]))
+                gfile.trash()
+                # continue
+                # if song._gfile is not None:
+                #     song._gfile.trash()
+                #     song._status = self.RECORD_MODIFIED
+
+
+class ViewWithCopySong(ViewWithFiles, ViewWithCopy):
+    pass
+
+
+class ViewWithCopyPasteUrl(ViewWithFiles, ViewWithCopyPaste):
+    def generate_editing_actions(self):
+        yield from super().generate_editing_actions()
+        yield action.ActionInfo('add-url', self.action_add_url_cb, _("Add URL or filename"))
+
+    @misc.create_task
+    async def action_add_url_cb(self, action, parameter):
+        selection = self.get_selection()
+        if selection:
+            pos = selection[0]
+        else:
+            return
+        dialog_ = dialog.TextDialog(transient_for=self.get_root(), decorated=False, text='http://')
+        url = await dialog_.run()
+        if url:
+            item_ = item.SongItem(value=dict(file=url))
+            transfer = self.transfer_type([item_])
+            self.add_items(pos, transfer.value)
+
+
+class ViewWithCopyPasteSong(ViewWithFiles, ViewWithCopyPaste):
+    def __init__(self, *args, separator, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.separator = separator
+
+    def generate_editing_actions(self):
+        yield from super().generate_editing_actions()
+        yield action.ActionInfo('add-separator', self.action_add_separator_cb, _("Add separator"))
+
+    def action_add_separator_cb(self, action, parameter):
+        positions = self.get_selected_positions()
+        if positions:
+            self.add_items(positions[0], [self.separator])

@@ -42,8 +42,8 @@ from ..ui import editable
 
 from ..view import field
 from ..view.actions import ViewWithContextMenu
-from ..view.cache import ViewCacheWithCopy
-from ..view.cache import ViewCacheWithCopyPaste
+from ..view.actions import ViewWithCopy
+from ..view.actions import ViewWithCopyPaste
 
 from ..control import compound
 from ..control import editstack
@@ -82,7 +82,7 @@ class TandaItem(item.Item):
 
     def new_value(self, value):
         self.tandaid = value.pop('tandaid')
-        self.edit_stack = editstack.EditStack([song['file'] for song in value['_songs']], self)
+        self.edit_stack = editstack.EditStack(value['_songs'], self, item_type=item.SongItem)
         self.edit_stack.bind_property('modified', self, 'modified')
         super().new_value(value)
 
@@ -156,9 +156,8 @@ class TandaWidget(compound.WidgetWithPaned):
     genre_filter = GObject.Property(type=int, default=0)
     current_tandaid = GObject.Property()
 
-    def __init__(self, tandas, queue_model, config, tanda_fields, song_fields, separator_file, cache):
-        self.separator_file = separator_file
-        self.cache = cache
+    def __init__(self, tandas, queue_model, config, tanda_fields, song_fields, separator):
+        self.separator = separator
 
         self.artist_store = Gtk.StringList()
         self.artist_selection = Gtk.MultiSelection(model=self.artist_store)
@@ -189,8 +188,8 @@ class TandaWidget(compound.WidgetWithPaned):
 
         super().__init__(self.right_box, config, self.artist_selection, StringListItemFactory())
 
-        self.edit = TandaEdit(self.tanda_artist_filter_model, queue_model, tanda_fields, song_fields, separator_file=separator_file, cache=cache, context_menu=self.context_menu)
-        self.view = TandaView(self.tanda_artist_filter_model, song_fields, separator_file=separator_file, cache=cache, context_menu=self.context_menu)
+        self.edit = TandaEdit(self.tanda_artist_filter_model, queue_model, tanda_fields, song_fields, separator=separator, context_menu=self.context_menu)
+        self.view = TandaView(self.tanda_artist_filter_model, song_fields, separator=separator, context_menu=self.context_menu)
         self.add_cleanup_below(self.edit, self.view)
         self.stack.add_titled(self.edit, 'edit', _("Edit tandas"))
         self.stack.add_titled(self.view, 'view', _("View tandas"))
@@ -257,8 +256,8 @@ class TandaWidget(compound.WidgetWithPaned):
 
 
 class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
-    def __init__(self, *args, separator_file, **kwargs):
-        self.separator_file = separator_file
+    def __init__(self, *args, separator, **kwargs):
+        self.separator = separator
         super().__init__(*args, **kwargs)
 
     def init_tandaid_view(self, view):
@@ -279,28 +278,28 @@ class TandaSubWidgetMixin(cleanup.CleanupSignalMixin):
 
 
 class TandaEditTandaView(ViewWithContextMenu):
-    def __init__(self, *args, separator_file, **kwargs):
-        self.separator_file = separator_file
+    def __init__(self, *args, separator, **kwargs):
+        self.separator = separator
         self.edit_manager = editable.EditManager()
         super().__init__(*args, edit_manager=self.edit_manager, selection_model=Gtk.SingleSelection, sortable=True, **kwargs)
 
     def get_filenames(self, selection):
         if self.item_selection_filter_model:
-            return [self.separator_file] + [song['file'] for song in self.item_selection_filter_model[0].value['_songs']] + [self.separator_file]
+            return [self.separator['file']] + [song['file'] for song in self.item_selection_filter_model[0].value['_songs']] + [self.separator['file']]
         else:
             return []
 
 
-class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Box):
+class TandaEdit(editstack.WidgetEditStackMixin, TandaSubWidgetMixin, Gtk.Box):
     current_tandaid = GObject.Property()
 
-    def __init__(self, tandas, queue_model, tanda_fields, song_fields, *args, cache, context_menu, **kwargs):
-        self.song_view = ViewCacheWithCopyPaste(song_fields, cache=cache, filterable=False)
+    def __init__(self, tandas, queue_model, tanda_fields, song_fields, *args, context_menu, **kwargs):
+        self.song_view = ViewWithCopyPaste(song_fields, filterable=False)
 
         super().__init__(*args, **kwargs, orientation=Gtk.Orientation.VERTICAL, edit_stack_view=self.song_view)
 
         self.tanda_fields = tanda_fields
-        self.tanda_view = TandaEditTandaView(tanda_fields, model=tandas, separator_file=self.separator_file)
+        self.tanda_view = TandaEditTandaView(tanda_fields, item_model=tandas, separator=self.separator)
         self.tanda_view.context_menu.prepend_section(None, context_menu)
         self.song_view.scrolled_item_view.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
         self.song_view.set_vexpand(False)
@@ -309,10 +308,10 @@ class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Bo
         self.add_cleanup_below(self.tanda_view, self.song_view)
 
         self.model_to_flatten = Gio.ListStore()
-        self.model_to_flatten.append(self.song_view.item_model)
+        self.model_to_flatten.append(self.song_view.item_selection_model)
         self.model_to_flatten.append(queue_model)
         self.queue_and_tanda_model = Gtk.FlattenListModel(model=self.model_to_flatten)
-        item.setup_find_duplicate_items(self.queue_and_tanda_model, ['Title'], [self.separator_file])
+        item.setup_find_duplicate_items(self.queue_and_tanda_model, ['Title'])
 
         self.init_tandaid_view(self.tanda_view)
         self.tanda_view.item_view.add_css_class('tanda-edit')
@@ -324,7 +323,6 @@ class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Bo
 
         self.song_view.context_menu.append_section(None, self.edit_stack_menu)
         self.tanda_view.context_menu.append_section(None, self.edit_stack_menu)
-        self.edit_stack_splicer = self.song_view.splice_keys
 
     def action_save_cb(self, action, parameter):
         self.activate_action('tanda.save')
@@ -343,44 +341,37 @@ class TandaEdit(editstack.WidgetCacheEditStackMixin, TandaSubWidgetMixin, Gtk.Bo
         if model:
             self.current_tanda = model[0]
             self.set_edit_stack(self.current_tanda.edit_stack)
+            self.song_view.set_model(self.current_tanda.edit_stack.item_model)
         else:
             self.current_tanda = None
             self.set_edit_stack(None)
+            self.song_view.set_model(None)
 
 
-class TandaView(TandaSubWidgetMixin, ViewCacheWithCopy):
+class TandaView(TandaSubWidgetMixin, ViewWithCopy):
     current_tandaid = GObject.Property()
 
     def __init__(self, tandas, *args, context_menu, **kwargs):
         super().__init__(*args, **kwargs, item_type=TandaSongItem, sortable=False)
         self.context_menu.prepend_section(None, context_menu)
         self.connect_clean(tandas, 'items-changed', self.tandas_changed)
-        item.setup_find_duplicate_items(self.item_model, ['Title', 'Artist', 'Performer', 'Date'], [self.separator_file])
+        item.setup_find_duplicate_items(self.item_selection_model, ['Title', 'Artist', 'Performer', 'Date'])
         self.init_tandaid_view(self)
 
     def tandas_changed(self, tandas, p, r, a):
-        filenames = []
+        songs = []
         for tanda in tandas:
-            tandaid = tanda.tandaid
             for song in tanda.value['_songs']:
-                filenames.append((song['file'], tandaid))
-            filenames.append((self.separator_file, tandaid))
-        self.set_keys(filenames)
-
-    async def _splice_keys(self, task, pos, remove, keys):
-        real_keys, tandaids = zip(*keys)
-        await self.cache.ensure_keys(real_keys)
-        if task is not None:
-            await task
-        self.item_model.splice_values(pos, remove, (dict(self.cache[key], tandaid=tandaid) for key, tandaid in keys))
+                songs.append(dict(song, tandaid=tanda.tandaid))
+            songs.append(dict(self.separator, tandaid=tanda.tandaid))
+        self.item_model.set_values(songs)
 
 
 class TandaDatabase(db.Database):
-    def __init__(self, tanda_model, tanda_field_names, song_field_names, name, cache):
+    def __init__(self, tanda_model, tanda_field_names, song_field_names, name):
         self.tanda_model = tanda_model
         self.tanda_field_names = tanda_field_names
         self.song_field_names = song_field_names
-        self.cache = cache
 
         self.tanda_field_names_joined = ','.join(map(lambda name: f'tandas.{name}', self.tanda_field_names))
         self.song_field_names_joined = ','.join(map(lambda name: f'songs.{name}', self.song_field_names))
@@ -496,6 +487,7 @@ class TandaDatabase(db.Database):
         query = self.connection.cursor().execute(f'SELECT {self.song_field_names_joined} FROM tanda_songs,songs USING(file) WHERE tanda_songs.tandaid=? ORDER BY tanda_songs.position', (tanda['tandaid'],))
         tanda['_songs'] = list(map(self._song_from_record, query))
         set_tanda_fields(tanda)
+        misc.songs_set_fields(tanda['_songs'])
         return tanda
 
     @staticmethod
@@ -547,7 +539,7 @@ class TandaDatabase(db.Database):
 
     # Cleanup stuff
 
-    def get_used_songs(self, ignore):
+    def get_used_songs(self):
         with self.connection as cursor:
             query = cursor.execute('SELECT {},file in (SELECT file from tanda_songs) FROM songs'.format(', '.join(self.song_field_names))).fetchall()
             songs = [self._dict_from_record(t, self.song_field_names + ['used']) for t in query]
@@ -557,7 +549,7 @@ class TandaDatabase(db.Database):
             for song in songs:
                 if song['used']:
                     used_songs.append(song)
-                elif song['file'] not in ignore:
+                elif song['file'] != misc.SEPARATOR_FILE:
                     n_unused += 1
                     logger.info(_("Deleting '{file}'").format_map(song))
                     cursor.execute('DELETE FROM songs WHERE file=:file', song)
@@ -666,11 +658,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         self.tanda_field_names = list(self.fields.infos)[:-4]
         self.song_field_names = list(self.unit_song.fields.infos)[:-2] + ['duration']
 
-        self.db = TandaDatabase(self.tanda_model, self.tanda_field_names, self.song_field_names, self.name, self.unit_database.cache)
-        self.update_cache_full(None)
-
-        self.connect_clean(self.unit_database, 'cleared', self.update_cache_full)
-        self.connect_clean(self.tanda_model, 'items-changed', self.update_cache_partial)
+        self.db = TandaDatabase(self.tanda_model, self.tanda_field_names, self.song_field_names, self.name)
 
     def cleanup(self):
         del self.db
@@ -684,7 +672,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         return component
 
     def new_widget(self):
-        tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config['paned'], self.fields, self.unit_song.fields, self.unit_database.SEPARATOR_FILE, cache=self.unit_database.cache)
+        tanda = TandaWidget(self.tanda_sort_model, self.queue_model, self.config['paned'], self.fields, self.unit_song.fields, self.unit_database.separator)
 
         tanda.connect_clean(self.unit_persistent, 'notify::protect-requested', lambda unit, pspec: unit.protect_requested and tanda.problem_button.set_active(True))
         tanda.add_context_menu_actions(self.generate_db_actions(), 'db', self.TITLE)
@@ -719,7 +707,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         if edit.current_tanda is None:
             return
         tanda = edit.current_tanda
-        new_value = dict(tanda.value, _songs=[self.unit_database.cache[filename] for filename in tanda.edit_stack.items])
+        new_value = dict(tanda.value, _songs=[item.value for item in tanda.edit_stack.item_model])
         set_tanda_fields(new_value)
         self.db.update_tanda(dict(new_value, tandaid=tanda.tandaid))
         tanda.value = new_value
@@ -743,7 +731,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
         replaced = []
         problem = []
         done = [0]
-        used_songs, n_unused = self.db.get_used_songs(ignore=[self.unit_database.SEPARATOR_FILE])
+        used_songs, n_unused = self.db.get_used_songs()
 
         n_songs = len(used_songs)
         await asyncio.wait([self.verify_song(window, song, n_songs, done, updated, replaced, problem) for song in used_songs])
@@ -802,10 +790,9 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
 
     @ampd.task
     async def client_connected_cb(self, client):
-        if self.db.song_is_missing(self.unit_database.SEPARATOR_FILE):
-            songs = await self.ampd.find('file', self.unit_database.SEPARATOR_FILE)
+        if self.db.song_is_missing(misc.SEPARATOR_FILE):
+            songs = await self.ampd.find('file', misc.SEPARATOR_FILE)
             if len(songs) == 1:
-                self.unit_database.cache[self.unit_database.SEPARATOR_FILE] = songs[0]
                 self.db.add_song(songs[0])
         try:
             while True:
@@ -813,14 +800,6 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
                 await self.ampd.idle(ampd.PLAYLIST)
         finally:
             self.queue_model.remove_all()
-
-    def update_cache_full(self, unit):
-        if self.unit_database.SEPARATOR_FILE not in self.unit_database.cache:
-            self.unit_database.cache[self.unit_database.SEPARATOR_FILE] = self.db.get_song(self.unit_database.SEPARATOR_FILE)
-        self.unit_database.update(song for tanda in self.tanda_model for song in tanda.get_field('_songs'))
-
-    def update_cache_partial(self, model, p, r, a):
-        self.unit_database.update(song for tanda in self.tanda_model[p:p + a] for song in tanda.get_field('_songs'))
 
     @staticmethod
     def tanda_key_func(tanda):

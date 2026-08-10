@@ -21,6 +21,7 @@ from gi.repository import GObject
 import weakref
 
 from ..util import action
+from ..util import item as _item
 from ..util import misc
 
 
@@ -34,7 +35,7 @@ class DeltaSplicer:
         old, new = self.old, self.new
         if not advance:
             old, new = new, old
-        edit_stack.splice(self.position, len(old), new)
+        edit_stack.splice_values(self.position, len(old), new)
         return self.position, list(range(self.position, self.position + len(new)))
 
     def transpose_position_after(self, position, advance=True):
@@ -103,19 +104,18 @@ class Transaction:
         return Transaction(deltas=self.deltas, advance=not self.advance)
 
 
-class EditStack(GObject.Object):
+class EditStack(_item.WithItemModelMixin, GObject.Object):
     __gsignals__ = {
-        'splice': (GObject.SIGNAL_RUN_FIRST, None, (int, int, int)),
         'step': (GObject.SIGNAL_RUN_FIRST, None, (object, object)),
     }
 
     modified = GObject.Property(type=bool, default=False)
 
-    def __init__(self, items=None, item=None):
-        super().__init__()
+    def __init__(self, values=[], item=None, **kwargs):
+        super().__init__(**kwargs)
         self.hold_counter = 0
         self.reset()
-        self.items = items or []
+        self.set_values(values)
         if item is not None:
             self.item_weakref = weakref.ref(item)
 
@@ -138,10 +138,13 @@ class EditStack(GObject.Object):
     def get_item(self):
         return self.item_weakref()
 
-    def splice(self, p, r, a):
+    def set_values(self, values):
         assert self.hold_counter == 0
-        self.items[p:p + r] = a
-        self.emit('splice', p, r, len(a))
+        self.item_model.set_values(values)
+
+    def splice_values(self, p, r, a):
+        assert self.hold_counter == 0
+        self.item_model.splice_values(p, r, a)
 
     def step(self, advance):
         assert self.hold_counter == 0
@@ -156,7 +159,7 @@ class EditStack(GObject.Object):
         if modified != self.modified:
             self.modified = modified
         if focus is not None:
-            if focus >= len(self.items):
+            if focus >= len(self.item_model):
                 focus -= 1
             if focus == -1:
                 focus = None
@@ -193,7 +196,6 @@ class EditStack(GObject.Object):
 
 class WidgetEditStackMixin:
     def __init__(self, *args, edit_stack_view=None, **kwargs):
-        super().__init__(*args, **kwargs)
         self.edit_stack = None
         family = action.ActionInfoFamily(self.generate_edit_stack_actions(), 'edit-stack', _("Edit stack"))
         self.edit_stack_menu = family.get_menu()
@@ -206,6 +208,9 @@ class WidgetEditStackMixin:
             self.edit_stack_view = edit_stack_view
         else:
             self.edit_stack_view = self
+
+        super().__init__(*args, **kwargs)
+
         self.insert_action_group('edit-stack', self.edit_stack_actions)
         self.add_controller(family.get_shortcut_controller())
         self.edit_stack_changed()
@@ -242,14 +247,10 @@ class WidgetEditStackMixin:
 
     def set_edit_stack(self, edit_stack):
         if self.edit_stack is not None:
-            self.edit_stack.disconnect_by_func(self.splice_cb)
             self.edit_stack.disconnect_by_func(self.step_cb)
-        self.edit_stack_view.item_model.remove_all()
         self.edit_stack = edit_stack
         if edit_stack is not None:
-            self.edit_stack_splicer(0, 0, self.edit_stack.items)
             self.edit_stack.connect('step', self.step_cb)
-            self.edit_stack.connect('splice', self.splice_cb)
         self.edit_stack_changed()
 
     def step_cb(self, edit_stack, focus, selection):
@@ -281,7 +282,7 @@ class WidgetEditStackMixin:
         for k in positions[1:] + [0]:
             j += 1
             if j != k:
-                values = self.edit_stack.items[i:j]
+                values = [item.value for item in self.edit_stack.item_model[i:j]]
                 self.edit_stack.append_delta(DeltaSplicer(i, values, []))
                 i = j = k
         self.unlock()
@@ -296,8 +297,3 @@ class WidgetEditStackMixin:
 
     def unlock(self):
         self.edit_stack.release_transaction()
-
-
-class WidgetCacheEditStackMixin(WidgetEditStackMixin):
-    def refocus(self, *args):
-        self.edit_stack_view.aioqueue.queue_task(super().refocus, *args, sync=True)
