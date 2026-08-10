@@ -65,7 +65,13 @@ class ComponentWidget(cleanup.CleanupSignalMixin, Gtk.Box):
         self.connect('map', self.__class__.map_cb)
         self.append(widget)
         self.widget = widget
-        self.add_cleanup_below(widget)
+
+    def cleanup(self):
+        super().cleanup()
+        self.widget.cleanup()
+        # This should not be necessary, but it is.  WHY?
+        self.remove(self.widget)
+        del self.widget
 
     def notify_subtitle_cb(self, pspec):
         window = self.get_root()
@@ -76,7 +82,7 @@ class ComponentWidget(cleanup.CleanupSignalMixin, Gtk.Box):
         self.get_root().set_subtitle(self.subtitle)
 
     def grab_focus(self):
-        return self.get_first_child().grab_focus()
+        return self.widget.grab_focus()
 
 
 class UnitComponentMixin:

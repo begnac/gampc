@@ -124,12 +124,6 @@ class WidgetWithPanedTreeList(compound.WidgetWithPaned):
         self.left_view.connect('activate', self.left_view_activate_cb)
         self.left_selected_item = None
 
-    def cleanup(self):
-        del self.left_selected_item
-        super().cleanup()
-        # del self.left_store
-        # self.left_selection_model.set_model(None)
-
     def left_selection_changed_cb(self, selection, position, n_items):
         super().left_selection_changed_cb(selection, position, n_items)
         if len(self.left_selected_positions) == 1:
