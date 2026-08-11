@@ -255,11 +255,11 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
     @ampd.task
     async def client_connected_cb(self, client):
         while True:
-            playlists = {entry['playlist']: entry['Last_Modified'] for entry in await self.ampd.listplaylists() if entry['playlist'] != self.TEMPNAME}
-            self.update_playlists(playlists)
+            await self.update_playlists()
             await self.ampd.idle(ampd.STORED_PLAYLIST)
 
-    def update_playlists(self, playlists={}):
+    async def update_playlists(self):
+        playlists = {entry['playlist']: entry['Last_Modified'] for entry in await self.ampd.listplaylists() if entry['playlist'] != self.TEMPNAME}
         for name, playlist in list(self.playlists.items()):
             last_modified = playlists.pop(name, None)
             if last_modified is None:
