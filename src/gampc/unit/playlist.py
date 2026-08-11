@@ -306,7 +306,7 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
                 widget.edit_stack.reset()
                 widget.edit_stack_changed()
         elif action.get_name() == 'rename':
-            await self.rename_playlist(window, path, widget.left_selected_item.model is not None)
+            await self.rename_playlist(window, path, isinstance(widget.left_selected_item, FolderNode))
         elif action.get_name() == 'delete':
             await self.delete_playlist(window, path)
         elif action.get_name() == 'update-from-queue':
