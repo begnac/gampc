@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import Gtk
 
@@ -74,6 +75,7 @@ class ContextMenuMixin:
     @staticmethod
     def popover_closed_cb(popover):
         popover.get_parent().grab_focus()
+        GLib.idle_add(lambda: popover.unparent() or GLib.SOURCE_REMOVE)
 
 
 class ContextMenuActionMixin(ContextMenuMixin, MenuActionMixin):
