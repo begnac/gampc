@@ -7,670 +7,691 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GAMPC 0.4.0\n"
 "Report-Msgid-Bugs-To: cangeb@free.fr\n"
-"POT-Creation-Date: 2024-09-16 20:28+0200\n"
-"PO-Revision-Date: 2024-09-17 07:04+0200\n"
+"POT-Creation-Date: 2026-08-12 12:44+0200\n"
+"PO-Revision-Date: 2026-08-12 12:47+0200\n"
 "Last-Translator: Itaï BEN YAACOV <candeb@free.fr>\n"
-"Language-Team: French\n"
 "Language: fr\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
+"Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"Generated-By: Babel 2.10.3\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
 
-#: src/gampc/__init__.py:45
+#: src/gampc/__init__.py:43
 msgid ""
 "A Music Player Daemon client written in Python/Gtk4, using asynchronous "
 "communication"
-msgstr "Un client pour Music Player Daemon écrit en Python/Gtk4, avec communication asynchrone"
+msgstr ""
+"Un client pour Music Player Daemon écrit en Python/Gtk4, avec "
+"communication asynchrone"
 
 #: src/gampc/__main__.py:26
 msgid "Cannot open display"
 msgstr "Impossible d'ouvrir l'affichage"
 
-#: src/gampc/app.py:44 src/gampc/app.py:45
+#: src/gampc/app.py:45 src/gampc/app.py:46
 msgid "List application actions"
 msgstr "Lister les actions de l'application"
 
-#: src/gampc/app.py:46
+#: src/gampc/app.py:47
 msgid "Display version"
 msgstr "Afficher la version"
 
-#: src/gampc/app.py:47
+#: src/gampc/app.py:48
 msgid "Do not start a unique instance"
 msgstr "Ne pas démarrer une instance unique"
 
-#: src/gampc/app.py:48
+#: src/gampc/app.py:49
 msgid "Debug messages"
 msgstr "Messages de débogage"
 
-#: src/gampc/app.py:49
+#: src/gampc/app.py:50
 msgid "[ACTION...]"
 msgstr "[ACTION...]"
 
-#: src/gampc/app.py:95
+#: src/gampc/app.py:90
 msgid "MPD status"
 msgstr "État de MPD"
 
-#: src/gampc/app.py:136
+#: src/gampc/app.py:118
+#, python-brace-format
 msgid "{program} version {version}"
 msgstr "{program} version {version}"
 
-#: src/gampc/app.py:168
+#: src/gampc/app.py:149
+#, python-brace-format
 msgid "Action '{name}' does not exist"
 msgstr "L'action '{name}' n'existe pas"
 
-#: src/gampc/app.py:224
+#: src/gampc/app.py:202 src/gampc/app.py:205
 msgid "Playing"
 msgstr "En train de jouer"
 
-#: src/gampc/control/editstack.py:186
+#: src/gampc/control/editstack.py:200
 msgid "Edit stack"
 msgstr "Pile d'édition"
 
-#: src/gampc/control/editstack.py:215
+#: src/gampc/control/editstack.py:232
 msgid "Undo"
 msgstr "Annuler"
 
-#: src/gampc/control/editstack.py:216
+#: src/gampc/control/editstack.py:233
 msgid "Redo"
 msgstr "Rétablir"
 
-#: src/gampc/control/editstack.py:217
+#: src/gampc/control/editstack.py:234
 msgid "Reset"
 msgstr "Réinitialiser"
 
-#: src/gampc/control/editstack.py:218
+#: src/gampc/control/editstack.py:235
 msgid "Save"
 msgstr "Sauvegarder"
 
-#: src/gampc/control/editstack.py:226
-msgid "Reset and lose all modifications?"
-msgstr "Réinitialiser et perdre toutes les modifications?"
+#: src/gampc/ui/dialog.py:35
+msgid "_Close"
+msgstr "_Fermer"
 
-#: src/gampc/ui/dialog.py:70 src/gampc/ui/dialog.py:81 src/gampc/ui/ssde.py:54
-#: src/gampc/unit/tanda.py:769
-msgid "_Cancel"
-msgstr "_Annuler"
-
-#: src/gampc/ui/dialog.py:71 src/gampc/ui/dialog.py:82 src/gampc/ui/ssde.py:55
-#: src/gampc/unit/tanda.py:770
+#: src/gampc/ui/dialog.py:41
 msgid "_OK"
 msgstr "_Valider"
 
-#: src/gampc/ui/headerbar.py:160 src/gampc/unit/persistent.py:57
+#: src/gampc/ui/dialog.py:42
+msgid "_Cancel"
+msgstr "_Annuler"
+
+#: src/gampc/ui/headerbar.py:160 src/gampc/unit/persistent.py:49
 msgid "Protected mode"
 msgstr "Mode protégé"
 
-#: src/gampc/unit/browser.py:58
-msgid "Database Browser"
-msgstr "Navigateur de la base de données"
-
-#: src/gampc/unit/browser.py:96
+#: src/gampc/unit/browser.py:74
 msgid "Music"
 msgstr "Musique"
 
-#: src/gampc/unit/command.py:33
+#: src/gampc/unit/browser.py:88
+msgid "Database Browser"
+msgstr "Navigateur de la base de données"
+
+#: src/gampc/unit/command.py:31
 msgid "Execute MPD commands"
 msgstr "Exécuter des commandes MPD"
 
-#: src/gampc/unit/command.py:42
+#: src/gampc/unit/command.py:40
 msgid "Empty reply"
 msgstr "Réponse vide"
 
-#: src/gampc/unit/component.py:43 src/gampc/unit/menubar.py:64
+#: src/gampc/unit/component.py:41 src/gampc/unit/menu.py:64
 msgid "_Component"
 msgstr "_Composantes"
 
-#: src/gampc/unit/component.py:50
+#: src/gampc/unit/component.py:48
 msgid "Press <Ctrl> for a new instance"
 msgstr "Appuyer sur <Ctrl> pour une nouvelle instance"
 
-#: src/gampc/unit/component.py:71
+#: src/gampc/unit/component.py:69
 msgid "Stop component"
 msgstr "Arrêter la composante"
 
-#: src/gampc/unit/current.py:230
+#: src/gampc/unit/current.py:207
 msgid "Current Song"
 msgstr "Lecture en cours"
 
-#: src/gampc/unit/database.py:58
+#: src/gampc/unit/database.py:50
 msgid "Database changed"
 msgstr "Base de données modifiée"
 
-#: src/gampc/unit/database.py:67
+#: src/gampc/unit/database.py:68
+msgid "Separator file missing"
+msgstr "Fichier séparateur manquant"
+
+#: src/gampc/unit/database.py:68
+#, python-brace-format
 msgid ""
 "Some features require a file named '{separator}' at the music root "
-"directory.  Such a file, consisting of a three second silence, is provided."
+"directory.  Such a file, consisting of a three second silence, is "
+"provided."
 msgstr ""
-"Certaines fonctionnalités exigent un fichier nommé '{separator}' à la racine "
-"du répertoire de musique.  Un tel fichier, qui consiste en un silence de "
-"trois seconde, est fourni."
+"Certaines fonctionnalités exigent un fichier nommé '{separator}' à la "
+"racine du répertoire de musique.  Un tel fichier, qui consiste en un "
+"silence de trois seconde, est fourni."
 
-#: src/gampc/unit/fields.py:40
-msgid "Album"
-msgstr "Album"
-
-#: src/gampc/unit/fields.py:41
-msgid "Album artist"
-msgstr "Artiste de l'album"
-
-#: src/gampc/unit/fields.py:42 src/gampc/unit/tanda.py:622
-msgid "Artist"
-msgstr "Artiste"
-
-#: src/gampc/unit/fields.py:43
-msgid "Composer"
-msgstr "Compositeur"
-
-#: src/gampc/unit/fields.py:44
-msgid "Date"
-msgstr "Date"
-
-#: src/gampc/unit/fields.py:45
-msgid "Disc"
-msgstr "Disque"
-
-#: src/gampc/unit/fields.py:46
-msgid "File"
-msgstr "Fichier"
-
-#: src/gampc/unit/fields.py:47 src/gampc/unit/tanda.py:623
-msgid "Genre"
-msgstr "Genre"
-
-#: src/gampc/unit/fields.py:48 src/gampc/unit/tanda.py:641
-msgid "Last modified"
-msgstr "Dernière modification"
-
-#: src/gampc/unit/fields.py:49 src/gampc/unit/tanda.py:628
-msgid "Performer"
-msgstr "Interprète"
-
-#: src/gampc/unit/fields.py:50
-msgid "Seconds"
-msgstr "Secondes"
-
-#: src/gampc/unit/fields.py:51 src/gampc/unit/tanda.py:645
-msgid "Duration"
-msgstr "Durée"
-
-#: src/gampc/unit/fields.py:53
-msgid "Title (partial)"
-msgstr "Titre (partiel)"
-
-#: src/gampc/unit/fields.py:54
-msgid "Title"
-msgstr "Titre"
-
-#: src/gampc/unit/fields.py:55
-msgid "Track"
-msgstr "Piste"
-
-#: src/gampc/unit/fields.py:57
-msgid "Extension"
-msgstr "Extension"
-
-#: src/gampc/unit/help.py:49
+#: src/gampc/unit/help.py:48
 msgid "Application shortcuts"
 msgstr "Raccourcis de l'application"
 
-#: src/gampc/unit/help.py:50
+#: src/gampc/unit/help.py:49
 msgid "Window shortcuts"
 msgstr "Raccourcis de la fenêtre"
 
 #: src/gampc/unit/help.py:76
+msgid "BAD"
+msgstr ""
+
+#: src/gampc/unit/help.py:77
 msgid "Help"
 msgstr "Aide"
 
-#: src/gampc/unit/help.py:77
+#: src/gampc/unit/help.py:78
 msgid "About"
 msgstr "À propos"
 
-#: src/gampc/unit/log.py:65
+#: src/gampc/unit/log.py:63
 msgid "View log"
 msgstr "Visualiser le journal"
 
-#: src/gampc/unit/menubar.py:46
+#: src/gampc/unit/menu.py:44
 msgid "_Application"
 msgstr "_Application"
 
-#: src/gampc/unit/menubar.py:50
+#: src/gampc/unit/menu.py:49
 msgid "Quit"
 msgstr "Quitter"
 
-#: src/gampc/unit/menubar.py:53
+#: src/gampc/unit/menu.py:52
 msgid "_Playback"
 msgstr "_Lecture"
 
-#: src/gampc/unit/menubar.py:56
+#: src/gampc/unit/menu.py:55
 msgid "_Server"
 msgstr "_Serveur"
 
-#: src/gampc/unit/menubar.py:62 src/gampc/unit/profiles.py:69
+#: src/gampc/unit/menu.py:61
 msgid "Profiles"
 msgstr "Profils"
 
-#: src/gampc/unit/menubar.py:71
+#: src/gampc/unit/menu.py:71
 msgid "_Help"
 msgstr "_Aide"
 
-#: src/gampc/unit/mixins.py:123
-msgid "Add to play queue with high priority"
-msgstr "Ajouter à la file de lecture avec priorité élevée"
-
-#: src/gampc/unit/mixins.py:124
+#: src/gampc/unit/mixins.py:129
 msgid "Add to play queue"
 msgstr "Ajouter à la file de lecture"
 
-#: src/gampc/unit/mixins.py:125
+#: src/gampc/unit/mixins.py:130
 msgid "Replace play queue"
 msgstr "Remplacer la file de lecture"
 
-#: src/gampc/unit/mixins.py:142 src/gampc/unit/playlist.py:338
+#: src/gampc/unit/mixins.py:131
+msgid "Add to play queue with high priority"
+msgstr "Ajouter à la file de lecture avec priorité élevée"
+
+#: src/gampc/unit/mixins.py:148 src/gampc/unit/playlist.py:368
 msgid "Save as playlist"
 msgstr "Sauvegarder comme liste de lecture"
 
-#: src/gampc/unit/mixins.py:148
+#: src/gampc/unit/mixins.py:153
 msgid "Define tanda"
 msgstr "Définir une tanda"
 
-#: src/gampc/unit/persistent.py:56
+#: src/gampc/unit/persistent.py:48
 msgid "Dark interface"
 msgstr "Interface sombre"
 
-#: src/gampc/unit/persistent.py:78
+#: src/gampc/unit/persistent.py:70
 msgid "Paused while protected.  Playing."
 msgstr "En pause en mode protégé.  Jouer."
 
-#: src/gampc/unit/playback.py:49
+#: src/gampc/unit/playback.py:48
 msgid "_Play/pause"
 msgstr "_Jouer/mettre en pause"
 
-#: src/gampc/unit/playback.py:51
+#: src/gampc/unit/playback.py:50
 msgid "_Stop"
 msgstr "_Arrêter"
 
-#: src/gampc/unit/playback.py:52
+#: src/gampc/unit/playback.py:51
 msgid "_Next"
 msgstr "_Suivant"
 
-#: src/gampc/unit/playback.py:53
+#: src/gampc/unit/playback.py:52
 msgid "_Previous"
 msgstr "_Précédent"
 
-#: src/gampc/unit/playback.py:56
+#: src/gampc/unit/playback.py:55
 msgid "Stop [fadeout]"
 msgstr "Arrêter [graduel]"
 
-#: src/gampc/unit/playback.py:57
+#: src/gampc/unit/playback.py:56
 msgid "Next [fadeout]"
 msgstr "Suivant [graduel]"
 
-#: src/gampc/unit/playback.py:58
+#: src/gampc/unit/playback.py:57
 msgid "Adjust volume"
 msgstr "Ajuster le volume"
 
-#: src/gampc/unit/playback.py:61
+#: src/gampc/unit/playback.py:60
 msgid "Volume up"
 msgstr "Augmenter le volume"
 
-#: src/gampc/unit/playback.py:62
+#: src/gampc/unit/playback.py:61
 msgid "Volume down"
 msgstr "Baisser le volume"
 
-#: src/gampc/unit/playback.py:63
+#: src/gampc/unit/playback.py:62
 msgid "Mute"
 msgstr "Muet"
 
-#: src/gampc/unit/playback.py:66
+#: src/gampc/unit/playback.py:65
 msgid "Restart playback"
 msgstr "Rejouer"
 
-#: src/gampc/unit/playback.py:67
+#: src/gampc/unit/playback.py:66
+#, python-brace-format
 msgid "End of song (-{} seconds)"
 msgstr "Fin du morceau (-{} secondes)"
 
-#: src/gampc/unit/playback.py:68
+#: src/gampc/unit/playback.py:67
+#, python-brace-format
 msgid "Skip backwards ({} seconds)"
 msgstr "Retour en arrière ({} secondes)"
 
-#: src/gampc/unit/playback.py:69
+#: src/gampc/unit/playback.py:68
+#, python-brace-format
 msgid "Skip forwards ({} seconds)"
 msgstr "Avancer ({} secondes)"
 
-#: src/gampc/unit/playlist.py:147
+#: src/gampc/unit/playlist.py:216
 msgid "Playlist"
 msgstr "Liste de lecture"
 
-#: src/gampc/unit/playlist.py:262
+#: src/gampc/unit/playlist.py:292
 msgid "Rename"
 msgstr "Renommer"
 
-#: src/gampc/unit/playlist.py:263 src/gampc/view/actions.py:157
+#: src/gampc/unit/playlist.py:293 src/gampc/view/actions.py:162
 msgid "Delete"
 msgstr "Supprimer"
 
-#: src/gampc/unit/playlist.py:264
+#: src/gampc/unit/playlist.py:294
 msgid "Update from play queue"
 msgstr "Mettre à jour depuis la file de lecture"
 
-#: src/gampc/unit/playlist.py:288
+#: src/gampc/unit/playlist.py:318
+#, python-brace-format
 msgid "Replace existing playlist {name}?"
 msgstr "Remplacer la liste de lecture existante {name} ?"
 
-#: src/gampc/unit/playlist.py:309
+#: src/gampc/unit/playlist.py:339
 msgid "Rename playlist folder"
 msgstr "Renommer le dossier de listes de lecture"
 
-#: src/gampc/unit/playlist.py:309
+#: src/gampc/unit/playlist.py:339
 msgid "Rename playlist"
 msgstr "Renommer la liste de lecture"
 
-#: src/gampc/unit/playlist.py:327
+#: src/gampc/unit/playlist.py:357
+#, python-brace-format
 msgid "Delete playlist {name}?"
 msgstr "Supprimer la liste de lecture {name} ?"
 
-#: src/gampc/unit/playlist.py:335
+#: src/gampc/unit/playlist.py:365
 msgid "Nothing to save!"
 msgstr "Rien à sauvegarder!"
 
-#: src/gampc/unit/profiles.py:51
-msgid "Unknown profile"
-msgstr "Profil inconnu"
+#: src/gampc/unit/profiles.py:83
+msgid "Local MPD server"
+msgstr "Serveur MPD local"
 
-#: src/gampc/unit/profiles.py:62
-msgid "Local host"
-msgstr "Hôte local"
-
-#: src/gampc/unit/profiles.py:71
-msgid "Profile"
-msgstr "Profil"
-
-#: src/gampc/unit/profiles.py:73 src/gampc/unit/stream.py:119
-msgid "Name"
-msgstr "Nom"
-
-#: src/gampc/unit/profiles.py:73
-msgid "<Name>"
-msgstr "<Nom>"
-
-#: src/gampc/unit/profiles.py:74
-msgid "[password@]host:port"
-msgstr "[mot de passe@]hôte:port"
-
-#: src/gampc/unit/profiles.py:74
-msgid "<Host>"
-msgstr "<Hôte>"
-
-#: src/gampc/unit/profiles.py:101
+#: src/gampc/unit/profiles.py:91
 msgid "Edit profiles"
 msgstr "Éditer les profils"
 
-#: src/gampc/unit/queue.py:82
+#: src/gampc/unit/profiles.py:136
+msgid "Add profile"
+msgstr "Ajouter un profil"
+
+#: src/gampc/unit/queue.py:140
 msgid "Queue"
 msgstr "File de lecture"
 
-#: src/gampc/unit/queue.py:85
+#: src/gampc/unit/queue.py:143
 msgid "Go to current song"
 msgstr "Aller au morceau en cours"
 
-#: src/gampc/unit/queue.py:107
+#: src/gampc/unit/queue.py:162
 msgid "Play Queue"
 msgstr "File de lecture"
 
-#: src/gampc/unit/queue.py:135
+#: src/gampc/unit/queue.py:192
 msgid "Priority for random mode"
 msgstr "Priorité pour mode aléatoire"
 
-#: src/gampc/unit/queue.py:136
+#: src/gampc/unit/queue.py:193
 msgid "General queue operations"
 msgstr "Opérations sur la file"
 
-#: src/gampc/unit/queue.py:152
+#: src/gampc/unit/queue.py:209
 msgid "High"
 msgstr "Élevée"
 
-#: src/gampc/unit/queue.py:153
+#: src/gampc/unit/queue.py:210
 msgid "Normal"
 msgstr "Normale"
 
-#: src/gampc/unit/queue.py:173
+#: src/gampc/unit/queue.py:211
+msgid "Choose"
+msgstr "Choisir"
+
+#: src/gampc/unit/queue.py:230
 msgid "Shuffle"
 msgstr "Mélanger"
 
-#: src/gampc/unit/search.py:38 src/gampc/unit/search.py:48
-#: src/gampc/unit/search.py:60
+#: src/gampc/unit/search.py:37 src/gampc/unit/search.py:47
+#: src/gampc/unit/search.py:59
 msgid "Search"
 msgstr "Recherche"
 
-#: src/gampc/unit/search.py:124
+#: src/gampc/unit/search.py:123
 msgid "Unbalanced quotes"
 msgstr "Guillemets non équilibrés"
 
-#: src/gampc/unit/server.py:72
+#: src/gampc/unit/server.py:39
+msgid "Unknown profile"
+msgstr "Profil inconnu"
+
+#: src/gampc/unit/server.py:82
 msgid "Update database"
 msgstr "Mettre à jour la base de données"
 
-#: src/gampc/unit/server.py:75
+#: src/gampc/unit/server.py:85
 msgid "Connect"
 msgstr "Se connecter"
 
-#: src/gampc/unit/server.py:76
+#: src/gampc/unit/server.py:86
 msgid "Disconnect"
 msgstr "Se déconnecter"
 
-#: src/gampc/unit/server.py:77
+#: src/gampc/unit/server.py:87
 msgid "Connect to previous"
 msgstr "Se connecter au précédent"
 
-#: src/gampc/unit/server.py:103
+#: src/gampc/unit/server.py:113
+#, python-brace-format
 msgid "Connected to {address} [protocol version {protocol}]"
 msgstr "Connecté à {address} [protocole version {protocol}]"
 
-#: src/gampc/unit/server.py:110
+#: src/gampc/unit/server.py:120
 msgid "Invalid password"
 msgstr "Mot de passe invalide"
 
-#: src/gampc/unit/server.py:113
+#: src/gampc/unit/server.py:123
+#, python-brace-format
 msgid "Connection failed: {message}"
 msgstr "Connexion échouée: {message}"
 
-#: src/gampc/unit/server.py:113
+#: src/gampc/unit/server.py:123
 msgid "reason unknown"
 msgstr "raison inconnue"
 
-#: src/gampc/unit/server.py:115
+#: src/gampc/unit/server.py:125
 msgid "Disconnected"
 msgstr "Déconnecté"
 
-#: src/gampc/unit/server.py:126
+#: src/gampc/unit/server.py:136
+#, python-brace-format
 msgid "Server error: {error}"
 msgstr "Erreur du serveur : {error}"
 
-#: src/gampc/unit/server.py:130
+#: src/gampc/unit/server.py:140
 msgid "Not connected"
 msgstr "Déconnecté"
 
-#: src/gampc/unit/server.py:132
+#: src/gampc/unit/server.py:142
+#, python-brace-format
 msgid "Connecting to {profile}"
 msgstr "Connexion à {profile}"
 
-#: src/gampc/unit/server.py:136
+#: src/gampc/unit/server.py:146
 msgid "database update"
 msgstr "mise à jour de la base de données"
 
-#: src/gampc/unit/stream.py:108
+#: src/gampc/unit/song.py:31
+msgid "Album"
+msgstr "Album"
+
+#: src/gampc/unit/song.py:32
+msgid "Album artist"
+msgstr "Artiste de l'album"
+
+#: src/gampc/unit/song.py:33 src/gampc/unit/tanda.py:632
+msgid "Artist"
+msgstr "Artiste"
+
+#: src/gampc/unit/song.py:34
+msgid "Composer"
+msgstr "Compositeur"
+
+#: src/gampc/unit/song.py:35
+msgid "Date"
+msgstr "Date"
+
+#: src/gampc/unit/song.py:36
+msgid "Disc"
+msgstr "Disque"
+
+#: src/gampc/unit/song.py:37
+msgid "File"
+msgstr "Fichier"
+
+#: src/gampc/unit/song.py:38 src/gampc/unit/tanda.py:633
+msgid "Genre"
+msgstr "Genre"
+
+#: src/gampc/unit/song.py:39 src/gampc/unit/tanda.py:643
+msgid "Last modified"
+msgstr "Dernière modification"
+
+#: src/gampc/unit/song.py:40 src/gampc/unit/tanda.py:634
+msgid "Performer"
+msgstr "Interprète"
+
+#: src/gampc/unit/song.py:41
+msgid "Track"
+msgstr "Piste"
+
+#: src/gampc/unit/song.py:42
+msgid "Title"
+msgstr "Titre"
+
+#: src/gampc/unit/song.py:43 src/gampc/unit/tanda.py:646
+msgid "Duration"
+msgstr "Durée"
+
+#: src/gampc/unit/song.py:44
+msgid "Extension"
+msgstr "Extension"
+
+#: src/gampc/unit/stream.py:98
 msgid "Internet Streams"
 msgstr "Flux internet"
 
-#: src/gampc/unit/stream.py:120
+#: src/gampc/unit/stream.py:107
+msgid "Name"
+msgstr "Nom"
+
+#: src/gampc/unit/stream.py:108
 msgid "URL"
 msgstr "URL"
 
-#: src/gampc/unit/stream.py:121 src/gampc/unit/tanda.py:629
+#: src/gampc/unit/stream.py:109 src/gampc/unit/tanda.py:635
 msgid "Comment"
 msgstr "Commentaire"
 
-#: src/gampc/unit/stream.py:141
+#: src/gampc/unit/stream.py:131
 msgid "[modified]"
 msgstr "[modifié]"
 
-#: src/gampc/unit/stream.py:155
+#: src/gampc/unit/stream.py:145
 msgid "Save stream database?"
 msgstr "Sauvegarder les flux?"
 
-#: src/gampc/unit/tanda.py:164
+#: src/gampc/unit/tanda.py:152
+msgid "Tango"
+msgstr "Tango"
+
+#: src/gampc/unit/tanda.py:152
+msgid "Vals"
+msgstr "Vals"
+
+#: src/gampc/unit/tanda.py:152
+msgid "Milonga"
+msgstr "Milonga"
+
+#: src/gampc/unit/tanda.py:152
 msgid "Other"
 msgstr "Autre"
 
-#: src/gampc/unit/tanda.py:164
+#: src/gampc/unit/tanda.py:152
 msgid "All"
 msgstr "Tout"
 
-#: src/gampc/unit/tanda.py:191
+#: src/gampc/unit/tanda.py:178
 msgid "Filter zero note"
 msgstr "Filtrer note nulle"
 
-#: src/gampc/unit/tanda.py:207
+#: src/gampc/unit/tanda.py:194
 msgid "Edit tandas"
 msgstr "Éditer les tandas"
 
-#: src/gampc/unit/tanda.py:208
+#: src/gampc/unit/tanda.py:195
 msgid "View tandas"
 msgstr "Visualiser les tandas"
 
-#: src/gampc/unit/tanda.py:222
+#: src/gampc/unit/tanda.py:208
 msgid "Tanda Editor"
 msgstr "Éditeur de tandas"
 
-#: src/gampc/unit/tanda.py:231
+#: src/gampc/unit/tanda.py:217
 msgid "Switch tanda view mode"
 msgstr "Changer le mode de présentation des tandas"
 
-#: src/gampc/unit/tanda.py:548
+#: src/gampc/unit/tanda.py:554
+#, python-brace-format
 msgid "Deleting '{file}'"
 msgstr "'{file}' supprimé"
 
-#: src/gampc/unit/tanda.py:608
+#: src/gampc/unit/tanda.py:614
 msgid "Tandas"
 msgstr "Tandas"
 
-#: src/gampc/unit/tanda.py:626
-msgid "Years"
-msgstr "Années"
-
-#: src/gampc/unit/tanda.py:627
-msgid "First song"
-msgstr "Premier morceau"
-
-#: src/gampc/unit/tanda.py:630
+#: src/gampc/unit/tanda.py:636
 msgid "Description"
 msgstr "Description"
 
-#: src/gampc/unit/tanda.py:631
+#: src/gampc/unit/tanda.py:637
 msgid "Note"
 msgstr "Note"
 
-#: src/gampc/unit/tanda.py:632
+#: src/gampc/unit/tanda.py:638
 msgid "Rhythm"
 msgstr "Rythme"
 
-#: src/gampc/unit/tanda.py:633
+#: src/gampc/unit/tanda.py:639
 msgid "Energy"
 msgstr "Énergie"
 
-#: src/gampc/unit/tanda.py:634
+#: src/gampc/unit/tanda.py:640
 msgid "Speed"
 msgstr "Vitesse"
 
-#: src/gampc/unit/tanda.py:635
+#: src/gampc/unit/tanda.py:641
 msgid "Emotion"
 msgstr "Émotion"
 
-#: src/gampc/unit/tanda.py:639
+#: src/gampc/unit/tanda.py:642
 msgid "Level"
 msgstr "Niveau"
 
-#: src/gampc/unit/tanda.py:642
+#: src/gampc/unit/tanda.py:644
 msgid "Last played"
 msgstr "Joué dernièrement"
 
-#: src/gampc/unit/tanda.py:643
+#: src/gampc/unit/tanda.py:647
+msgid "First song"
+msgstr "Premier morceau"
+
+#: src/gampc/unit/tanda.py:648
+msgid "Years"
+msgstr "Années"
+
+#: src/gampc/unit/tanda.py:649
 msgid "Weeks since last played"
 msgstr "Semaines depuis"
 
-#: src/gampc/unit/tanda.py:644
-msgid "Number of songs"
-msgstr "Nombre de morceaux"
-
-#: src/gampc/unit/tanda.py:685
+#: src/gampc/unit/tanda.py:691
 msgid "Fill field"
 msgstr "Remplir le champ"
 
-#: src/gampc/unit/tanda.py:686 src/gampc/unit/tanda.py:695
+#: src/gampc/unit/tanda.py:692 src/gampc/unit/tanda.py:703
 msgid "Delete tanda"
 msgstr "Supprimer la tanda"
 
-#: src/gampc/unit/tanda.py:695
+#: src/gampc/unit/tanda.py:703
+#, python-brace-format
 msgid "Delete {tanda}?"
 msgstr "Supprimer {tanda} ?"
 
-#: src/gampc/unit/tanda.py:710
+#: src/gampc/unit/tanda.py:720
 msgid "Verify tanda database"
 msgstr "Vérifier les tandas"
 
-#: src/gampc/unit/tanda.py:711
+#: src/gampc/unit/tanda.py:721
 msgid "Cleanup database"
 msgstr "Nettoyer la base de données"
 
-#: src/gampc/unit/tanda.py:728
+#: src/gampc/unit/tanda.py:739
+#, python-brace-format
+msgid "Not sure about '{file}'"
+msgstr "Incertain pour '{file}'"
+
+#: src/gampc/unit/tanda.py:742
+#, python-brace-format
 msgid ""
-"Tanda database checked: {unused} songs unused, {updated} updated, {replaced} "
-"replaced, {problem} problematic"
+"Tanda database checked: {unused} songs unused, {updated} updated, "
+"{replaced} replaced, {problem} problematic"
 msgstr ""
 "Tandas vérifiées : {unused} morceaux non utilisés, {updated} mis à jour, "
 "{replaced} remplacés, {problem} problématiques"
 
-#: src/gampc/unit/tanda.py:739
+#: src/gampc/unit/tanda.py:753
+#, python-brace-format
 msgid "Updating metadata for '{file}': "
 msgstr "Mise à jour des métadonnées pour '{file}' : "
 
-#: src/gampc/unit/tanda.py:744
+#: src/gampc/unit/tanda.py:758
 msgid "Replacing song:"
 msgstr "Remplaçant le morceau"
 
-#: src/gampc/unit/tanda.py:750
-msgid "Not sure about '{file}'"
-msgstr "Incertain pour '{file}'"
-
-#: src/gampc/unit/tanda.py:759
+#: src/gampc/unit/tanda.py:771
+#, python-brace-format
 msgid "verifying tandas: {progress}%"
 msgstr "vérification des tandas : {progress}%"
 
-#: src/gampc/unit/tanda.py:767
+#: src/gampc/unit/tanda.py:778
+#, python-brace-format
 msgid "Replace {}"
 msgstr "Remplacer {}"
 
-#: src/gampc/unit/window.py:113
+#: src/gampc/unit/window.py:111
 msgid "Unknown song"
 msgstr "Morceau inconnu"
 
-#: src/gampc/unit/window.py:117
+#: src/gampc/unit/window.py:115
+#, python-brace-format
 msgid "{title} (paused)"
 msgstr "{title} (en pause)"
 
-#: src/gampc/unit/window.py:142
+#: src/gampc/unit/window.py:147
+msgid "Window"
+msgstr "Fenêtre"
+
+#: src/gampc/unit/window.py:150
 msgid "New window"
 msgstr "Nouvelle fenêtre"
 
-#: src/gampc/unit/window.py:143
+#: src/gampc/unit/window.py:151
 msgid "Close window"
 msgstr "Fermer la fenêtre"
-
-#: src/gampc/unit/window.py:144
-msgid "Fullscreen window"
-msgstr "Mode plein ecran"
 
 #: src/gampc/view/actions.py:37
 msgid "Filter actions"
@@ -696,22 +717,74 @@ msgstr "Édition"
 msgid "Copy"
 msgstr "Copier"
 
-#: src/gampc/view/actions.py:151
+#: src/gampc/view/actions.py:156
 msgid "Cut"
 msgstr "Couper"
 
-#: src/gampc/view/actions.py:154
+#: src/gampc/view/actions.py:159
+msgid "Paste"
+msgstr "Coller"
+
+#: src/gampc/view/actions.py:161
 msgid "Paste after"
 msgstr "Coller après"
 
-#: src/gampc/view/actions.py:156
-msgid "Paste before"
-msgstr "Coller avant"
+#: src/gampc/view/actions.py:229
+msgid "Files"
+msgstr "Fichiers"
 
-#: src/gampc/view/actions.py:186
+#: src/gampc/view/actions.py:232 src/gampc/view/actions.py:239
+msgid "Move to trash"
+msgstr "Déplacer vers la corbeille"
+
+#: src/gampc/view/actions.py:238
+msgid "Move these files to the trash bin?"
+msgstr "Déplacer ces fichiers vers la corbeille ?"
+
+#: src/gampc/view/actions.py:257
 msgid "Add URL or filename"
 msgstr "Ajouter une URL ou un nom de fichier"
 
-#: src/gampc/view/cache.py:45
+#: src/gampc/view/actions.py:281
 msgid "Add separator"
 msgstr "Ajouter un séparateur"
+
+#~ msgid "Reset and lose all modifications?"
+#~ msgstr "Réinitialiser et perdre toutes les modifications?"
+
+#~ msgid "Seconds"
+#~ msgstr "Secondes"
+
+#~ msgid "Title (partial)"
+#~ msgstr "Titre (partiel)"
+
+#~ msgid "<Name>"
+#~ msgstr "<Nom>"
+
+#~ msgid "[password@]host:port"
+#~ msgstr "[mot de passe@]hôte:port"
+
+#~ msgid "<Host>"
+#~ msgstr "<Hôte>"
+
+#~ msgid "Edit profiles"
+#~ msgstr "Éditer les profils"
+
+#~ msgid "Number of songs"
+#~ msgstr "Nombre de morceaux"
+
+#~ msgid "Fullscreen window"
+#~ msgstr "Mode plein ecran"
+
+#~ msgid "Paste before"
+#~ msgstr "Coller avant"
+
+#~ msgid "Move files to trash"
+#~ msgstr "Déplacer les vers la corbeille"
+
+#~ msgid "Local host"
+#~ msgstr "Hôte local"
+
+#~ msgid "Edit hosts"
+#~ msgstr "Pile d'édition"
+

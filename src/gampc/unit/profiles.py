@@ -75,20 +75,20 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
         self.menu_zeroconf = Gio.Menu()
         self.menu_localhost = Gio.Menu()
         self.menu_user = Gio.Menu()
-        self.menu_user_hosts = Gio.Menu()
+        self.menu_user_profiles = Gio.Menu()
         self.menu_user_edit = Gio.Menu()
         self.menu_user_edit_real = Gio.Menu()
 
         self.zeroconf_profiles_setup()
-        self.menu_from_profiles(self.menu_localhost, {_("Local host"): 'localhost:6600'})
+        self.menu_from_profiles(self.menu_localhost, {_("Local MPD server"): 'localhost:6600'})
         self.user_profiles_setup()
 
         self.menu = Gio.Menu()
         self.menu.append_section(None, self.menu_zeroconf)
         self.menu.append_section(None, self.menu_localhost)
         self.menu.append_section(None, self.menu_user)
-        self.menu_user.append_section(None, self.menu_user_hosts)
-        self.menu_user.append_submenu(_("Edit hosts"), self.menu_user_edit)
+        self.menu_user.append_section(None, self.menu_user_profiles)
+        self.menu_user.append_submenu(_("Edit profiles"), self.menu_user_edit)
 
     def cleanup(self):
         super().cleanup()
@@ -127,7 +127,7 @@ class __unit__(mixins.UnitConfigMixin, unit.Unit):
 
     def user_profiles_setup(self):
         profiles = self.config['profiles']
-        self.menu_from_profiles(self.menu_user_hosts, profiles)
+        self.menu_from_profiles(self.menu_user_profiles, profiles)
         edit_action = self.get_edit_action()
         edit_actions = (edit_action.derive(name, arg=(name, address)) for name, address in profiles.items())
         edit_family = action.ActionInfoFamily(edit_actions, 'app')

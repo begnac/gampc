@@ -229,7 +229,7 @@ class ViewWithFiles(ViewWithContextMenu):
         self.add_context_menu_actions(self.generate_file_actions(), 'view-file', _("Files"))
 
     def generate_file_actions(self):
-        yield action.ActionInfo('delete-file', self.action_delete_file_cb, _("Move files to trash"), ['<Control>Delete'])
+        yield action.ActionInfo('delete-file', self.action_delete_file_cb, _("Move to trash"), ['<Control>Delete'])
 
     @misc.create_task
     async def action_delete_file_cb(self, action, parameter):
