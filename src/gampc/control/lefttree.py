@@ -30,8 +30,8 @@ class Node(WithItemModelMixin, GObject.Object):
         super().__init__(**kwargs)
         self.name = name
         self.path = [] if path is None else path + [name]
-        self.children = children
         self.icon = icon
+        self.children = children
         self.rows = []
         self.ready = False
 
