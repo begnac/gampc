@@ -133,6 +133,12 @@ class FolderNode(lefttree.Node):
             self.children_model.append(Gio.ListStore())
         self.children.set_model(self.children_model)
 
+    def mark_changed_paths(self, changed_paths):
+        self.ready = False
+        for node in self.children:
+            if isinstance(node, FolderNode) and node.name in changed_paths:
+                node.mark_changed_paths(changed_paths[node.name])
+
 
 class PlaylistNode(lefttree.Node):
     def __init__(self, *args, playlist):
@@ -157,7 +163,7 @@ class PlaylistTree(lefttree.Tree):
     async def fill_node(self, node):
         if isinstance(node, FolderNode):
             folders, playlists = self.get_pseudo_folder_contents(node.path)
-            expanded = any(row.get_expanded() for row in node.rows)
+            expanded = node.name is None or any(row.get_expanded() for row in node.rows)
             self.merge(node.children_model[0], folders, expanded, lambda name: FolderNode(name, node.path))
             self.merge(node.children_model[1], playlists, False, lambda name: self.get_playlist_node(name, node.path))
 
@@ -260,16 +266,27 @@ class __unit__(mixins.UnitConfigMixin, cleanup.CleanupCssMixin, mixins.UnitCompo
 
     async def update_playlists(self):
         playlists = {entry['playlist']: entry['Last_Modified'] for entry in await self.ampd.listplaylists() if entry['playlist'] != self.TEMPNAME}
+        changed = []
         for name, playlist in list(self.playlists.items()):
             last_modified = playlists.pop(name, None)
             if last_modified is None:
                 if playlist.edit_stack is None or not playlist.edit_stack.transactions:
                     del self.playlists[name]
+                    changed.append(name)
             elif last_modified != playlist.last_modified:
                 playlist.last_modified = last_modified
                 playlist.clean = False
         for name in playlists:
             self.playlists[name] = Playlist(name, playlists[name])
+            changed.append(name)
+
+        if changed:
+            changed_paths = {}
+            for name in changed:
+                path = changed_paths
+                for element in name.split(PSEUDO_SEPARATOR):
+                    path = path.setdefault(element, {})
+            self.tree.root.mark_changed_paths(changed_paths)
         self.tree.start()
 
     def playlist_paths(self):
