@@ -88,7 +88,8 @@ class ItemView(Gtk.ColumnView):
         self.add_css_class('data-table')
 
         self.titles = self.get_first_child().observe_children()
-        self.titles.connect('items-changed', self._HACK_titles_items_changed_cb)
+        if not self.sortable:
+            self.titles.connect('items-changed', self._HACK_titles_items_changed_cb)
 
         self.fields = fields
         self.columns = {}
