@@ -147,6 +147,8 @@ class ViewBase(item.WithItemModelMixin, cleanup.CleanupSignalMixin, Gtk.Box):
         self.append(self.scrolled_item_view)
         self.add_cleanup_below(self.item_view, self.view_search)
 
+        self.item_view.add_css_class('song-by-key')
+
         if filterable:
             self.filter_manager = editable.EditManager()
             self.connect_clean(self.filter_manager, 'edited', self.filter_edited_cb)
